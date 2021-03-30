@@ -35,8 +35,6 @@ var _ = BeforeSuite(func() {
 ]`)
 	})
 
-	fmt.Printf("Starting server at port 8080\n")
-
 	go func() {
 		if err := http.ListenAndServe(":8080", nil); err != nil {
 			log.Fatal(err)

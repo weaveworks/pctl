@@ -61,7 +61,7 @@ var _ = Describe("Search", func() {
 	})
 
 	When("no profiles matching the search exist", func() {
-		It("returns all profiles matching the name description of the profile", func() {
+		It("returns an error", func() {
 			httpBody := bytes.NewBufferString(`[]`)
 			fakeHTTPClient.DoReturns(&http.Response{
 				Body:       ioutil.NopCloser(httpBody),
