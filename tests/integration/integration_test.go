@@ -25,7 +25,7 @@ var _ = Describe("PCTL", func() {
 				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("--catalog-url must be provided"))
+				Expect(string(session.Err.Contents())).To(ContainSubstring("--catalog-url or $PCTL_CATALOG_URL must be provided"))
 			})
 		})
 	})
