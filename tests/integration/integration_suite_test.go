@@ -1,8 +1,8 @@
 package integration_test
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"testing"
 
@@ -13,6 +13,7 @@ import (
 
 var (
 	binaryPath string
+	server     *http.Server
 )
 
 func TestIntegration(t *testing.T) {
@@ -25,24 +26,27 @@ var _ = BeforeSuite(func() {
 	binaryPath, err = gexec.Build("github.com/weaveworks/pctl/cmd/pctl")
 	Expect(err).NotTo(HaveOccurred())
 
-	http.HandleFunc("/profiles", func(w http.ResponseWriter, r *http.Request) {
-		Expect(r.URL.Query().Get("name")).To(Equal("nginx"))
-		fmt.Fprintf(w, `[
+	mux := http.NewServeMux()
+	mux.Handle("/profiles", http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			Expect(r.URL.Query().Get("name")).To(Equal("nginx"))
+			fmt.Fprintf(w, `[
 	{
 		"name": "weaveworks-nginx",
 		"description": "This installs nginx."
 	}
 ]`)
-	})
+		}))
+
+	server = &http.Server{Addr: ":8080", Handler: mux}
 
 	go func() {
-		if err := http.ListenAndServe(":8080", nil); err != nil {
-			log.Fatal(err)
-		}
+		_ = server.ListenAndServe()
 	}()
 
 })
 
 var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
+	Expect(server.Shutdown(context.Background())).To(Succeed())
 })

@@ -75,17 +75,18 @@ var _ = Describe("Search", func() {
 		})
 	})
 
-	When("http request fails", func() {
+	When("http request returns non-200", func() {
 		It("returns an error", func() {
 			fakeHTTPClient.DoReturns(&http.Response{
 				StatusCode: http.StatusBadGateway,
+				Body:       ioutil.NopCloser(nil),
 			}, nil)
 			_, err := catalog.Search("http://example.catalog", "dontexist")
 			Expect(err).To(MatchError("failed to fetch catalog: status code 502"))
 		})
 	})
 
-	When("http request returns non-200", func() {
+	When("http request fails", func() {
 		It("returns an error", func() {
 			fakeHTTPClient.DoReturns(nil, fmt.Errorf("foo"))
 			_, err := catalog.Search("http://example.catalog", "dontexist")

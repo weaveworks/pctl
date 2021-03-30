@@ -13,9 +13,8 @@ func main() {
 	app := &cli.App{
 		Commands: []*cli.Command{
 			{
-				Name:    "search",
-				Aliases: []string{"a"},
-				Usage:   "search for a profile",
+				Name:  "search",
+				Usage: "search for a profle",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "catalog-url",

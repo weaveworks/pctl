@@ -31,11 +31,11 @@ func Search(catalogURL, profileName string) ([]ProfileDescription, error) {
 	if err != nil {
 		return []ProfileDescription{}, fmt.Errorf("failed to fetch catalog: %w", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return []ProfileDescription{}, fmt.Errorf("failed to fetch catalog: status code %d", resp.StatusCode)
 	}
-	defer resp.Body.Close()
 
 	profiles := []ProfileDescription{}
 	err = json.NewDecoder(resp.Body).Decode(&profiles)
