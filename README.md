@@ -1,2 +1,2 @@
 # pctl
-Gitops native package mangement
+Gitops native package mangement for profiles
