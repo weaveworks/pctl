@@ -15,7 +15,7 @@ func main() {
 			{
 				Name:    "search",
 				Aliases: []string{"a"},
-				Usage:   "search for a profle",
+				Usage:   "search for a profile",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "catalog-url",
