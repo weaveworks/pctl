@@ -20,7 +20,6 @@ var _ = Describe("Search", func() {
 	BeforeEach(func() {
 		fakeHTTPClient = new(fakes.FakeHTTPClient)
 		catalog.SetHTTPClient(fakeHTTPClient)
-
 	})
 
 	When("profiles matching the search exist", func() {
@@ -90,7 +89,7 @@ var _ = Describe("Search", func() {
 		It("returns an error", func() {
 			fakeHTTPClient.DoReturns(nil, fmt.Errorf("foo"))
 			_, err := catalog.Search("http://example.catalog", "dontexist")
-			Expect(err).To(MatchError("failed to fetch catalog: foo"))
+			Expect(err).To(MatchError(ContainSubstring("failed to do request: foo")))
 		})
 	})
 
@@ -106,4 +105,12 @@ var _ = Describe("Search", func() {
 			Expect(err).To(MatchError(ContainSubstring("failed to parse catalog")))
 		})
 	})
+
+	When("the catalog url is invalid", func() {
+		It("returns an error", func() {
+			_, err := catalog.Search("!\"££!\"£%$£$%%^&&^*()~{@}:@.|ZX", "nginx")
+			Expect(err).To(MatchError(ContainSubstring("failed to parse url")))
+		})
+	})
+
 })

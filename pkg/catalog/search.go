@@ -17,22 +17,17 @@ type HTTPClient interface {
 var httpClient HTTPClient = http.DefaultClient
 
 // Search queries the catalog at catalogURL for profiles matching the provided profileName.
-func Search(catalogURL, profileName string) ([]ProfileDescription, error) {
+func Search(catalogURL, searchName string) ([]ProfileDescription, error) {
 	u, err := url.Parse(catalogURL)
 	if err != nil {
 		return []ProfileDescription{}, fmt.Errorf("failed to parse url %q: %w", catalogURL, err)
 	}
 	u.Path = "profiles"
-	req, err := http.NewRequest("GET", u.String(), nil)
-	if err != nil {
-		return []ProfileDescription{}, fmt.Errorf("failed to build request: %w", err)
-	}
 	q := u.Query()
-	q.Add("name", profileName)
-	req.URL.RawQuery = q.Encode()
-	resp, err := httpClient.Do(req)
+	q.Add("name", searchName)
+	resp, err := doRequest(u, q)
 	if err != nil {
-		return []ProfileDescription{}, fmt.Errorf("failed to fetch catalog: %w", err)
+		return []ProfileDescription{}, fmt.Errorf("failed to do request: %w", err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -51,7 +46,7 @@ func Search(catalogURL, profileName string) ([]ProfileDescription, error) {
 	}
 
 	if len(profiles) == 0 {
-		return []ProfileDescription{}, fmt.Errorf("no profiles matching %q found", profileName)
+		return []ProfileDescription{}, fmt.Errorf("no profiles matching %q found", searchName)
 	}
 
 	return profiles, nil
