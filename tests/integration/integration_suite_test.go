@@ -46,7 +46,7 @@ var _ = BeforeSuite(func() {
 	"version": "0.0.1",
 	"catalog": "weaveworks (https://github.com/weaveworks/profiles)",
 	"url": "https://github.com/weaveworks/nginx-profile",
-	"prerequisites": "Kubernetes 1.18+",
+	"prerequisites": ["Kubernetes 1.18+"],
 	"maintainer": "WeaveWorks <gitops@weave.works>"
 }
 `)

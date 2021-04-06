@@ -32,7 +32,7 @@ var _ = Describe("Show", func() {
 	"version": "0.0.1",
 	"catalog": "weaveworks (https://github.com/weaveworks/profiles)",
 	"url": "https://github.com/weaveworks/nginx-profile",
-	"prerequisites": "Kubernetes 1.18+",
+	"prerequisites": ["Kubernetes 1.18+"],
 	"maintainer": "WeaveWorks <gitops@weave.works>"
 }
 		  `)
@@ -53,7 +53,7 @@ var _ = Describe("Show", func() {
 					Version:       "0.0.1",
 					Catalog:       "weaveworks (https://github.com/weaveworks/profiles)",
 					URL:           "https://github.com/weaveworks/nginx-profile",
-					Prerequisites: "Kubernetes 1.18+", // array?
+					Prerequisites: []string{"Kubernetes 1.18+"},
 					Maintainer:    "WeaveWorks <gitops@weave.works>",
 				},
 			))

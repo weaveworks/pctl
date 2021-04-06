@@ -45,7 +45,7 @@ var _ = Describe("PCTL", func() {
 			Expect(string(session.Out.Contents())).To(ContainSubstring("description: This installs nginx."))
 			Expect(string(session.Out.Contents())).To(ContainSubstring("version: 0.0.1"))
 			Expect(string(session.Out.Contents())).To(ContainSubstring("catalog: weaveworks (https://github.com/weaveworks/profiles)"))
-			Expect(string(session.Out.Contents())).To(ContainSubstring("prerequisites: Kubernetes 1.18+"))
+			Expect(string(session.Out.Contents())).To(ContainSubstring("prerequisites:\n- Kubernetes 1.18+"))
 			Expect(string(session.Out.Contents())).To(ContainSubstring("maintainer: WeaveWorks <gitops@weave.works>"))
 		})
 
