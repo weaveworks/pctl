@@ -16,7 +16,7 @@ var _ = Describe("PCTL", func() {
 
 	Context("search", func() {
 		It("returns the matching profiles", func() {
-			cmd := exec.Command(binaryPath, "search", "--catalog-url", exampleCatalog, "nginx")
+			cmd := exec.Command(binaryPath, "--catalog-url", exampleCatalog, "search", "nginx")
 			session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(session).Should(gexec.Exit(0))
@@ -36,7 +36,7 @@ var _ = Describe("PCTL", func() {
 
 	Context("show", func() {
 		It("returns information about the given profile", func() {
-			cmd := exec.Command(binaryPath, "show", "--catalog-url", exampleCatalog, "weaveworks-nginx")
+			cmd := exec.Command(binaryPath, "--catalog-url", exampleCatalog, "show", "weaveworks-nginx")
 			session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(session).Should(gexec.Exit(0))
@@ -51,7 +51,7 @@ var _ = Describe("PCTL", func() {
 
 		When("the profile is not listed in the catalog", func() {
 			It("returns a useful error", func() {
-				cmd := exec.Command(binaryPath, "show", "--catalog-url", exampleCatalog, "unlisted")
+				cmd := exec.Command(binaryPath, "--catalog-url", exampleCatalog, "show", "unlisted")
 				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(session).Should(gexec.Exit(1))

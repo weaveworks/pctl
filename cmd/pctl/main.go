@@ -13,6 +13,7 @@ import (
 
 func main() {
 	app := &cli.App{
+		Flags: globalFlags(),
 		Commands: []*cli.Command{
 			searchCmd(),
 			showCmd(),
@@ -28,8 +29,7 @@ func main() {
 func searchCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "search",
-		Usage: "search for a profle",
-		Flags: commonFlags(),
+		Usage: "search for a profile",
 		Action: func(c *cli.Context) error {
 			catalogURL := c.String("catalog-url")
 			if catalogURL == "" {
@@ -53,7 +53,6 @@ func showCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "show",
 		Usage: "display information about a profile",
-		Flags: commonFlags(),
 		Action: func(c *cli.Context) error {
 			catalogURL := c.String("catalog-url")
 			if catalogURL == "" {
@@ -70,7 +69,7 @@ func showCmd() *cli.Command {
 	}
 }
 
-func commonFlags() []cli.Flag {
+func globalFlags() []cli.Flag {
 	return []cli.Flag{
 		&cli.StringFlag{
 			Name:    "catalog-url",
