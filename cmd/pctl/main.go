@@ -59,7 +59,7 @@ func showCmd() *cli.Command {
 				return fmt.Errorf("--catalog-url or $PCTL_CATALOG_URL must be provided")
 			}
 			profileName := c.Args().First()
-			fmt.Printf("retrieving informtation for profile %q:\n", profileName)
+			fmt.Printf("retrieving information for profile %q:\n\n", profileName)
 			profile, err := catalog.Show(catalogURL, profileName)
 			if err != nil {
 				return err
