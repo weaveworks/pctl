@@ -11,7 +11,7 @@ integration-test: ## Run the integration tests
 ##@ Build
 
 lint:
-	golangci-lint run ## Run the linter
+	golangci-lint run --exclude-use-default=false --timeout=5m0s ## Run the linter
 
 build: ## Build the pctl binary to ./pctl
 	go build -o pctl ./cmd/pctl
