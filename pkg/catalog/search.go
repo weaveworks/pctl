@@ -16,7 +16,7 @@ type HTTPClient interface {
 
 var httpClient HTTPClient = http.DefaultClient
 
-// Search will return profile descriptions for a given `catalogURL` and `profileName`.
+// Search queries the catalog at catalogURL for profiles matching the provided profileName.
 func Search(catalogURL, profileName string) ([]ProfileDescription, error) {
 	u, err := url.Parse(catalogURL)
 	if err != nil {
