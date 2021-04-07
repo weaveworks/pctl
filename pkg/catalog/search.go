@@ -7,6 +7,8 @@ import (
 	"net/url"
 )
 
+// HTTPClient defines an http client which then can be used to test the
+// handler code.
 //go:generate counterfeiter -o fakes/fake_http_client.go . HTTPClient
 type HTTPClient interface {
 	Do(*http.Request) (*http.Response, error)
@@ -14,6 +16,7 @@ type HTTPClient interface {
 
 var httpClient HTTPClient = http.DefaultClient
 
+// Search queries the catalog at catalogURL for profiles matching the provided profileName.
 func Search(catalogURL, profileName string) ([]ProfileDescription, error) {
 	u, err := url.Parse(catalogURL)
 	if err != nil {
@@ -31,7 +34,11 @@ func Search(catalogURL, profileName string) ([]ProfileDescription, error) {
 	if err != nil {
 		return []ProfileDescription{}, fmt.Errorf("failed to fetch catalog: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			fmt.Printf("Failed to close the response body from profile search with error: %v/n", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return []ProfileDescription{}, fmt.Errorf("failed to fetch catalog: status code %d", resp.StatusCode)
