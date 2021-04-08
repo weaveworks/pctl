@@ -5,17 +5,19 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 // Show queries the catalog at catalogURL for a profile matching the provided profileName
-func Show(catalogURL, profileName string) (v1alpha1.ProfileDescription, error) {
+func Show(catalogURL, profilePath string) (v1alpha1.ProfileDescription, error) {
 	u, err := url.Parse(catalogURL)
 	if err != nil {
 		return v1alpha1.ProfileDescription{}, fmt.Errorf("failed to parse url %q: %w", catalogURL, err)
 	}
-	u.Path = "profiles/" + profileName
+
+	u.Path = "profiles/" + profilePath
 	resp, err := doRequest(u, nil)
 	if err != nil {
 		return v1alpha1.ProfileDescription{}, fmt.Errorf("failed to do request: %w", err)
@@ -23,7 +25,9 @@ func Show(catalogURL, profileName string) (v1alpha1.ProfileDescription, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return v1alpha1.ProfileDescription{}, fmt.Errorf("unable to find profile `%s` in catalog %s", profileName, catalogURL)
+		parts := strings.Split(profilePath, "/")
+		catalogName, profileName := parts[0], parts[1]
+		return v1alpha1.ProfileDescription{}, fmt.Errorf("unable to find profile `%s` in catalog `%s`", profileName, catalogName)
 	}
 
 	if resp.StatusCode != http.StatusOK {

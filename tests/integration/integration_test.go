@@ -46,15 +46,15 @@ var _ = Describe("PCTL", func() {
 
 	Context("show", func() {
 		It("returns information about the given profile", func() {
-			cmd := exec.Command(binaryPath, "--catalog-url", exampleCatalog, "show", "weaveworks-nginx")
+			cmd := exec.Command(binaryPath, "--catalog-url", exampleCatalog, "show", "nginx-catalog/weaveworks-nginx")
 			session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(session).Should(gexec.Exit(0))
-			Expect(string(session.Out.Contents())).To(ContainSubstring("retrieving information for profile \"weaveworks-nginx\":"))
+			Expect(string(session.Out.Contents())).To(ContainSubstring("retrieving information for profile \"nginx-catalog/weaveworks-nginx\""))
 			Expect(string(session.Out.Contents())).To(ContainSubstring("name: weaveworks-nginx"))
 			Expect(string(session.Out.Contents())).To(ContainSubstring("description: This installs nginx."))
 			Expect(string(session.Out.Contents())).To(ContainSubstring("version: 0.0.1"))
-			Expect(string(session.Out.Contents())).To(ContainSubstring("catalog: weaveworks (https://github.com/weaveworks/profiles)"))
+			Expect(string(session.Out.Contents())).To(ContainSubstring("catalog: nginx-catalog"))
 			Expect(string(session.Out.Contents())).To(ContainSubstring("prerequisites:\n- Kubernetes 1.18+"))
 			Expect(string(session.Out.Contents())).To(ContainSubstring("maintainer: WeaveWorks <gitops@weave.works>"))
 		})

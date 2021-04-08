@@ -56,7 +56,7 @@ func showCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "show",
 		Usage:     "display information about a profile",
-		UsageText: "pctl --catalog-url <URL> show <NAME>",
+		UsageText: "pctl --catalog-url <URL> show <CATALOG>/<PROFILE>",
 		Action: func(c *cli.Context) error {
 			profileName, catalogURL, err := parseArgs(c)
 			if err != nil {
