@@ -29,14 +29,16 @@ func main() {
 
 func searchCmd() *cli.Command {
 	return &cli.Command{
-		Name:  "search",
-		Usage: "search for a profile",
+		Name:      "search",
+		Usage:     "search for a profile",
+		UsageText: "pctl --catalog-url <URL> search <QUERY>",
 		Action: func(c *cli.Context) error {
-			catalogURL := c.String("catalog-url")
-			if catalogURL == "" {
-				return fmt.Errorf("--catalog-url or $PCTL_CATALOG_URL must be provided")
+			searchName, catalogURL, err := parseArgs(c)
+			if err != nil {
+				_ = cli.ShowCommandHelp(c, "show")
+				return err
 			}
-			searchName := c.Args().First()
+
 			fmt.Printf("searching for profiles matching %q:\n", searchName)
 			profiles, err := catalog.Search(catalogURL, searchName)
 			if err != nil {
@@ -52,14 +54,16 @@ func searchCmd() *cli.Command {
 
 func showCmd() *cli.Command {
 	return &cli.Command{
-		Name:  "show",
-		Usage: "display information about a profile",
+		Name:      "show",
+		Usage:     "display information about a profile",
+		UsageText: "pctl --catalog-url <URL> show <NAME>",
 		Action: func(c *cli.Context) error {
-			catalogURL := c.String("catalog-url")
-			if catalogURL == "" {
-				return fmt.Errorf("--catalog-url or $PCTL_CATALOG_URL must be provided")
+			profileName, catalogURL, err := parseArgs(c)
+			if err != nil {
+				_ = cli.ShowCommandHelp(c, "show")
+				return err
 			}
-			profileName := c.Args().First()
+
 			fmt.Printf("retrieving information for profile %q:\n\n", profileName)
 			profile, err := catalog.Show(catalogURL, profileName)
 			if err != nil {
@@ -78,6 +82,17 @@ func globalFlags() []cli.Flag {
 			EnvVars: []string{"PCTL_CATALOG_URL"},
 		},
 	}
+}
+
+func parseArgs(c *cli.Context) (string, string, error) {
+	catalogURL := c.String("catalog-url")
+	if catalogURL == "" {
+		return "", "", fmt.Errorf("--catalog-url or $PCTL_CATALOG_URL must be provided")
+	}
+	if c.Args().Len() < 1 {
+		return "", "", fmt.Errorf("argument must be provided")
+	}
+	return c.Args().First(), catalogURL, nil
 }
 
 func printProfile(profile v1alpha1.ProfileDescription) error {

@@ -32,6 +32,16 @@ var _ = Describe("PCTL", func() {
 				Expect(string(session.Err.Contents())).To(ContainSubstring("--catalog-url or $PCTL_CATALOG_URL must be provided"))
 			})
 		})
+
+		When("a search string is not provided", func() {
+			It("returns a useful error", func() {
+				cmd := exec.Command(binaryPath, "--catalog-url", exampleCatalog, "search")
+				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(session).Should(gexec.Exit(1))
+				Expect(string(session.Err.Contents())).To(ContainSubstring("argument must be provided"))
+			})
+		})
 	})
 
 	Context("show", func() {
@@ -66,6 +76,16 @@ var _ = Describe("PCTL", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(session).Should(gexec.Exit(1))
 				Expect(string(session.Err.Contents())).To(ContainSubstring("--catalog-url or $PCTL_CATALOG_URL must be provided"))
+			})
+		})
+
+		When("a name argument is not provided", func() {
+			It("returns a useful error", func() {
+				cmd := exec.Command(binaryPath, "--catalog-url", exampleCatalog, "show")
+				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(session).Should(gexec.Exit(1))
+				Expect(string(session.Err.Contents())).To(ContainSubstring("argument must be provided"))
 			})
 		})
 	})
