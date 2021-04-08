@@ -9,6 +9,7 @@ import (
 	"github.com/weaveworks/profiles/api/v1alpha1"
 )
 
+// Show queries the catalog at catalogURL for a profile matching the provided profileName
 func Show(catalogURL, profileName string) (v1alpha1.ProfileDescription, error) {
 	u, err := url.Parse(catalogURL)
 	if err != nil {

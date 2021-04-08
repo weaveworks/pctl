@@ -21,4 +21,5 @@ run the following to use pctl against it:
 1. Create your catalog, for example there is a `examples/profile-catalog-source.yaml` file in the profiles repo
 `kubectl apply -f profiles/examples/profile-catalog-source.yaml`
 1. In a separate terminal run `kubectl -n profiles-system port-forward <profiles-controller-pod-name> 8000:8000` to enable access to the API
-1. Run `pctl search --catalog-url http://localhost:8000 <profile-name>` to search for your profile
+1. Run `pctl --catalog-url http://localhost:8000 search <query>` to search for your profile
+1. To see more detail of a profile, run `pctl --catalog-url http://localhost:8000 show <profile-name>`
