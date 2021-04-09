@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/weaveworks/pctl/pkg/catalog"
-	"github.com/weaveworks/profiles/api/v1alpha1"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"gopkg.in/yaml.v2"
 )
 
@@ -95,7 +95,7 @@ func parseArgs(c *cli.Context) (string, string, error) {
 	return c.Args().First(), catalogURL, nil
 }
 
-func printProfile(profile v1alpha1.ProfileDescription) error {
+func printProfile(profile profilesv1.ProfileDescription) error {
 	out, err := yaml.Marshal(profile)
 	if err != nil {
 		return err
