@@ -5,6 +5,8 @@ import (
 	"net/url"
 )
 
+// HTTPClient defines an http client which then can be used to test the
+// handler code.
 //go:generate counterfeiter -o fakes/fake_http_client.go . HTTPClient
 type HTTPClient interface {
 	Do(*http.Request) (*http.Response, error)

@@ -1,6 +1,6 @@
 ##@ Test
 
-test: unit-test integration-test ## Run all tests
+test: lint unit-test integration-test ## Run all tests
 
 unit-test: ## Run the unit tests
 	go test -count=1 ./pkg/...

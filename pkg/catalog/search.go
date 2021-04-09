@@ -24,7 +24,7 @@ func Search(catalogURL, searchName string) ([]profilesv1.ProfileDescription, err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			fmt.Printf("Failed to close the response body from profile search with error: %v/n", err)
+			fmt.Printf("failed to close the response body from profile search with error: %v/n", err)
 		}
 	}()
 

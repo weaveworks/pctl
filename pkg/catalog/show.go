@@ -21,7 +21,11 @@ func Show(catalogURL, catalogName, profileName string) (profilesv1.ProfileDescri
 	if err != nil {
 		return profilesv1.ProfileDescription{}, fmt.Errorf("failed to do request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			fmt.Printf("failed to close the response body from profile show with error: %v/n", err)
+		}
+	}()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return profilesv1.ProfileDescription{}, fmt.Errorf("unable to find profile `%s` in catalog `%s`", profileName, catalogName)
