@@ -50,7 +50,7 @@ var _ = Describe("PCTL", func() {
 			session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(session).Should(gexec.Exit(0))
-			Expect(string(session.Out.Contents())).To(ContainSubstring("retrieving information for profile \"nginx-catalog/weaveworks-nginx\""))
+			Expect(string(session.Out.Contents())).To(ContainSubstring("retrieving information for profile nginx-catalog/weaveworks-nginx"))
 			Expect(string(session.Out.Contents())).To(ContainSubstring("name: weaveworks-nginx"))
 			Expect(string(session.Out.Contents())).To(ContainSubstring("description: This installs nginx."))
 			Expect(string(session.Out.Contents())).To(ContainSubstring("version: 0.0.1"))
@@ -61,11 +61,11 @@ var _ = Describe("PCTL", func() {
 
 		When("the profile is not listed in the catalog", func() {
 			It("returns a useful error", func() {
-				cmd := exec.Command(binaryPath, "--catalog-url", exampleCatalog, "show", "unlisted")
+				cmd := exec.Command(binaryPath, "--catalog-url", exampleCatalog, "show", "foo/unlisted")
 				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("unable to find profile `unlisted` in catalog http://localhost:8080"))
+				Expect(string(session.Err.Contents())).To(ContainSubstring("unable to find profile `unlisted` in catalog `foo`"))
 			})
 		})
 

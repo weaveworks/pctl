@@ -42,11 +42,11 @@ var _ = Describe("Show", func() {
 				StatusCode: http.StatusOK,
 			}, nil)
 
-			resp, err := catalog.Show("http://example.catalog", "weaveworks-nginx")
+			resp, err := catalog.Show("http://example.catalog", "foo", "weaveworks-nginx")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeHTTPClient.DoCallCount()).To(Equal(1))
 			req := fakeHTTPClient.DoArgsForCall(0)
-			Expect(req.URL.String()).To(Equal("http://example.catalog/profiles/weaveworks-nginx"))
+			Expect(req.URL.String()).To(Equal("http://example.catalog/profiles/foo/weaveworks-nginx"))
 			Expect(resp).To(Equal(
 				profilesv1.ProfileDescription{
 					Name:          "nginx-1",
@@ -63,7 +63,7 @@ var _ = Describe("Show", func() {
 
 	When("the catalog url is invalid", func() {
 		It("returns an error", func() {
-			_, err := catalog.Show("!\"££!\"£%$£$%%^&&^*()~{@}:@.|ZX", "weaveworks-nginx")
+			_, err := catalog.Show("!\"££!\"£%$£$%%^&&^*()~{@}:@.|ZX", "foo", "weaveworks-nginx")
 			Expect(err).To(MatchError(ContainSubstring("failed to parse url")))
 		})
 	})
@@ -75,10 +75,10 @@ var _ = Describe("Show", func() {
 				Body:       ioutil.NopCloser(nil),
 			}, nil)
 
-			_, err := catalog.Show("http://example.catalog", "dontexist")
-			Expect(err).To(MatchError("unable to find profile `dontexist` in catalog http://example.catalog"))
+			_, err := catalog.Show("http://example.catalog", "foo", "dontexist")
+			Expect(err).To(MatchError("unable to find profile `dontexist` in catalog `foo`"))
 			req := fakeHTTPClient.DoArgsForCall(0)
-			Expect(req.URL.String()).To(Equal("http://example.catalog/profiles/dontexist"))
+			Expect(req.URL.String()).To(Equal("http://example.catalog/profiles/foo/dontexist"))
 		})
 	})
 
@@ -88,7 +88,7 @@ var _ = Describe("Show", func() {
 				StatusCode: http.StatusBadGateway,
 				Body:       ioutil.NopCloser(nil),
 			}, nil)
-			_, err := catalog.Show("http://example.catalog", "weaveworks-nginx")
+			_, err := catalog.Show("http://example.catalog", "foo", "weaveworks-nginx")
 			Expect(err).To(MatchError("failed to fetch profile: status code 502"))
 		})
 	})
@@ -96,7 +96,7 @@ var _ = Describe("Show", func() {
 	When("http request fails", func() {
 		It("returns an error", func() {
 			fakeHTTPClient.DoReturns(nil, fmt.Errorf("epic fail"))
-			_, err := catalog.Show("http://example.catalog", "weaveworks-nginx")
+			_, err := catalog.Show("http://example.catalog", "foo", "weaveworks-nginx")
 			Expect(err).To(MatchError(ContainSubstring("failed to do request: epic fail")))
 		})
 	})
@@ -109,7 +109,7 @@ var _ = Describe("Show", func() {
 				StatusCode: http.StatusOK,
 			}, nil)
 
-			_, err := catalog.Show("http://example.catalog", "weaveworks-nginx")
+			_, err := catalog.Show("http://example.catalog", "foo", "weaveworks-nginx")
 			Expect(err).To(MatchError(ContainSubstring("failed to parse profile")))
 		})
 	})

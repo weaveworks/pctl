@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 
@@ -58,14 +60,21 @@ func showCmd() *cli.Command {
 		Usage:     "display information about a profile",
 		UsageText: "pctl --catalog-url <URL> show <CATALOG>/<PROFILE>",
 		Action: func(c *cli.Context) error {
-			profileName, catalogURL, err := parseArgs(c)
+			profilePath, catalogURL, err := parseArgs(c)
 			if err != nil {
 				_ = cli.ShowCommandHelp(c, "show")
 				return err
 			}
 
-			fmt.Printf("retrieving information for profile %q:\n\n", profileName)
-			profile, err := catalog.Show(catalogURL, profileName)
+			parts := strings.Split(profilePath, "/")
+			if len(parts) < 2 {
+				_ = cli.ShowCommandHelp(c, "show")
+				return errors.New("both catalog name and profile name must be provided")
+			}
+			catalogName, profileName := parts[0], parts[1]
+
+			fmt.Printf("retrieving information for profile %s/%s:\n\n", catalogName, profileName)
+			profile, err := catalog.Show(catalogURL, catalogName, profileName)
 			if err != nil {
 				return err
 			}
