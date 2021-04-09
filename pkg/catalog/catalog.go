@@ -5,6 +5,13 @@ import (
 	"net/url"
 )
 
+//go:generate counterfeiter -o fakes/fake_http_client.go . HTTPClient
+type HTTPClient interface {
+	Do(*http.Request) (*http.Response, error)
+}
+
+var httpClient HTTPClient = http.DefaultClient
+
 func doRequest(u *url.URL, q url.Values) (*http.Response, error) {
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {

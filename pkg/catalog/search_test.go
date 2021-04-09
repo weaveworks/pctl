@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
+	"github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 var _ = Describe("Search", func() {
@@ -47,11 +48,11 @@ var _ = Describe("Search", func() {
 			req := fakeHTTPClient.DoArgsForCall(0)
 			Expect(req.URL.String()).To(Equal("http://example.catalog/profiles?name=nginx"))
 			Expect(resp).To(ConsistOf(
-				catalog.ProfileDescription{
+				v1alpha1.ProfileDescription{
 					Name:        "nginx-1",
 					Description: "nginx 1",
 				},
-				catalog.ProfileDescription{
+				v1alpha1.ProfileDescription{
 					Name:        "nginx-2",
 					Description: "nginx 2",
 				},

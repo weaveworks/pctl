@@ -11,6 +11,7 @@ import (
 
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
+	"github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 var _ = Describe("Show", func() {
@@ -47,7 +48,7 @@ var _ = Describe("Show", func() {
 			req := fakeHTTPClient.DoArgsForCall(0)
 			Expect(req.URL.String()).To(Equal("http://example.catalog/profiles/weaveworks-nginx"))
 			Expect(resp).To(Equal(
-				catalog.ProfileDescription{
+				v1alpha1.ProfileDescription{
 					Name:          "nginx-1",
 					Description:   "nginx 1",
 					Version:       "0.0.1",

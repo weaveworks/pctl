@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/weaveworks/pctl/pkg/catalog"
+	"github.com/weaveworks/profiles/api/v1alpha1"
 	"gopkg.in/yaml.v2"
 )
 
@@ -79,7 +80,7 @@ func globalFlags() []cli.Flag {
 	}
 }
 
-func printProfile(profile catalog.ProfileDescription) error {
+func printProfile(profile v1alpha1.ProfileDescription) error {
 	out, err := yaml.Marshal(profile)
 	if err != nil {
 		return err
