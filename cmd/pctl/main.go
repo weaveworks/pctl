@@ -16,6 +16,7 @@ import (
 
 func main() {
 	app := &cli.App{
+		Usage: "A cli tool for interacting with profiles",
 		Flags: globalFlags(),
 		Commands: []*cli.Command{
 			searchCmd(),
