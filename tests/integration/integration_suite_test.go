@@ -37,6 +37,20 @@ var _ = BeforeSuite(func() {
 	}
 ]`)
 		}))
+	mux.Handle("/profiles/nginx-catalog/weaveworks-nginx", http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(w, `
+{
+	"name": "weaveworks-nginx",
+	"description": "This installs nginx.",
+	"version": "0.0.1",
+	"catalog": "nginx-catalog",
+	"url": "https://github.com/weaveworks/nginx-profile",
+	"prerequisites": ["Kubernetes 1.18+"],
+	"maintainer": "WeaveWorks <gitops@weave.works>"
+}
+`)
+		}))
 
 	server = &http.Server{Addr: ":8080", Handler: mux}
 

@@ -20,4 +20,4 @@ jobs:
             ~/go/pkg/mod/
           key: ${{ hashFiles('go.sum') }}
       - name: Test
-        run: make test
+        run: make unit-test integration-test

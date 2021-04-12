@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 var _ = Describe("Search", func() {
@@ -20,7 +21,6 @@ var _ = Describe("Search", func() {
 	BeforeEach(func() {
 		fakeHTTPClient = new(fakes.FakeHTTPClient)
 		catalog.SetHTTPClient(fakeHTTPClient)
-
 	})
 
 	When("profiles matching the search exist", func() {
@@ -48,11 +48,11 @@ var _ = Describe("Search", func() {
 			req := fakeHTTPClient.DoArgsForCall(0)
 			Expect(req.URL.String()).To(Equal("http://example.catalog/profiles?name=nginx"))
 			Expect(resp).To(ConsistOf(
-				catalog.ProfileDescription{
+				profilesv1.ProfileDescription{
 					Name:        "nginx-1",
 					Description: "nginx 1",
 				},
-				catalog.ProfileDescription{
+				profilesv1.ProfileDescription{
 					Name:        "nginx-2",
 					Description: "nginx 2",
 				},
@@ -90,7 +90,7 @@ var _ = Describe("Search", func() {
 		It("returns an error", func() {
 			fakeHTTPClient.DoReturns(nil, fmt.Errorf("foo"))
 			_, err := catalog.Search("http://example.catalog", "dontexist")
-			Expect(err).To(MatchError("failed to fetch catalog: foo"))
+			Expect(err).To(MatchError(ContainSubstring("failed to do request: foo")))
 		})
 	})
 
@@ -106,4 +106,12 @@ var _ = Describe("Search", func() {
 			Expect(err).To(MatchError(ContainSubstring("failed to parse catalog")))
 		})
 	})
+
+	When("the catalog url is invalid", func() {
+		It("returns an error", func() {
+			_, err := catalog.Search("!\"££!\"£%$£$%%^&&^*()~{@}:@.|ZX", "nginx")
+			Expect(err).To(MatchError(ContainSubstring("failed to parse url")))
+		})
+	})
+
 })
