@@ -91,8 +91,33 @@ func showCmd() *cli.Command {
 func installCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "install",
-		Usage:     "generate configuration objects for later cluster setup",
-		UsageText: "pctl --catalog-url <URL> install <CATALOG>/<PROFILE> --subscription-name pctl-profile --namespace default --branch main",
+		Usage:     "generate resources for installing a profile",
+		UsageText: "pctl --catalog-url <URL> install --subscription-name pctl-profile --namespace default --branch main --config-map-name configmap-name <CATALOG>/<PROFILE>",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "subscription-name",
+				DefaultText: "pctl-profile",
+				Value:       "pctl-profile",
+				Usage:       "The name of the subscription.",
+			},
+			&cli.StringFlag{
+				Name:        "namespace",
+				DefaultText: "default",
+				Value:       "default",
+				Usage:       "The namespace to use for generating resources.",
+			},
+			&cli.StringFlag{
+				Name:        "branch",
+				Value:       "main",
+				DefaultText: "main",
+				Usage:       "The branch to use on the repository in which the profile is.",
+			},
+			&cli.StringFlag{
+				Name:  "config-map-name",
+				Value: "",
+				Usage: "The name of the ConfigMap which contains values for this profile.",
+			},
+		},
 		Action: func(c *cli.Context) error {
 			profilePath, catalogURL, err := parseArgs(c)
 			if err != nil {
@@ -101,17 +126,9 @@ func installCmd() *cli.Command {
 			}
 
 			branch := c.String("branch")
-			if branch == "" {
-				branch = "main"
-			}
 			subName := c.String("subscription-name")
-			if subName == "" {
-				subName = "pctl-profile"
-			}
 			namespace := c.String("namespace")
-			if namespace == "" {
-				namespace = "default"
-			}
+			configValues := c.String("config-map-name")
 
 			parts := strings.Split(profilePath, "/")
 			if len(parts) < 2 {
@@ -121,7 +138,7 @@ func installCmd() *cli.Command {
 			catalogName, profileName := parts[0], parts[1]
 
 			fmt.Printf("generating data for profile %s/%s:\n\n", catalogName, profileName)
-			objs, err := catalog.Install(catalogURL, catalogName, profileName, subName, namespace, branch, git.GetProfileDefinition)
+			objs, err := catalog.Install(catalogURL, catalogName, profileName, subName, namespace, branch, configValues, git.GetProfileDefinition)
 			if err != nil {
 				return fmt.Errorf("failed to install yaml artifacts: %w", err)
 			}

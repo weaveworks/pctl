@@ -3,10 +3,10 @@ package catalog
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 
+	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,7 +20,7 @@ type getProfileDefinition func(repoURL, branch string, log logr.Logger) (profile
 
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates all the
 // artifacts and outputs a single yaml file containing all artifacts that the profile would create.
-func Install(catalogURL, catalogName, profileName, subName, namespace, branch string, gitClient getProfileDefinition) ([]runtime.Object, error) {
+func Install(catalogURL, catalogName, profileName, subName, namespace, branch, configMap string, gitClient getProfileDefinition) ([]runtime.Object, error) {
 	u, err := url.Parse(catalogURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse url %q: %w", catalogURL, err)
@@ -49,7 +49,6 @@ func Install(catalogURL, catalogName, profileName, subName, namespace, branch st
 	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
 		return nil, fmt.Errorf("failed to parse profile: %w", err)
 	}
-	log.Println(profile.URL)
 
 	logger := logr.Discard()
 	pd, err := gitClient(profile.URL, branch, logger)
@@ -57,7 +56,11 @@ func Install(catalogURL, catalogName, profileName, subName, namespace, branch st
 		return nil, fmt.Errorf("failed to get profile definition: %w", err)
 	}
 
-	p := pp.New(pd, profilesv1.ProfileSubscription{
+	subscription := profilesv1.ProfileSubscription{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ProfileSubscription",
+			APIVersion: "weave.works/v1alpha1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      subName,
 			Namespace: namespace,
@@ -66,6 +69,23 @@ func Install(catalogURL, catalogName, profileName, subName, namespace, branch st
 			ProfileURL: profile.URL,
 			Branch:     branch,
 		},
-	}, nil, logger)
-	return p.MakeOwnerlessArtifacts()
+	}
+	if configMap != "" {
+		subscription.Spec.ValuesFrom = []helmv2.ValuesReference{
+			{
+				Kind:      "ConfigMap",
+				Name:      subName + "-values",
+				ValuesKey: configMap,
+			},
+		}
+	}
+	p := pp.New(pd, subscription, nil, logger)
+
+	obj, err := p.MakeOwnerlessArtifacts()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate artifacts: %w", err)
+	}
+
+	obj = append([]runtime.Object{&subscription}, obj...)
+	return obj, nil
 }
