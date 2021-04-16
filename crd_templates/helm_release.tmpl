@@ -1,0 +1,22 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: HelmRelease
+metadata:
+  name: {{.Name}}
+  namespace: {{.Namespace}}
+spec:
+  chart:
+    spec:
+      chart: {{.Spec.Chart.Spec.Chart}}
+{{- if .Spec.Chart.Spec.Version}}
+      version: {{.Spec.Chart.Spec.Version}}
+{{- end}}
+      sourceRef:
+        kind: {{.Spec.Chart.Spec.SourceRef.Kind}}
+        name: {{.Spec.Chart.Spec.SourceRef.Name}}
+        namespace: {{.Spec.Chart.Spec.SourceRef.Namespace}}
+{{- if .Spec.Values }}
+  values:
+{{- end}}
+{{- if .Spec.ValuesFrom }}
+  valuesFrom:
+{{- end}}

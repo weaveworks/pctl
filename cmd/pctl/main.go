@@ -21,6 +21,7 @@ func main() {
 		Commands: []*cli.Command{
 			searchCmd(),
 			showCmd(),
+			installCmd(),
 		},
 	}
 
@@ -80,6 +81,44 @@ func showCmd() *cli.Command {
 				return err
 			}
 			return printProfile(profile)
+		},
+	}
+}
+
+func installCmd() *cli.Command {
+	return &cli.Command{
+		Name:      "install",
+		Usage:     "generate configuration objects for later cluster setup",
+		UsageText: "pctl --catalog-url <URL> install <CATALOG>/<PROFILE> --subscription-name pctl-profile --namespace default --branch main",
+		Action: func(c *cli.Context) error {
+			profilePath, catalogURL, err := parseArgs(c)
+			if err != nil {
+				_ = cli.ShowCommandHelp(c, "install")
+				return err
+			}
+
+			branch := c.String("branch")
+			if branch == "" {
+				branch = "main"
+			}
+			subName := c.String("subscription-name")
+			if subName == "" {
+				subName = "pctl-profile"
+			}
+			namespace := c.String("namespace")
+			if namespace == "" {
+				namespace = "default"
+			}
+
+			parts := strings.Split(profilePath, "/")
+			if len(parts) < 2 {
+				_ = cli.ShowCommandHelp(c, "install")
+				return errors.New("both catalog name and profile name must be provided")
+			}
+			catalogName, profileName := parts[0], parts[1]
+
+			fmt.Printf("generating data for profile %s/%s:\n\n", catalogName, profileName)
+			return catalog.Install(catalogURL, catalogName, profileName, subName, namespace, branch)
 		},
 	}
 }
