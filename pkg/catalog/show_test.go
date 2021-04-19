@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"errors"
+
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"

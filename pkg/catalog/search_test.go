@@ -3,6 +3,7 @@ package catalog_test
 import (
 	"errors"
 	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/weaveworks/pctl/pkg/catalog"

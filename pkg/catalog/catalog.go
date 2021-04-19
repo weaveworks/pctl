@@ -5,4 +5,3 @@ package catalog
 type CatalogClient interface {
 	DoRequest(path string, query map[string]string) ([]byte, error)
 }
-

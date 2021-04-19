@@ -10,6 +10,8 @@ import (
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v2"
 
+	"path/filepath"
+
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
@@ -18,7 +20,6 @@ import (
 	"github.com/weaveworks/pctl/pkg/writer"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/util/homedir"
-	"path/filepath"
 )
 
 func main() {

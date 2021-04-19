@@ -3,6 +3,7 @@ package catalog
 import (
 	"encoding/json"
 	"fmt"
+
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 

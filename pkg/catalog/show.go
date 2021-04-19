@@ -3,9 +3,10 @@ package catalog
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/weaveworks/pctl/pkg/client"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
-	"net/http"
 )
 
 // Show queries the catalog at catalogURL for a profile matching the provided profileName
