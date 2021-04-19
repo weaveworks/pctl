@@ -1,11 +1,8 @@
 package catalog_test
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/weaveworks/pctl/pkg/catalog"
@@ -15,17 +12,16 @@ import (
 
 var _ = Describe("Search", func() {
 	var (
-		fakeHTTPClient *fakes.FakeHTTPClient
+		fakeCatalogClient *fakes.FakeCatalogClient
 	)
 
 	BeforeEach(func() {
-		fakeHTTPClient = new(fakes.FakeHTTPClient)
-		catalog.SetHTTPClient(fakeHTTPClient)
+		fakeCatalogClient = new(fakes.FakeCatalogClient)
 	})
 
 	When("profiles matching the search exist", func() {
 		It("returns all profiles matching the name description of the profile", func() {
-			httpBody := bytes.NewBufferString(`
+			httpBody := []byte(`
 [
     {
       "name": "nginx-1",
@@ -37,16 +33,16 @@ var _ = Describe("Search", func() {
     }
 ]
 		  `)
-			fakeHTTPClient.DoReturns(&http.Response{
-				Body:       ioutil.NopCloser(httpBody),
-				StatusCode: http.StatusOK,
-			}, nil)
+			fakeCatalogClient.DoRequestReturns(httpBody, nil)
 
-			resp, err := catalog.Search("http://example.catalog", "nginx")
+			resp, err := catalog.Search(fakeCatalogClient, "nginx")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(fakeHTTPClient.DoCallCount()).To(Equal(1))
-			req := fakeHTTPClient.DoArgsForCall(0)
-			Expect(req.URL.String()).To(Equal("http://example.catalog/profiles?name=nginx"))
+			Expect(fakeCatalogClient.DoRequestCallCount()).To(Equal(1))
+			path, query := fakeCatalogClient.DoRequestArgsForCall(0)
+			Expect(path).To(Equal("/profiles"))
+			Expect(query).To(Equal(map[string]string{
+				"name": "nginx",
+			}))
 			Expect(resp).To(ConsistOf(
 				profilesv1.ProfileDescription{
 					Name:        "nginx-1",
@@ -62,55 +58,44 @@ var _ = Describe("Search", func() {
 
 	When("no profiles matching the search exist", func() {
 		It("returns an error", func() {
-			httpBody := bytes.NewBufferString(`[]`)
-			fakeHTTPClient.DoReturns(&http.Response{
-				Body:       ioutil.NopCloser(httpBody),
-				StatusCode: http.StatusOK,
-			}, nil)
+			httpBody := []byte(`[]`)
+			fakeCatalogClient.DoRequestReturns(httpBody, nil)
 
-			_, err := catalog.Search("http://example.catalog", "dontexist")
+			_, err := catalog.Search(fakeCatalogClient, "dontexist")
 			Expect(err).To(MatchError(`no profiles matching "dontexist" found`))
-			req := fakeHTTPClient.DoArgsForCall(0)
-			Expect(req.URL.String()).To(Equal("http://example.catalog/profiles?name=dontexist"))
+			path, query := fakeCatalogClient.DoRequestArgsForCall(0)
+			Expect(path).To(Equal("/profiles"))
+			Expect(query).To(Equal(map[string]string{
+				"name": "dontexist",
+			}))
 		})
 	})
 
-	When("http request returns non-200", func() {
+	When("catalog client fails to process request", func() {
 		It("returns an error", func() {
-			fakeHTTPClient.DoReturns(&http.Response{
-				StatusCode: http.StatusBadGateway,
-				Body:       ioutil.NopCloser(nil),
-			}, nil)
-			_, err := catalog.Search("http://example.catalog", "dontexist")
+			fakeCatalogClient.DoRequestReturns(nil, errors.New("status code 502"))
+			_, err := catalog.Search(fakeCatalogClient, "dontexist")
+			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("failed to fetch catalog: status code 502"))
 		})
 	})
 
 	When("http request fails", func() {
 		It("returns an error", func() {
-			fakeHTTPClient.DoReturns(nil, fmt.Errorf("foo"))
-			_, err := catalog.Search("http://example.catalog", "dontexist")
-			Expect(err).To(MatchError(ContainSubstring("failed to do request: foo")))
+			fakeCatalogClient.DoRequestReturns(nil, fmt.Errorf("foo"))
+			_, err := catalog.Search(fakeCatalogClient, "dontexist")
+			Expect(err).To(MatchError(ContainSubstring("failed to fetch catalog: foo")))
 		})
 	})
 
 	When("the catalog isn't valid json", func() {
 		It("returns an error", func() {
-			httpBody := bytes.NewBufferString(`!20342 totally n:ot json "`)
-			fakeHTTPClient.DoReturns(&http.Response{
-				Body:       ioutil.NopCloser(httpBody),
-				StatusCode: http.StatusOK,
-			}, nil)
+			httpBody := []byte(`!20342 totally n:ot json "`)
+			fakeCatalogClient.DoRequestReturns(httpBody, nil)
 
-			_, err := catalog.Search("http://example.catalog", "dontexist")
+			_, err := catalog.Search(fakeCatalogClient, "dontexist")
+			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(ContainSubstring("failed to parse catalog")))
-		})
-	})
-
-	When("the catalog url is invalid", func() {
-		It("returns an error", func() {
-			_, err := catalog.Search("!\"££!\"£%$£$%%^&&^*()~{@}:@.|ZX", "nginx")
-			Expect(err).To(MatchError(ContainSubstring("failed to parse url")))
 		})
 	})
 
