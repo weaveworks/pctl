@@ -8,13 +8,9 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v2"
-	"k8s.io/apimachinery/pkg/runtime"
-	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
-
 	"github.com/weaveworks/pctl/pkg/catalog"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
-	"github.com/weaveworks/profiles/pkg/git"
+	"gopkg.in/yaml.v2"
 )
 
 func main() {
@@ -113,9 +109,14 @@ func installCmd() *cli.Command {
 				Usage:       "The branch to use on the repository in which the profile is.",
 			},
 			&cli.StringFlag{
-				Name:  "config-map-name",
+				Name:  "config-secret",
 				Value: "",
 				Usage: "The name of the ConfigMap which contains values for this profile.",
+			},
+			&cli.StringFlag{
+				Name:  "out",
+				Value: "",
+				Usage: "Optional filename to use instead of stdout for the generated content.",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -128,7 +129,8 @@ func installCmd() *cli.Command {
 			branch := c.String("branch")
 			subName := c.String("subscription-name")
 			namespace := c.String("namespace")
-			configValues := c.String("config-map-name")
+			configValues := c.String("config-secret")
+			filename := c.String("out")
 
 			parts := strings.Split(profilePath, "/")
 			if len(parts) < 2 {
@@ -138,11 +140,11 @@ func installCmd() *cli.Command {
 			catalogName, profileName := parts[0], parts[1]
 
 			fmt.Printf("generating data for profile %s/%s:\n\n", catalogName, profileName)
-			objs, err := catalog.Install(catalogURL, catalogName, profileName, subName, namespace, branch, configValues, git.GetProfileDefinition)
-			if err != nil {
-				return fmt.Errorf("failed to install yaml artifacts: %w", err)
+			var writer catalog.Writer = &catalog.StdoutWriter{}
+			if filename != "" {
+				writer = &catalog.FileWriter{Filename: filename}
 			}
-			return createFilesForArtifacts(objs)
+			return catalog.Install(catalogURL, catalogName, profileName, subName, namespace, branch, configValues, writer)
 		},
 	}
 }
@@ -175,32 +177,5 @@ func printProfile(profile profilesv1.ProfileDescription) error {
 	}
 
 	fmt.Println(string(out))
-	return nil
-}
-
-// createFilesForArtifacts will create files for all the artifacts that profiles generated.
-func createFilesForArtifacts(artifacts []runtime.Object) error {
-	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
-	generateOutput := func(i int, o runtime.Object) error {
-		filename := fmt.Sprintf("%s_%d_resource.%s", o.GetObjectKind().GroupVersionKind().Kind, i, "yaml")
-		f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-		if err != nil {
-			return err
-		}
-		defer func(f *os.File) {
-			if err := f.Close(); err != nil {
-				fmt.Printf("Failed to properly close file %s\n", f.Name())
-			}
-		}(f)
-		if err := e.Encode(o, f); err != nil {
-			return err
-		}
-		return nil
-	}
-	for i, a := range artifacts {
-		if err := generateOutput(i, a); err != nil {
-			return err
-		}
-	}
 	return nil
 }

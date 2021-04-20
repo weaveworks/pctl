@@ -2,21 +2,32 @@ package catalog_test
 
 import (
 	"bytes"
+	"io"
 	"io/ioutil"
 	"net/http"
 
-	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
-	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
 )
+
+// StringWriter is a test writer to generate output of the subscription into string
+type StringWriter struct {
+	output io.Writer
+}
+
+func (sw *StringWriter) Output(prof *profilesv1.ProfileSubscription) error {
+	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
+	if err := e.Encode(prof, sw.output); err != nil {
+		return err
+	}
+	return nil
+}
 
 var _ = Describe("Install", func() {
 	var (
@@ -29,7 +40,7 @@ var _ = Describe("Install", func() {
 	})
 
 	When("there is an existing catalog and user calls install for a profile", func() {
-		It("generates all artifacts and outputs installable yaml files", func() {
+		It("generates a ProfileSubscription ready to be applied to a cluster", func() {
 			httpBody := bytes.NewBufferString(`
 {
 	"name": "nginx-1",
@@ -46,122 +57,66 @@ var _ = Describe("Install", func() {
 				StatusCode: http.StatusOK,
 			}, nil)
 
-			gitClient := func(repoURL, branch string, log logr.Logger) (profilesv1.ProfileDefinition, error) {
-				return profilesv1.ProfileDefinition{
-					Spec: profilesv1.ProfileDefinitionSpec{
-						Description: "One Artifact",
-						Artifacts: []profilesv1.Artifact{
-							{
-								Name: "test-artifact-git-repository",
-								Kind: profilesv1.HelmChartKind,
-								Path: "test/path",
-							},
-							{
-								Name: "test-artifact-helm-repository",
-								Kind: profilesv1.HelmChartKind,
-								Chart: &profilesv1.Chart{
-									URL:     "https://org.github.io/chart",
-									Name:    "nginx",
-									Version: "8.8.1",
-								},
-							},
-						},
-					},
-				}, nil
+			var buf bytes.Buffer
+			writer := &StringWriter{
+				output: &buf,
 			}
-			objs, err := catalog.Install("https://example.catalog", "nginx", "profile", "mysub", "default", "main", "", gitClient)
+			err := catalog.Install("https://example.catalog", "nginx", "profile", "mysub", "default", "main", "", writer)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeHTTPClient.DoCallCount()).To(Equal(1))
-			Expect(objs).To(HaveLen(5))
-			Expect(objs[0]).To(Equal(&profilesv1.ProfileSubscription{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ProfileSubscription",
-					APIVersion: "weave.works/v1alpha1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "mysub",
-					Namespace: "default",
-				},
-				Spec: profilesv1.ProfileSubscriptionSpec{
-					ProfileURL: "https://github.com/weaveworks/nginx-profile",
-					Branch:     "main",
-				},
-			}))
-			Expect(objs[1]).To(Equal(&sourcev1.GitRepository{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "GitRepository",
-					APIVersion: "source.toolkit.fluxcd.io/v1beta1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "mysub-nginx-profile-main",
-					Namespace: "default",
-				},
-				Spec: sourcev1.GitRepositorySpec{
-					Reference: &sourcev1.GitRepositoryRef{
-						Branch: "main",
-					},
-					URL: "https://github.com/weaveworks/nginx-profile",
-				},
-			}))
-			Expect(objs[2]).To(Equal(&helmv2.HelmRelease{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "HelmRelease",
-					APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "mysub--test-artifact-git-repository",
-					Namespace: "default",
-				},
-				Spec: helmv2.HelmReleaseSpec{
-					Chart: helmv2.HelmChartTemplate{
-						Spec: helmv2.HelmChartTemplateSpec{
-							Chart: "test/path",
-							SourceRef: helmv2.CrossNamespaceObjectReference{
-								Name:      "mysub-nginx-profile-main",
-								Namespace: "default",
-								Kind:      "GitRepository",
-							},
-						},
-					},
-				},
-			}))
+			Expect(buf).NotTo(BeNil())
+			Expect(buf.String()).To(Equal(`apiVersion: weave.works/v1alpha1
+kind: ProfileSubscription
+metadata:
+  creationTimestamp: null
+  name: mysub
+  namespace: default
+spec:
+  branch: main
+  profileURL: https://github.com/weaveworks/nginx-profile
+status: {}
+`))
+		})
+		It("generates a ProfileSubscription with config map data if a config map name is defined", func() {
+			httpBody := bytes.NewBufferString(`
+{
+	"name": "nginx-1",
+	"description": "nginx 1",
+	"version": "0.0.1",
+	"catalog": "weaveworks (https://github.com/weaveworks/profiles)",
+	"url": "https://github.com/weaveworks/nginx-profile",
+	"prerequisites": ["Kubernetes 1.18+"],
+	"maintainer": "WeaveWorks <gitops@weave.works>"
+}
+`)
+			fakeHTTPClient.DoReturns(&http.Response{
+				Body:       ioutil.NopCloser(httpBody),
+				StatusCode: http.StatusOK,
+			}, nil)
 
-			Expect(objs[3]).To(Equal(&helmv2.HelmRelease{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "HelmRelease",
-					APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "mysub--test-artifact-helm-repository",
-					Namespace: "default",
-				},
-				Spec: helmv2.HelmReleaseSpec{
-					Chart: helmv2.HelmChartTemplate{
-						Spec: helmv2.HelmChartTemplateSpec{
-							Chart:   "nginx",
-							Version: "8.8.1",
-							SourceRef: helmv2.CrossNamespaceObjectReference{
-								Name:      "mysub-nginx-profile-main-nginx",
-								Namespace: "default",
-								Kind:      "HelmRepository",
-							},
-						},
-					},
-				},
-			}))
-			Expect(objs[4]).To(Equal(&sourcev1.HelmRepository{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "HelmRepository",
-					APIVersion: "source.toolkit.fluxcd.io/v1beta1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "mysub-nginx-profile-main-nginx",
-					Namespace: "default",
-				},
-				Spec: sourcev1.HelmRepositorySpec{
-					URL: "https://org.github.io/chart",
-				},
-			}))
+			var buf bytes.Buffer
+			writer := &StringWriter{
+				output: &buf,
+			}
+			err := catalog.Install("https://example.catalog", "nginx", "profile", "mysub", "default", "main", "config-secret", writer)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fakeHTTPClient.DoCallCount()).To(Equal(1))
+			Expect(buf).NotTo(BeNil())
+			Expect(buf.String()).To(Equal(`apiVersion: weave.works/v1alpha1
+kind: ProfileSubscription
+metadata:
+  creationTimestamp: null
+  name: mysub
+  namespace: default
+spec:
+  branch: main
+  profileURL: https://github.com/weaveworks/nginx-profile
+  valuesFrom:
+  - kind: ConfigMap
+    name: mysub-values
+    valuesKey: config-secret
+status: {}
+`))
 		})
 	})
 })
