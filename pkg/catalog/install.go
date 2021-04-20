@@ -5,51 +5,36 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
+
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
+	"github.com/weaveworks/pctl/pkg/writer"
 )
 
-// Writer takes a profile and writes it out into a medium.
-type Writer interface {
-	Output(prof *profilesv1.ProfileSubscription) error
-}
-
-// FileWriter is a Writer using a file as backing medium.
-type FileWriter struct {
-	Filename string
-}
-
-// Output writes the profile subscription yaml data into a given file.
-func (fw *FileWriter) Output(prof *profilesv1.ProfileSubscription) error {
-	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
-	f, err := os.OpenFile(fw.Filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer func(f *os.File) {
-		if err := f.Close(); err != nil {
-			fmt.Printf("Failed to close file %s\n", f.Name())
-		}
-	}(f)
-	if err := e.Encode(prof, f); err != nil {
-		return err
-	}
-	return nil
+// InstallConfig defines parameters for the installation call.
+type InstallConfig struct {
+	Branch      string
+	CatalogName string
+	CatalogURL  string
+	ConfigMap   string
+	Namespace   string
+	ProfileName string
+	SubName     string
+	Writer      writer.Writer
 }
 
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile subscription
 // writing it out with the provided profile subscription writer.
-func Install(catalogURL, catalogName, profileName, subName, namespace, branch, configMap string, writer Writer) error {
-	u, err := url.Parse(catalogURL)
+func Install(cfg InstallConfig) error {
+	u, err := url.Parse(cfg.CatalogURL)
 	if err != nil {
-		return fmt.Errorf("failed to parse url %q: %w", catalogURL, err)
+		return fmt.Errorf("failed to parse url %q: %w", cfg.CatalogURL, err)
 	}
 
-	u.Path = fmt.Sprintf("profiles/%s/%s", catalogName, profileName)
+	u.Path = fmt.Sprintf("profiles/%s/%s", cfg.CatalogName, cfg.ProfileName)
 	resp, err := doRequest(u, nil)
 	if err != nil {
 		return fmt.Errorf("failed to do request: %w", err)
@@ -61,7 +46,7 @@ func Install(catalogURL, catalogName, profileName, subName, namespace, branch, c
 	}()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return fmt.Errorf("unable to find profile `%s` in catalog `%s`", profileName, catalogName)
+		return fmt.Errorf("unable to find profile `%s` in catalog `%s`", cfg.ProfileName, cfg.CatalogName)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -79,24 +64,24 @@ func Install(catalogURL, catalogName, profileName, subName, namespace, branch, c
 			APIVersion: "weave.works/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      subName,
-			Namespace: namespace,
+			Name:      cfg.SubName,
+			Namespace: cfg.Namespace,
 		},
 		Spec: profilesv1.ProfileSubscriptionSpec{
 			ProfileURL: profile.URL,
-			Branch:     branch,
+			Branch:     cfg.Branch,
 		},
 	}
-	if configMap != "" {
+	if cfg.ConfigMap != "" {
 		subscription.Spec.ValuesFrom = []helmv2.ValuesReference{
 			{
 				Kind:      "ConfigMap",
-				Name:      subName + "-values",
-				ValuesKey: configMap,
+				Name:      cfg.SubName + "-values",
+				ValuesKey: cfg.ConfigMap,
 			},
 		}
 	}
-	if err := writer.Output(&subscription); err != nil {
+	if err := cfg.Writer.Output(&subscription); err != nil {
 		return fmt.Errorf("failed to output subscription information: %w", err)
 	}
 	return nil
