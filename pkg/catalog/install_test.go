@@ -2,32 +2,16 @@ package catalog_test
 
 import (
 	"bytes"
-	"io"
 	"io/ioutil"
 	"net/http"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
-
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
+	"github.com/weaveworks/pctl/pkg/writer"
 )
-
-// StringWriter is a test writer to generate output of the subscription into string
-type StringWriter struct {
-	output io.Writer
-}
-
-func (sw *StringWriter) Output(prof *profilesv1.ProfileSubscription) error {
-	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
-	if err := e.Encode(prof, sw.output); err != nil {
-		return err
-	}
-	return nil
-}
 
 var _ = Describe("Install", func() {
 	var (
@@ -58,10 +42,19 @@ var _ = Describe("Install", func() {
 			}, nil)
 
 			var buf bytes.Buffer
-			writer := &StringWriter{
-				output: &buf,
+			writer := &writer.StringWriter{
+				Out: &buf,
 			}
-			err := catalog.Install("https://example.catalog", "nginx", "profile", "mysub", "default", "main", "", writer)
+			cfg := catalog.InstallConfig{
+				Branch:      "main",
+				CatalogName: "nginx",
+				CatalogURL:  "https://example.catalog",
+				Namespace:   "default",
+				ProfileName: "profile",
+				SubName:     "mysub",
+				Writer:      writer,
+			}
+			err := catalog.Install(cfg)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeHTTPClient.DoCallCount()).To(Equal(1))
 			Expect(buf).NotTo(BeNil())
@@ -95,10 +88,20 @@ status: {}
 			}, nil)
 
 			var buf bytes.Buffer
-			writer := &StringWriter{
-				output: &buf,
+			writer := &writer.StringWriter{
+				Out: &buf,
 			}
-			err := catalog.Install("https://example.catalog", "nginx", "profile", "mysub", "default", "main", "config-secret", writer)
+			cfg := catalog.InstallConfig{
+				Branch:      "main",
+				CatalogName: "nginx",
+				CatalogURL:  "https://example.catalog",
+				ConfigMap:   "config-secret",
+				Namespace:   "default",
+				ProfileName: "profile",
+				SubName:     "mysub",
+				Writer:      writer,
+			}
+			err := catalog.Install(cfg)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeHTTPClient.DoCallCount()).To(Equal(1))
 			Expect(buf).NotTo(BeNil())
@@ -126,10 +129,20 @@ status: {}
 			}, nil)
 
 			var buf bytes.Buffer
-			writer := &StringWriter{
-				output: &buf,
+			writer := &writer.StringWriter{
+				Out: &buf,
 			}
-			err := catalog.Install("https://example.catalog", "nginx", "profile", "mysub", "default", "main", "config-secret", writer)
+			cfg := catalog.InstallConfig{
+				Branch:      "main",
+				CatalogName: "nginx",
+				CatalogURL:  "https://example.catalog",
+				ConfigMap:   "config-secret",
+				Namespace:   "default",
+				ProfileName: "profile",
+				SubName:     "mysub",
+				Writer:      writer,
+			}
+			err := catalog.Install(cfg)
 			Expect(err).To(MatchError("unable to find profile `profile` in catalog `nginx`"))
 		})
 		It("returns an error in case the call is non-200", func() {
@@ -139,11 +152,7 @@ status: {}
 				StatusCode: http.StatusTeapot,
 			}, nil)
 
-			var buf bytes.Buffer
-			writer := &StringWriter{
-				output: &buf,
-			}
-			err := catalog.Install("https://example.catalog", "nginx", "profile", "mysub", "default", "main", "config-secret", writer)
+			err := catalog.Install(catalog.InstallConfig{})
 			Expect(err).To(MatchError("failed to fetch profile: status code 418"))
 		})
 		It("returns an error in the url is invalid", func() {
@@ -153,7 +162,7 @@ status: {}
 				StatusCode: http.StatusOK,
 			}, nil)
 
-			err := catalog.Install("invalid_1234%^", "nginx", "profile", "mysub", "default", "main", "config-secret", nil)
+			err := catalog.Install(catalog.InstallConfig{CatalogURL: "invalid_1234%^"})
 			Expect(err).To(MatchError(`failed to parse url "invalid_1234%^": parse "invalid_1234%^": invalid URL escape "%^"`))
 		})
 	})
