@@ -26,7 +26,7 @@ type FileWriter struct {
 // Output writes the profile subscription yaml data into a given file.
 func (fw *FileWriter) Output(prof *profilesv1.ProfileSubscription) error {
 	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
-	f, err := os.OpenFile(fw.Filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	f, err := os.OpenFile(fw.Filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
@@ -41,17 +41,8 @@ func (fw *FileWriter) Output(prof *profilesv1.ProfileSubscription) error {
 	return nil
 }
 
-// StdoutWriter is a Writer using stdout as backing medium.
-type StdoutWriter struct{}
-
-// Output outputs the yaml generated content for a profile to stdout.
-func (s *StdoutWriter) Output(prof *profilesv1.ProfileSubscription) error {
-	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
-	return e.Encode(prof, os.Stdout)
-}
-
-// Install using the catalog at catalogURL and a profile matching the provided profileName generates all the
-// artifacts and outputs a single yaml file containing all artifacts that the profile would create.
+// Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile subscription
+// writing it out with the provided profile subscription writer.
 func Install(catalogURL, catalogName, profileName, subName, namespace, branch, configMap string, writer Writer) error {
 	u, err := url.Parse(catalogURL)
 	if err != nil {

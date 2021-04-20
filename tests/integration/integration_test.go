@@ -1,7 +1,9 @@
 package integration_test
 
 import (
+	"io/ioutil"
 	"os/exec"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -88,5 +90,84 @@ var _ = Describe("PCTL", func() {
 				Expect(string(session.Err.Contents())).To(ContainSubstring("argument must be provided"))
 			})
 		})
+	})
+	Context("install", func() {
+		It("generates a ProfileSubscription ready to be applied to a cluster", func() {
+			temp, err := ioutil.TempDir("", "pctl_test_install_generate_01")
+			Expect(err).ToNot(HaveOccurred())
+			filename := filepath.Join(temp, "profile_subscription.yaml")
+			cmd := exec.Command(binaryPath, "--catalog-url", exampleCatalog, "install", "--out", filename, "nginx-catalog/weaveworks-nginx")
+			session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(session).Should(gexec.Exit(0))
+			content, err := ioutil.ReadFile(filename)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
+kind: ProfileSubscription
+metadata:
+  creationTimestamp: null
+  name: pctl-profile
+  namespace: default
+spec:
+  branch: main
+  profileURL: https://github.com/weaveworks/nginx-profile
+status: {}
+`))
+		})
+
+		When("a branch and namespace is provided", func() {
+			It("will use that branch and namespace", func() {
+				temp, err := ioutil.TempDir("", "pctl_test_install_generate_branch_01")
+				Expect(err).ToNot(HaveOccurred())
+				filename := filepath.Join(temp, "profile_subscription.yaml")
+				cmd := exec.Command(binaryPath, "--catalog-url", exampleCatalog, "install", "--out", filename, "--branch", "my_branch", "--namespace", "my-namespace", "nginx-catalog/weaveworks-nginx")
+				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(session).Should(gexec.Exit(0))
+				content, err := ioutil.ReadFile(filename)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
+kind: ProfileSubscription
+metadata:
+  creationTimestamp: null
+  name: pctl-profile
+  namespace: my-namespace
+spec:
+  branch: my_branch
+  profileURL: https://github.com/weaveworks/nginx-profile
+status: {}
+`))
+			})
+		})
+
+		When("a config-secret is provided", func() {
+			It("will add a valueFrom section to the profile subscription", func() {
+				temp, err := ioutil.TempDir("", "pctl_test_install_generate_values_from_01")
+				Expect(err).ToNot(HaveOccurred())
+				filename := filepath.Join(temp, "profile_subscription.yaml")
+				cmd := exec.Command(binaryPath, "--catalog-url", exampleCatalog, "install", "--out", filename, "--config-secret", "my-secret", "nginx-catalog/weaveworks-nginx")
+				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(session).Should(gexec.Exit(0))
+				content, err := ioutil.ReadFile(filename)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
+kind: ProfileSubscription
+metadata:
+  creationTimestamp: null
+  name: pctl-profile
+  namespace: default
+spec:
+  branch: main
+  profileURL: https://github.com/weaveworks/nginx-profile
+  valuesFrom:
+  - kind: ConfigMap
+    name: pctl-profile-values
+    valuesKey: my-secret
+status: {}
+`))
+			})
+		})
+
 	})
 })

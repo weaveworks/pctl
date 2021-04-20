@@ -118,5 +118,43 @@ spec:
 status: {}
 `))
 		})
+		It("returns an error in case the profile does not exist", func() {
+			httpBody := bytes.NewBufferString(`{}`)
+			fakeHTTPClient.DoReturns(&http.Response{
+				Body:       ioutil.NopCloser(httpBody),
+				StatusCode: http.StatusNotFound,
+			}, nil)
+
+			var buf bytes.Buffer
+			writer := &StringWriter{
+				output: &buf,
+			}
+			err := catalog.Install("https://example.catalog", "nginx", "profile", "mysub", "default", "main", "config-secret", writer)
+			Expect(err).To(MatchError("unable to find profile `profile` in catalog `nginx`"))
+		})
+		It("returns an error in case the call is non-200", func() {
+			httpBody := bytes.NewBufferString(`{}`)
+			fakeHTTPClient.DoReturns(&http.Response{
+				Body:       ioutil.NopCloser(httpBody),
+				StatusCode: http.StatusTeapot,
+			}, nil)
+
+			var buf bytes.Buffer
+			writer := &StringWriter{
+				output: &buf,
+			}
+			err := catalog.Install("https://example.catalog", "nginx", "profile", "mysub", "default", "main", "config-secret", writer)
+			Expect(err).To(MatchError("failed to fetch profile: status code 418"))
+		})
+		It("returns an error in the url is invalid", func() {
+			httpBody := bytes.NewBufferString(`{}`)
+			fakeHTTPClient.DoReturns(&http.Response{
+				Body:       ioutil.NopCloser(httpBody),
+				StatusCode: http.StatusOK,
+			}, nil)
+
+			err := catalog.Install("invalid_1234%^", "nginx", "profile", "mysub", "default", "main", "config-secret", nil)
+			Expect(err).To(MatchError(`failed to parse url "invalid_1234%^": parse "invalid_1234%^": invalid URL escape "%^"`))
+		})
 	})
 })

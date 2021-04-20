@@ -87,8 +87,8 @@ func showCmd() *cli.Command {
 func installCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "install",
-		Usage:     "generate resources for installing a profile",
-		UsageText: "pctl --catalog-url <URL> install --subscription-name pctl-profile --namespace default --branch main --config-map-name configmap-name <CATALOG>/<PROFILE>",
+		Usage:     "generate a profile subscription for a profile in a catalog",
+		UsageText: "pctl --catalog-url <URL> install --subscription-name pctl-profile --namespace default --branch main --config-secret configmap-name --out profile_subscription.yaml <CATALOG>/<PROFILE>",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "subscription-name",
@@ -114,9 +114,10 @@ func installCmd() *cli.Command {
 				Usage: "The name of the ConfigMap which contains values for this profile.",
 			},
 			&cli.StringFlag{
-				Name:  "out",
-				Value: "",
-				Usage: "Optional filename to use instead of stdout for the generated content.",
+				Name:        "out",
+				Value:       "profile_subscription.yaml",
+				DefaultText: "profile_subscription.yaml",
+				Usage:       "Filename to use for the generated content.",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -139,11 +140,8 @@ func installCmd() *cli.Command {
 			}
 			catalogName, profileName := parts[0], parts[1]
 
-			fmt.Printf("generating data for profile %s/%s:\n\n", catalogName, profileName)
-			var writer catalog.Writer = &catalog.StdoutWriter{}
-			if filename != "" {
-				writer = &catalog.FileWriter{Filename: filename}
-			}
+			fmt.Printf("generating subscription for profile %s/%s:\n\n", catalogName, profileName)
+			var writer catalog.Writer = &catalog.FileWriter{Filename: filename}
 			return catalog.Install(catalogURL, catalogName, profileName, subName, namespace, branch, configValues, writer)
 		},
 	}

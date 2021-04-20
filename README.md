@@ -11,6 +11,17 @@ searching for profiles matching "nginx":
 weaveworks-nginx: This installs nginx.
 ```
 
+### Install
+
+pctl can be used to install a profile subscription for a profile, example:
+
+```
+pctl --catalog-url http://localhost:8000 install nginx-catalog/weaveworks-nginx
+generating subscription for profile nginx-catalog/weaveworks-nginx:
+```
+
+Then the result will be in profile-subscription.yaml file.
+
 ## Local testing
 
 In order to test the CLI you need a profiles catalog controller up and running along with its API.
