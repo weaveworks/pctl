@@ -144,7 +144,7 @@ func installCmd() *cli.Command {
 			catalogName, profileName := parts[0], parts[1]
 
 			fmt.Printf("generating subscription for profile %s/%s:\n\n", catalogName, profileName)
-			var w writer.Writer = &writer.FileWriter{Filename: filename}
+			w := &writer.FileWriter{Filename: filename}
 			cfg := catalog.InstallConfig{
 				Branch:      branch,
 				CatalogName: catalogName,
