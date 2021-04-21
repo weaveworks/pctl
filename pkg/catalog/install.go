@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os/exec"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
+	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/writer"
 )
 
@@ -85,4 +87,33 @@ func Install(cfg InstallConfig) error {
 		return fmt.Errorf("failed to output subscription information: %w", err)
 	}
 	return nil
+}
+
+// CreatePullRequest creates a pull request from the current changes.
+func CreatePullRequest(scm git.SCMClient, g git.Git) error {
+	if _, err := exec.LookPath("git"); err != nil {
+		return fmt.Errorf("failed to find git on path: %w", err)
+	}
+
+	if err := g.IsRepository(); err != nil {
+		return fmt.Errorf("directory is not a git repository: %w", err)
+	}
+
+	if err := g.CreateBranch(); err != nil {
+		return fmt.Errorf("failed to create branch: %w", err)
+	}
+
+	if err := g.Add(); err != nil {
+		return fmt.Errorf("failed to add changes: %w", err)
+	}
+
+	if err := g.Commit(); err != nil {
+		return fmt.Errorf("failed to commit changes: %w", err)
+	}
+
+	if err := g.Push(); err != nil {
+		return fmt.Errorf("failed to push changes: %w", err)
+	}
+
+	return scm.CreatePullRequest()
 }

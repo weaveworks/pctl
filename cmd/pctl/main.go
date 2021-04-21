@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/urfave/cli/v2"
+	"github.com/weaveworks/pctl/pkg/git"
 	"gopkg.in/yaml.v2"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
@@ -122,6 +124,28 @@ func installCmd() *cli.Command {
 				DefaultText: "profile_subscription.yaml",
 				Usage:       "Filename to use for the generated content.",
 			},
+			&cli.BoolFlag{
+				Name:  "create-pr",
+				Value: false,
+				Usage: "If given, install will create a PR for the modifications it outputs.",
+			},
+			&cli.StringFlag{
+				Name:        "remote",
+				Value:       "origin",
+				DefaultText: "origin",
+				Usage:       "The remote to push the branch to.",
+			},
+			&cli.StringFlag{
+				Name:        "base",
+				Value:       "main",
+				DefaultText: "main",
+				Usage:       "The base branch to open a PR against.",
+			},
+			&cli.StringFlag{
+				Name:  "repo",
+				Value: "",
+				Usage: "The repository to open a pr against. Format is: org/repo-name",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			profilePath, catalogURL, err := parseArgs(c)
@@ -155,7 +179,40 @@ func installCmd() *cli.Command {
 				SubName:     subName,
 				Writer:      w,
 			}
-			return catalog.Install(cfg)
+			if err := catalog.Install(cfg); err != nil {
+				return err
+			}
+
+			createPR := c.Bool("create-pr")
+			if createPR {
+				repo := c.String("repo")
+				base := c.String("base")
+				remote := c.String("remote")
+				if repo == "" {
+					return errors.New("repo must be defined if create-pr is true")
+				}
+				fmt.Printf("Creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
+				r := &git.CLIRunner{}
+				g := git.NewCLIGit(git.CLIGitConfig{
+					Location: filepath.Dir(filename),
+					Branch:   branch,
+					Remote:   remote,
+					Base:     base,
+				}, r)
+				scmClient, err := git.NewSCMClient(git.SCMConfig{
+					Branch: branch,
+					Base:   base,
+					Repo:   repo,
+				})
+				if err != nil {
+					return fmt.Errorf("failed to create scm client: %w", err)
+				}
+				if err := catalog.CreatePullRequest(scmClient, g); err != nil {
+					return err
+				}
+			}
+
+			return nil
 		},
 	}
 }

@@ -10,16 +10,21 @@ import (
 
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
+	gitfakes "github.com/weaveworks/pctl/pkg/git/fakes"
 	"github.com/weaveworks/pctl/pkg/writer"
 )
 
 var _ = Describe("Install", func() {
 	var (
 		fakeHTTPClient *fakes.FakeHTTPClient
+		fakeGit        *gitfakes.FakeGit
+		fakeScm        *gitfakes.FakeSCMClient
 	)
 
 	BeforeEach(func() {
 		fakeHTTPClient = new(fakes.FakeHTTPClient)
+		fakeGit = new(gitfakes.FakeGit)
+		fakeScm = new(gitfakes.FakeSCMClient)
 		catalog.SetHTTPClient(fakeHTTPClient)
 	})
 
@@ -164,6 +169,13 @@ status: {}
 
 			err := catalog.Install(catalog.InstallConfig{CatalogURL: "invalid_1234%^"})
 			Expect(err).To(MatchError(`failed to parse url "invalid_1234%^": parse "invalid_1234%^": invalid URL escape "%^"`))
+		})
+	})
+
+	When("create-pr is set to true", func() {
+		It("can create a PR if the location is a git repository with change in it", func() {
+			err := catalog.CreatePullRequest(fakeScm, fakeGit)
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })
