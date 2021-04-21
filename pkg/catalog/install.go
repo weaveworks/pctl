@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os/exec"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,10 +90,6 @@ func Install(cfg InstallConfig) error {
 
 // CreatePullRequest creates a pull request from the current changes.
 func CreatePullRequest(scm git.SCMClient, g git.Git) error {
-	if _, err := exec.LookPath("git"); err != nil {
-		return fmt.Errorf("failed to find git on path: %w", err)
-	}
-
 	if err := g.IsRepository(); err != nil {
 		return fmt.Errorf("directory is not a git repository: %w", err)
 	}
