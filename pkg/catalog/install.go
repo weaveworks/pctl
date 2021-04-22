@@ -110,5 +110,8 @@ func CreatePullRequest(scm git.SCMClient, g git.Git) error {
 		return fmt.Errorf("failed to push changes: %w", err)
 	}
 
-	return scm.CreatePullRequest()
+	if err := scm.CreatePullRequest(); err != nil {
+		return fmt.Errorf("failed to create pull request: %w", err)
+	}
+	return nil
 }

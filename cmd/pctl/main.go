@@ -148,73 +148,85 @@ func installCmd() *cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			profilePath, catalogURL, err := parseArgs(c)
-			if err != nil {
-				_ = cli.ShowCommandHelp(c, "install")
+			// Run installation main
+			if err := runInstall(c); err != nil {
 				return err
 			}
-
-			branch := c.String("branch")
-			subName := c.String("subscription-name")
-			namespace := c.String("namespace")
-			configValues := c.String("config-secret")
-			filename := c.String("out")
-
-			parts := strings.Split(profilePath, "/")
-			if len(parts) < 2 {
-				_ = cli.ShowCommandHelp(c, "install")
-				return errors.New("both catalog name and profile name must be provided")
-			}
-			catalogName, profileName := parts[0], parts[1]
-
-			fmt.Printf("generating subscription for profile %s/%s:\n\n", catalogName, profileName)
-			w := &writer.FileWriter{Filename: filename}
-			cfg := catalog.InstallConfig{
-				Branch:      branch,
-				CatalogName: catalogName,
-				CatalogURL:  catalogURL,
-				ConfigMap:   configValues,
-				Namespace:   namespace,
-				ProfileName: profileName,
-				SubName:     subName,
-				Writer:      w,
-			}
-			if err := catalog.Install(cfg); err != nil {
-				return err
-			}
-
-			createPR := c.Bool("create-pr")
-			if createPR {
-				repo := c.String("repo")
-				base := c.String("base")
-				remote := c.String("remote")
-				if repo == "" {
-					return errors.New("repo must be defined if create-pr is true")
-				}
-				fmt.Printf("Creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
-				r := &git.CLIRunner{}
-				g := git.NewCLIGit(git.CLIGitConfig{
-					Location: filepath.Dir(filename),
-					Branch:   branch,
-					Remote:   remote,
-					Base:     base,
-				}, r)
-				scmClient, err := git.NewSCMClient(git.SCMConfig{
-					Branch: branch,
-					Base:   base,
-					Repo:   repo,
-				})
-				if err != nil {
-					return fmt.Errorf("failed to create scm client: %w", err)
-				}
-				if err := catalog.CreatePullRequest(scmClient, g); err != nil {
+			// Create a pull request if desired
+			if c.Bool("create-pr") {
+				if err := runCreatePullRequest(c); err != nil {
 					return err
 				}
 			}
-
 			return nil
 		},
 	}
+}
+
+// runInstall runs the install part of the `install` command.
+func runInstall(c *cli.Context) error {
+	profilePath, catalogURL, err := parseArgs(c)
+	if err != nil {
+		_ = cli.ShowCommandHelp(c, "install")
+		return err
+	}
+
+	branch := c.String("branch")
+	subName := c.String("subscription-name")
+	namespace := c.String("namespace")
+	configValues := c.String("config-secret")
+	filename := c.String("out")
+
+	parts := strings.Split(profilePath, "/")
+	if len(parts) < 2 {
+		_ = cli.ShowCommandHelp(c, "install")
+		return errors.New("both catalog name and profile name must be provided")
+	}
+	catalogName, profileName := parts[0], parts[1]
+
+	fmt.Printf("generating subscription for profile %s/%s:\n\n", catalogName, profileName)
+	w := &writer.FileWriter{Filename: filename}
+	cfg := catalog.InstallConfig{
+		Branch:      branch,
+		CatalogName: catalogName,
+		CatalogURL:  catalogURL,
+		ConfigMap:   configValues,
+		Namespace:   namespace,
+		ProfileName: profileName,
+		SubName:     subName,
+		Writer:      w,
+	}
+	return catalog.Install(cfg)
+}
+
+// runCreatePullRequest runs the pull request creation part of the `install` command.
+func runCreatePullRequest(c *cli.Context) error {
+	branch := c.String("branch")
+	filename := c.String("out")
+	repo := c.String("repo")
+	base := c.String("base")
+	remote := c.String("remote")
+	if repo == "" {
+		return errors.New("repo must be defined if create-pr is true")
+	}
+	fmt.Printf("Creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
+	r := &git.CLIRunner{}
+	g := git.NewCLIGit(git.CLIGitConfig{
+		Filename: filename,
+		Location: filepath.Dir(filename),
+		Branch:   branch,
+		Remote:   remote,
+		Base:     base,
+	}, r)
+	scmClient, err := git.NewClient(git.SCMConfig{
+		Branch: branch,
+		Base:   base,
+		Repo:   repo,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create scm client: %w", err)
+	}
+	return catalog.CreatePullRequest(scmClient, g)
 }
 
 func globalFlags() []cli.Flag {

@@ -22,13 +22,13 @@ type SCMConfig struct {
 	Client *scm.Client
 }
 
-// RealClient defines a client which uses a real implementation to create pull requests.
-type RealClient struct {
+// Client defines a client which uses a real implementation to create pull requests.
+type Client struct {
 	SCMConfig
 }
 
-// NewSCMClient returns a real client.
-func NewSCMClient(cfg SCMConfig) (*RealClient, error) {
+// NewClient returns a real client.
+func NewClient(cfg SCMConfig) (*Client, error) {
 	if cfg.Client == nil {
 		c, err := factory.NewClientFromEnvironment()
 		if err != nil {
@@ -36,13 +36,13 @@ func NewSCMClient(cfg SCMConfig) (*RealClient, error) {
 		}
 		cfg.Client = c
 	}
-	return &RealClient{
+	return &Client{
 		SCMConfig: cfg,
 	}, nil
 }
 
 // CreatePullRequest will create a pull request.
-func (r *RealClient) CreatePullRequest() error {
+func (r *Client) CreatePullRequest() error {
 	fmt.Println("Creating pull request with : ", r.Repo, r.Base, r.Branch)
 	ctx := context.Background()
 	request, _, err := r.Client.PullRequests.Create(ctx, r.Repo, &scm.PullRequestInput{

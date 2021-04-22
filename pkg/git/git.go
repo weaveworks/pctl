@@ -32,6 +32,7 @@ type Git interface {
 
 // CLIGitConfig defines configuration options for CLIGit.
 type CLIGitConfig struct {
+	Filename string
 	Location string
 	Branch   string
 	Remote   string
@@ -69,8 +70,9 @@ func (g *CLIGit) Commit() error {
 		"--git-dir", filepath.Join(g.Location, ".git"),
 		"--work-tree", g.Location,
 		"commit",
-		"-am",
+		"-m",
 		"Push changes to remote",
+		g.Filename,
 	}
 	if err := g.runCmd(gitCmd, args...); err != nil {
 		return fmt.Errorf("failed to run commit: %w", err)
@@ -151,7 +153,7 @@ func (g *CLIGit) Add() error {
 		"--git-dir", filepath.Join(g.Location, ".git"),
 		"--work-tree", g.Location,
 		"add",
-		".", // TODO: Make this more strict so that it only adds the file?
+		g.Filename,
 	}
 	if err := g.runCmd(gitCmd, args...); err != nil {
 		return fmt.Errorf("failed to run add: %w", err)

@@ -2,12 +2,12 @@ package catalog_test
 
 import (
 	"bytes"
+	"errors"
 	"io/ioutil"
 	"net/http"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
 	gitfakes "github.com/weaveworks/pctl/pkg/git/fakes"
@@ -173,9 +173,41 @@ status: {}
 	})
 
 	When("create-pr is set to true", func() {
-		It("can create a PR if the location is a git repository with change in it", func() {
+		It("can create a PR if the generated values result in changes", func() {
 			err := catalog.CreatePullRequest(fakeScm, fakeGit)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(fakeGit.CreateBranchCallCount()).To(Equal(1))
+			Expect(fakeGit.AddCallCount()).To(Equal(1))
+			Expect(fakeGit.CommitCallCount()).To(Equal(1))
+			Expect(fakeGit.PushCallCount()).To(Equal(1))
+			Expect(fakeScm.CreatePullRequestCallCount()).To(Equal(1))
+		})
+	})
+	When("create-pr is set to true but something goes wrong", func() {
+		It("handles create branch errors", func() {
+			fakeGit.CreateBranchReturns(errors.New("nope"))
+			err := catalog.CreatePullRequest(fakeScm, fakeGit)
+			Expect(err).To(MatchError("failed to create branch: nope"))
+		})
+		It("handles add errors", func() {
+			fakeGit.AddReturns(errors.New("nope"))
+			err := catalog.CreatePullRequest(fakeScm, fakeGit)
+			Expect(err).To(MatchError("failed to add changes: nope"))
+		})
+		It("handles commit errors", func() {
+			fakeGit.CommitReturns(errors.New("nope"))
+			err := catalog.CreatePullRequest(fakeScm, fakeGit)
+			Expect(err).To(MatchError("failed to commit changes: nope"))
+		})
+		It("handles push errors", func() {
+			fakeGit.PushReturns(errors.New("nope"))
+			err := catalog.CreatePullRequest(fakeScm, fakeGit)
+			Expect(err).To(MatchError("failed to push changes: nope"))
+		})
+		It("handles create pull request errors", func() {
+			fakeScm.CreatePullRequestReturns(errors.New("nope"))
+			err := catalog.CreatePullRequest(fakeScm, fakeGit)
+			Expect(err).To(MatchError("failed to create pull request: nope"))
 		})
 	})
 })

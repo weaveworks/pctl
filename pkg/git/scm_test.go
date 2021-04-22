@@ -13,7 +13,7 @@ var _ = Describe("scm", func() {
 		It("can use an scm client to talk to the platform", func() {
 			fakeScm, err := factory.NewClient("fake", "", "")
 			Expect(err).NotTo(HaveOccurred())
-			client, err := git.NewSCMClient(git.SCMConfig{
+			client, err := git.NewClient(git.SCMConfig{
 				Branch: "",
 				Base:   "",
 				Repo:   "",
