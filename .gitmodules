@@ -1,0 +1,3 @@
+[submodule "dependencies/profiles"]
+	path = dependencies/profiles
+	url = https://github.com/weaveworks/profiles

@@ -8,11 +8,9 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v2"
 
 	"path/filepath"
 
-	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
@@ -130,7 +128,7 @@ func installCmd() *cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			profilePath, catalogURL, err := parseArgs(c)
+			profilePath, catalogClient, err := parseArgs(c)
 			if err != nil {
 				_ = cli.ShowCommandHelp(c, "install")
 				return err
@@ -152,14 +150,14 @@ func installCmd() *cli.Command {
 			fmt.Printf("generating subscription for profile %s/%s:\n\n", catalogName, profileName)
 			w := &writer.FileWriter{Filename: filename}
 			cfg := catalog.InstallConfig{
-				Branch:      branch,
-				CatalogName: catalogName,
-				CatalogURL:  catalogURL,
-				ConfigMap:   configValues,
-				Namespace:   namespace,
-				ProfileName: profileName,
-				SubName:     subName,
-				Writer:      w,
+				Branch:        branch,
+				CatalogName:   catalogName,
+				CatalogClient: catalogClient,
+				ConfigMap:     configValues,
+				Namespace:     namespace,
+				ProfileName:   profileName,
+				SubName:       subName,
+				Writer:        w,
 			}
 			return catalog.Install(cfg)
 		},
