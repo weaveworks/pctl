@@ -1,0 +1,27 @@
+name: Integration Test
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Cache go-build and mod
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build/
+            ~/go/pkg/mod/
+          key: ${{ hashFiles('go.sum') }}
+      - name: Test
+        run: make integration-test
+    env:
+      GIT_TOKEN: {{secrets.GITHUB_TOKEN}}
