@@ -1,4 +1,4 @@
-name: Test
+name: Unit Test
 
 on:
   pull_request: {}
@@ -20,4 +20,4 @@ jobs:
             ~/go/pkg/mod/
           key: ${{ hashFiles('go.sum') }}
       - name: Test
-        run: make unit-test integration-test
+        run: make unit-test
