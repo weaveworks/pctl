@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
+	"github.com/weaveworks/pctl/pkg/cluster"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/util/homedir"
 
@@ -28,6 +29,7 @@ func main() {
 			searchCmd(),
 			showCmd(),
 			installCmd(),
+			prepareCmd(),
 		},
 	}
 
@@ -229,6 +231,45 @@ func createPullRequest(c *cli.Context) error {
 		return fmt.Errorf("failed to create scm client: %w", err)
 	}
 	return catalog.CreatePullRequest(scmClient, g)
+}
+
+func prepareCmd() *cli.Command {
+	return &cli.Command{
+		Name:      "prepare",
+		Usage:     "prepare an environment with everything profiles need to work",
+		UsageText: "pctl prepare",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "dry-run",
+				Usage: "If defined, nothing will be applied.",
+				Value: false,
+			},
+			&cli.StringFlag{
+				Name:        "location",
+				Usage:       "Define the location where to put the manifest files to.",
+				Value:       os.TempDir(),
+				DefaultText: "Operating system Temp Folder",
+			},
+			&cli.StringFlag{
+				Name:  "version",
+				Usage: "Define the tagged version to use which can be found under releases in the profiles repository. v0.0.1",
+			},
+			&cli.StringFlag{
+				Name:  "context",
+				Usage: "The Kubernetes context to use to apply the manifest files .",
+			},
+		},
+		Action: func(c *cli.Context) error {
+			p := cluster.NewPreparer(cluster.PrepConfig{
+				Location:    c.String("location"),
+				Version:     c.String("version"),
+				KubeConfig:  c.String("kubeconfig"),
+				KubeContext: c.String("context"),
+				DryRun:      c.Bool("dry-run"),
+			})
+			return p.Prepare()
+		},
+	}
 }
 
 func globalFlags() []cli.Flag {

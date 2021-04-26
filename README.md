@@ -22,6 +22,21 @@ generating subscription for profile nginx-catalog/weaveworks-nginx:
 
 Then the result will be in profile-subscription.yaml file.
 
+### Prepare
+
+pctl can set up a cluster with all necessary components for `profiles` to work.
+To do that, run the following:
+
+```
+pctl prepare
+```
+
+This will take the latest manifests release under the profiles repository and install
+them into the currently set cluster.
+
+There are a number of options which can be set, such as: version, dry-run, context, kube-config.
+Please run `pctl help` for all options and defaults.
+
 ## Local testing
 
 In order to test the CLI you need a profiles catalog controller up and running along with its API.
