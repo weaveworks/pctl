@@ -9,5 +9,5 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/weaveworks/profiles v0.0.0-20210415085322-61383f6e66ed
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/apimachinery v0.20.5
+	k8s.io/apimachinery v0.21.0
 )
