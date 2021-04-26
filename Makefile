@@ -3,10 +3,18 @@
 test: lint unit-test integration-test ## Run all tests
 
 unit-test: ## Run the unit tests
-	go test -count=1 ./pkg/...
+	ginkgo -r ./pkg
 
-integration-test: ## Run the integration tests
-	go test -count=1 ./tests/...
+integration-test: build local-env ## Run the integration tests
+	ginkgo -r ./tests/...
+
+local-env: submodule
+	cd dependencies/profiles && make local-env
+	kubectl apply -f dependencies/profiles/examples/profile-catalog-source.yaml
+
+submodule:
+	git submodule init
+	git submodule update
 
 ##@ Build
 

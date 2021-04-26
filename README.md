@@ -31,6 +31,7 @@ run the following to use pctl against it:
 
 1. Create your catalog, for example there is a `examples/profile-catalog-source.yaml` file in the profiles repo
 `kubectl apply -f profiles/examples/profile-catalog-source.yaml`
-1. In a separate terminal run `kubectl -n profiles-system port-forward <profiles-controller-pod-name> 8000:8000` to enable access to the API
-1. Run `pctl --catalog-url http://localhost:8000 search <query>` to search for your profile
-1. To see more detail of a profile, run `pctl --catalog-url http://localhost:8000 show <catalog-name>/<profile-name>`
+1. Ensure the current context in kubeconfig is set to the `profiles` cluster (`kubectl config current-context` should return `kind-profiles`)
+1. Run `pctl search <query>` to search for your profile
+1. To see more details of a profile, run `pctl show <catalog-name>/<profile-name>`
+1. [Optional] The catalog service options can be configured via `--catalog-service-name`, `--catalog-service-port` and `--catalog-service-namespace`

@@ -1,10 +1,7 @@
 package catalog
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/url"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,46 +13,22 @@ import (
 
 // InstallConfig defines parameters for the installation call.
 type InstallConfig struct {
-	Branch      string
-	CatalogName string
-	CatalogURL  string
-	ConfigMap   string
-	Namespace   string
-	ProfileName string
-	SubName     string
-	Writer      writer.Writer
+	CatalogClient CatalogClient
+	Branch        string
+	CatalogName   string
+	ConfigMap     string
+	Namespace     string
+	ProfileName   string
+	SubName       string
+	Writer        writer.Writer
 }
 
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile subscription
 // writing it out with the provided profile subscription writer.
 func Install(cfg InstallConfig) error {
-	u, err := url.Parse(cfg.CatalogURL)
+	profile, err := Show(cfg.CatalogClient, cfg.CatalogName, cfg.ProfileName)
 	if err != nil {
-		return fmt.Errorf("failed to parse url %q: %w", cfg.CatalogURL, err)
-	}
-
-	u.Path = fmt.Sprintf("profiles/%s/%s", cfg.CatalogName, cfg.ProfileName)
-	resp, err := doRequest(u, nil)
-	if err != nil {
-		return fmt.Errorf("failed to do request: %w", err)
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			fmt.Printf("failed to close the response body from profile show with error: %v/n", err)
-		}
-	}()
-
-	if resp.StatusCode == http.StatusNotFound {
-		return fmt.Errorf("unable to find profile `%s` in catalog `%s`", cfg.ProfileName, cfg.CatalogName)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to fetch profile: status code %d", resp.StatusCode)
-	}
-
-	profile := profilesv1.ProfileDescription{}
-	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
-		return fmt.Errorf("failed to parse profile: %w", err)
+		return fmt.Errorf("failed to get profile %q in catalog %q: %w", cfg.ProfileName, cfg.CatalogName, err)
 	}
 
 	subscription := profilesv1.ProfileSubscription{
