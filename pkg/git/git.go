@@ -58,12 +58,11 @@ var _ Git = &CLIGit{}
 
 // Commit all changes.
 func (g *CLIGit) Commit() error {
-	ok, err := g.HasChanges()
+	hasChanges, err := g.HasChanges()
 	if err != nil {
 		return fmt.Errorf("failed to detect if repository has changes: %w", err)
 	}
-	if !ok {
-		// nothing to do.
+	if !hasChanges {
 		return nil
 	}
 	args := []string{
@@ -109,7 +108,7 @@ func (g *CLIGit) IsRepository() error {
 	// Note that this is redundant in case of CLI git, because the git command line utility
 	// already checks if the given location is a repository or not. Never the less we do this
 	// for posterity.
-	if _, err := os.Stat(filepath.Join(g.Location, ".git")); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(g.Location, ".git")); err != nil {
 		return err
 	}
 	return nil

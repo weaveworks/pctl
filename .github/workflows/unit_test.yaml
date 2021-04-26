@@ -1,4 +1,4 @@
-name: Test
+name: Unit Test
 
 on:
   pull_request: {}
@@ -19,5 +19,9 @@ jobs:
             ~/.cache/go-build/
             ~/go/pkg/mod/
           key: ${{ hashFiles('go.sum') }}
+      - name: Setup Ginkgo
+        run: |
+          go get -u github.com/onsi/ginkgo/ginkgo
       - name: Test
-        run: make unit-test integration-test
+        run: |
+          PATH=$PATH:$(go env GOPATH)/bin make unit-test

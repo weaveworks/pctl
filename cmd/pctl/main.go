@@ -9,12 +9,14 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
-	"github.com/weaveworks/pctl/pkg/git"
 	"gopkg.in/yaml.v2"
+	"k8s.io/client-go/util/homedir"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
 	"github.com/weaveworks/pctl/pkg/catalog"
+	"github.com/weaveworks/pctl/pkg/client"
+	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/writer"
 )
 
@@ -39,16 +41,16 @@ func searchCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "search",
 		Usage:     "search for a profile",
-		UsageText: "pctl --catalog-url <URL> search <QUERY>",
+		UsageText: "pctl --kubeconfig=<kubeconfig-path> search <QUERY>",
 		Action: func(c *cli.Context) error {
-			searchName, catalogURL, err := parseArgs(c)
+			searchName, catalogClient, err := parseArgs(c)
 			if err != nil {
-				_ = cli.ShowCommandHelp(c, "show")
+				_ = cli.ShowCommandHelp(c, "search")
 				return err
 			}
 
 			fmt.Printf("searching for profiles matching %q:\n", searchName)
-			profiles, err := catalog.Search(catalogURL, searchName)
+			profiles, err := catalog.Search(catalogClient, searchName)
 			if err != nil {
 				return err
 			}
@@ -64,9 +66,9 @@ func showCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "show",
 		Usage:     "display information about a profile",
-		UsageText: "pctl --catalog-url <URL> show <CATALOG>/<PROFILE>",
+		UsageText: "pctl --kubeconfig=<kubeconfig-path> show <CATALOG>/<PROFILE>",
 		Action: func(c *cli.Context) error {
-			profilePath, catalogURL, err := parseArgs(c)
+			profilePath, catalogClient, err := parseArgs(c)
 			if err != nil {
 				_ = cli.ShowCommandHelp(c, "show")
 				return err
@@ -80,7 +82,7 @@ func showCmd() *cli.Command {
 			catalogName, profileName := parts[0], parts[1]
 
 			fmt.Printf("retrieving information for profile %s/%s:\n\n", catalogName, profileName)
-			profile, err := catalog.Show(catalogURL, catalogName, profileName)
+			profile, err := catalog.Show(catalogClient, catalogName, profileName)
 			if err != nil {
 				return err
 			}
@@ -149,12 +151,12 @@ func installCmd() *cli.Command {
 		},
 		Action: func(c *cli.Context) error {
 			// Run installation main
-			if err := runInstall(c); err != nil {
+			if err := install(c); err != nil {
 				return err
 			}
 			// Create a pull request if desired
 			if c.Bool("create-pr") {
-				if err := runCreatePullRequest(c); err != nil {
+				if err := createPullRequest(c); err != nil {
 					return err
 				}
 			}
@@ -163,9 +165,9 @@ func installCmd() *cli.Command {
 	}
 }
 
-// runInstall runs the install part of the `install` command.
-func runInstall(c *cli.Context) error {
-	profilePath, catalogURL, err := parseArgs(c)
+// install runs the install part of the `install` command.
+func install(c *cli.Context) error {
+	profilePath, catalogClient, err := parseArgs(c)
 	if err != nil {
 		_ = cli.ShowCommandHelp(c, "install")
 		return err
@@ -187,20 +189,20 @@ func runInstall(c *cli.Context) error {
 	fmt.Printf("generating subscription for profile %s/%s:\n\n", catalogName, profileName)
 	w := &writer.FileWriter{Filename: filename}
 	cfg := catalog.InstallConfig{
-		Branch:      branch,
-		CatalogName: catalogName,
-		CatalogURL:  catalogURL,
-		ConfigMap:   configValues,
-		Namespace:   namespace,
-		ProfileName: profileName,
-		SubName:     subName,
-		Writer:      w,
+		Branch:        branch,
+		CatalogName:   catalogName,
+		CatalogClient: catalogClient,
+		ConfigMap:     configValues,
+		Namespace:     namespace,
+		ProfileName:   profileName,
+		SubName:       subName,
+		Writer:        w,
 	}
 	return catalog.Install(cfg)
 }
 
-// runCreatePullRequest runs the pull request creation part of the `install` command.
-func runCreatePullRequest(c *cli.Context) error {
+// createPullRequest runs the pull request creation part of the `install` command.
+func createPullRequest(c *cli.Context) error {
 	branch := c.String("branch")
 	filename := c.String("out")
 	repo := c.String("repo")
@@ -230,24 +232,57 @@ func runCreatePullRequest(c *cli.Context) error {
 }
 
 func globalFlags() []cli.Flag {
+	var kubeconfigFlag *cli.StringFlag
+	if home := homedir.HomeDir(); home != "" {
+		kubeconfigFlag = &cli.StringFlag{
+			Name:  "kubeconfig",
+			Value: filepath.Join(home, ".kube", "config"),
+			Usage: "Absolute path to the kubeconfig file (optional)",
+		}
+	} else {
+		kubeconfigFlag = &cli.StringFlag{
+			Name:     "kubeconfig",
+			Usage:    "Absolute path to the kubeconfig file",
+			Required: true,
+		}
+	}
+
 	return []cli.Flag{
 		&cli.StringFlag{
-			Name:    "catalog-url",
-			Usage:   "Catalog url",
-			EnvVars: []string{"PCTL_CATALOG_URL"},
+			Name:  "catalog-service-name",
+			Value: "profiles-catalog-service",
+			Usage: "Catalog Kubernetes Service name",
 		},
+		&cli.StringFlag{
+			Name:  "catalog-service-port",
+			Value: "8000",
+			Usage: "Catalog Kubernetes Service port",
+		},
+		&cli.StringFlag{
+			Name:  "catalog-service-namespace",
+			Value: "profiles-system",
+			Usage: "Catalog Kubernetes Service namespace",
+		},
+		kubeconfigFlag,
 	}
 }
 
-func parseArgs(c *cli.Context) (string, string, error) {
-	catalogURL := c.String("catalog-url")
-	if catalogURL == "" {
-		return "", "", fmt.Errorf("--catalog-url or $PCTL_CATALOG_URL must be provided")
+func parseArgs(c *cli.Context) (string, *client.Client, error) {
+	options := client.ServiceOptions{
+		KubeconfigPath: c.String("kubeconfig"),
+		Namespace:      c.String("catalog-service-namespace"),
+		ServiceName:    c.String("catalog-service-name"),
+		ServicePort:    c.String("catalog-service-port"),
 	}
+
 	if c.Args().Len() < 1 {
-		return "", "", fmt.Errorf("argument must be provided")
+		return "", nil, fmt.Errorf("argument must be provided")
 	}
-	return c.Args().First(), catalogURL, nil
+	client, err := client.NewFromOptions(options)
+	if err != nil {
+		return "", nil, err
+	}
+	return c.Args().First(), client, nil
 }
 
 func printProfile(profile profilesv1.ProfileDescription) error {

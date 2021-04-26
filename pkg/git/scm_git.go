@@ -46,9 +46,9 @@ func (r *Client) CreatePullRequest() error {
 	fmt.Println("Creating pull request with : ", r.Repo, r.Base, r.Branch)
 	ctx := context.Background()
 	request, _, err := r.Client.PullRequests.Create(ctx, r.Repo, &scm.PullRequestInput{
-		Title: "PCTL Generated Profile 	Resource Update",
-		Head: r.Branch,
-		Base: r.Base,
+		Title: "PCTL Generated Profile Resource Update",
+		Head:  r.Branch,
+		Base:  r.Base,
 	})
 	if err != nil {
 		return fmt.Errorf("error while creating pr: %w", err)
