@@ -9,14 +9,20 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
-	"k8s.io/client-go/util/homedir"
+
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
 	"github.com/weaveworks/pctl/pkg/formatter"
 	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/pctl/pkg/profile"
 	"github.com/weaveworks/pctl/pkg/writer"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
+	"k8s.io/kops/util/pkg/tables"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func main() {
@@ -27,12 +33,70 @@ func main() {
 			searchCmd(),
 			showCmd(),
 			installCmd(),
+			listCmd(),
+			getCmd(),
 		},
 	}
 
 	err := app.Run(os.Args)
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func getCmd() *cli.Command {
+	return &cli.Command{
+		Name:      "get",
+		Usage:     "get a profile Subscription",
+		UsageText: "pctl --kubeconfig=<kubeconfig-path> list",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "name",
+				Usage: "The name of the subscription.",
+			},
+			&cli.StringFlag{
+				Name:        "namespace",
+				DefaultText: "default",
+				Value:       "default",
+				Usage:       "The namespace the subscrption is in",
+			},
+		},
+		Action: func(c *cli.Context) error {
+			namespace := c.String("namespace")
+			name := c.String("name")
+			if name == "" {
+				return fmt.Errorf("subscrption name must be provided")
+			}
+			cl, err := buildK8sClient(c.String("kubeconfig"))
+			if err != nil {
+				return err
+			}
+			profile, err := profile.New(cl).Get(namespace, name)
+			if err != nil {
+				return err
+			}
+			printSubscription(profile)
+			return nil
+		},
+	}
+}
+
+func listCmd() *cli.Command {
+	return &cli.Command{
+		Name:      "list",
+		Usage:     "list profile subscriptions",
+		UsageText: "pctl --kubeconfig=<kubeconfig-path> list",
+		Action: func(c *cli.Context) error {
+			cl, err := buildK8sClient(c.String("kubeconfig"))
+			if err != nil {
+				return err
+			}
+			profiles, err := profile.New(cl).List()
+			if err != nil {
+				return err
+			}
+			return printSubscriptions(profiles)
+		},
 	}
 }
 
@@ -216,6 +280,19 @@ func installCmd() *cli.Command {
 	}
 }
 
+func buildK8sClient(kubeconfig string) (runtimeclient.Client, error) {
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create config from kubeconfig path %q: %w", kubeconfig, err)
+	}
+	cl, err := runtimeclient.New(config, runtimeclient.Options{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client: %w", err)
+	}
+	utilruntime.Must(profilesv1.AddToScheme(cl.Scheme()))
+	return cl, nil
+}
+
 // install runs the install part of the `install` command.
 func install(c *cli.Context) error {
 	profilePath, catalogClient, err := parseArgs(c)
@@ -366,4 +443,27 @@ func showDataFunc(profile profilesv1.ProfileDescription) func() interface{} {
 			},
 		}
 	}
+}
+
+func printSubscriptions(subs []profile.SubscriptionDescription) error {
+	table := tables.Table{}
+	table.AddColumn("NAMESPACE", func(sub profile.SubscriptionDescription) string {
+		return sub.Namespace
+	})
+	table.AddColumn("NAME", func(sub profile.SubscriptionDescription) string {
+		return sub.Name
+	})
+	table.AddColumn("READY", func(sub profile.SubscriptionDescription) string {
+		return sub.Ready
+	})
+	return table.Render(subs, os.Stdout, "NAMESPACE", "NAME", "READY")
+}
+
+func printSubscription(sub profile.SubscriptionSummary) {
+	fmt.Printf(`Subscription: %s
+Namespace: %s
+Ready: %s
+Reason:
+ - %s
+`, sub.Name, sub.Namespace, sub.Ready, sub.Reason)
 }
