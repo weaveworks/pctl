@@ -45,7 +45,7 @@ func searchCmd() *cli.Command {
 		Action: func(c *cli.Context) error {
 			searchName, catalogClient, err := parseArgs(c)
 			if err != nil {
-				_ = cli.ShowCommandHelp(c, "show")
+				_ = cli.ShowCommandHelp(c, "search")
 				return err
 			}
 
