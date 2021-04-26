@@ -21,7 +21,20 @@ jobs:
             ~/.cache/go-build/
             ~/go/pkg/mod/
           key: ${{ hashFiles('go.sum') }}
+      - name: Setup Kind CLI
+        run: |
+          sudo curl -sSLo /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/v0.10.0/kind-linux-amd64
+          sudo chmod +x /usr/local/bin/kind
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v1
+        id: install
+      - name: Setup Ginkgo
+        run: |
+          go get -u github.com/onsi/ginkgo/ginkgo
+      - name: Setup Flux v2 CLI
+        uses: fluxcd/flux2/action@main
       - name: Test
-        run: make integration-test
+        run: |
+          PATH=$PATH:$(go env GOPATH)/bin make integration-test
     env:
       GIT_TOKEN: ${{secrets.GITHUB_TOKEN}}
