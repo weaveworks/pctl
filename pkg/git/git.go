@@ -74,7 +74,7 @@ func (g *CLIGit) Commit() error {
 		"Push changes to remote",
 		g.Filename,
 	}
-	if err := g.runCmd(gitCmd, args...); err != nil {
+	if err := g.runGitCmd(args...); err != nil {
 		return fmt.Errorf("failed to run commit: %w", err)
 	}
 	return nil
@@ -93,7 +93,7 @@ func (g *CLIGit) CreateBranch() error {
 		"-b",
 		g.Branch,
 	}
-	if err := g.runCmd(gitCmd, args...); err != nil {
+	if err := g.runGitCmd(args...); err != nil {
 		return fmt.Errorf("failed to create new branch %s: %w", g.Branch, err)
 	}
 	return nil
@@ -140,13 +140,13 @@ func (g *CLIGit) Push() error {
 		g.Remote,
 		g.Branch,
 	}
-	if err := g.runCmd(gitCmd, args...); err != nil {
+	if err := g.runGitCmd(args...); err != nil {
 		return fmt.Errorf("failed to push changes to remote %s with branch %s: %w", g.Remote, g.Branch, err)
 	}
 	return nil
 }
 
-// Add will add all unstaged changes.
+// Add will add any changes to the generated file.
 func (g *CLIGit) Add() error {
 	fmt.Println("adding unstaged changes")
 	args := []string{
@@ -155,18 +155,18 @@ func (g *CLIGit) Add() error {
 		"add",
 		g.Filename,
 	}
-	if err := g.runCmd(gitCmd, args...); err != nil {
+	if err := g.runGitCmd(args...); err != nil {
 		return fmt.Errorf("failed to run add: %w", err)
 	}
 	return nil
 }
 
-// runCmd is a convenient wrapper around running commands with error output when the output is not needed but needs to
+// runGitCmd is a convenient wrapper around running commands with error output when the output is not needed but needs to
 // be logged.
-func (g *CLIGit) runCmd(c string, args ...string) error {
-	out, err := g.Runner.Run(c, args...)
+func (g *CLIGit) runGitCmd(args ...string) error {
+	out, err := g.Runner.Run(gitCmd, args...)
 	if err != nil {
-		fmt.Printf("failed to run cmd %s with output: %s\n", c, string(out))
+		fmt.Printf("failed to run git with output: %s\n", string(out))
 	}
 	return err
 }
