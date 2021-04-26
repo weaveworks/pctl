@@ -24,4 +24,4 @@ jobs:
       - name: Test
         run: make integration-test
     env:
-      GIT_TOKEN: {{secrets.GITHUB_TOKEN}}
+      GIT_TOKEN: ${{secrets.GITHUB_TOKEN}}
