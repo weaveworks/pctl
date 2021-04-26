@@ -8,7 +8,7 @@ import (
 )
 
 type FakeCatalogClient struct {
-	DoRequestStub        func(string, map[string]string) ([]byte, error)
+	DoRequestStub        func(string, map[string]string) ([]byte, int, error)
 	doRequestMutex       sync.RWMutex
 	doRequestArgsForCall []struct {
 		arg1 string
@@ -16,17 +16,19 @@ type FakeCatalogClient struct {
 	}
 	doRequestReturns struct {
 		result1 []byte
-		result2 error
+		result2 int
+		result3 error
 	}
 	doRequestReturnsOnCall map[int]struct {
 		result1 []byte
-		result2 error
+		result2 int
+		result3 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCatalogClient) DoRequest(arg1 string, arg2 map[string]string) ([]byte, error) {
+func (fake *FakeCatalogClient) DoRequest(arg1 string, arg2 map[string]string) ([]byte, int, error) {
 	fake.doRequestMutex.Lock()
 	ret, specificReturn := fake.doRequestReturnsOnCall[len(fake.doRequestArgsForCall)]
 	fake.doRequestArgsForCall = append(fake.doRequestArgsForCall, struct {
@@ -41,9 +43,9 @@ func (fake *FakeCatalogClient) DoRequest(arg1 string, arg2 map[string]string) ([
 		return stub(arg1, arg2)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1, ret.result2, ret.result3
 	}
-	return fakeReturns.result1, fakeReturns.result2
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
 func (fake *FakeCatalogClient) DoRequestCallCount() int {
@@ -52,7 +54,7 @@ func (fake *FakeCatalogClient) DoRequestCallCount() int {
 	return len(fake.doRequestArgsForCall)
 }
 
-func (fake *FakeCatalogClient) DoRequestCalls(stub func(string, map[string]string) ([]byte, error)) {
+func (fake *FakeCatalogClient) DoRequestCalls(stub func(string, map[string]string) ([]byte, int, error)) {
 	fake.doRequestMutex.Lock()
 	defer fake.doRequestMutex.Unlock()
 	fake.DoRequestStub = stub
@@ -65,30 +67,33 @@ func (fake *FakeCatalogClient) DoRequestArgsForCall(i int) (string, map[string]s
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeCatalogClient) DoRequestReturns(result1 []byte, result2 error) {
+func (fake *FakeCatalogClient) DoRequestReturns(result1 []byte, result2 int, result3 error) {
 	fake.doRequestMutex.Lock()
 	defer fake.doRequestMutex.Unlock()
 	fake.DoRequestStub = nil
 	fake.doRequestReturns = struct {
 		result1 []byte
-		result2 error
-	}{result1, result2}
+		result2 int
+		result3 error
+	}{result1, result2, result3}
 }
 
-func (fake *FakeCatalogClient) DoRequestReturnsOnCall(i int, result1 []byte, result2 error) {
+func (fake *FakeCatalogClient) DoRequestReturnsOnCall(i int, result1 []byte, result2 int, result3 error) {
 	fake.doRequestMutex.Lock()
 	defer fake.doRequestMutex.Unlock()
 	fake.DoRequestStub = nil
 	if fake.doRequestReturnsOnCall == nil {
 		fake.doRequestReturnsOnCall = make(map[int]struct {
 			result1 []byte
-			result2 error
+			result2 int
+			result3 error
 		})
 	}
 	fake.doRequestReturnsOnCall[i] = struct {
 		result1 []byte
-		result2 error
-	}{result1, result2}
+		result2 int
+		result3 error
+	}{result1, result2, result3}
 }
 
 func (fake *FakeCatalogClient) Invocations() map[string][][]interface{} {

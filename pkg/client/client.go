@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
@@ -55,17 +56,15 @@ type Client struct {
 }
 
 // DoRequest sends a request to the catalog service
-func (c *Client) DoRequest(path string, query map[string]string) ([]byte, error) {
+func (c *Client) DoRequest(path string, query map[string]string) ([]byte, int, error) {
 	o := c.serviceOptions
 	responseWrapper := c.clientset.CoreV1().Services(o.Namespace).ProxyGet("http", o.ServiceName, o.ServicePort, path, query)
 	data, err := responseWrapper.DoRaw(context.TODO())
 	if err != nil {
 		if se, ok := err.(*errors.StatusError); ok {
-			return nil, &StatusError{
-				wrapped: se,
-			}
+			return nil, int(se.Status().Code), nil
 		}
-		return nil, err
+		return nil, 0, err
 	}
-	return data, err
+	return data, http.StatusOK, nil
 }

@@ -33,7 +33,7 @@ var _ = Describe("Show", func() {
 	"maintainer": "WeaveWorks <gitops@weave.works>"
 }
 		  `)
-			fakeCatalogClient.DoRequestReturns(httpBody, nil)
+			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
 			resp, err := catalog.Show(fakeCatalogClient, "foo", "weaveworks-nginx")
 			Expect(err).NotTo(HaveOccurred())
@@ -55,30 +55,42 @@ var _ = Describe("Show", func() {
 		})
 	})
 
-	When("the profile does not exist in the catalog", func() {
+	When("http request fails", func() {
 		It("returns an error", func() {
-			fakeCatalogClient.DoRequestReturns(nil, errors.New("not found"))
+			fakeCatalogClient.DoRequestReturns(nil, 0, errors.New("epic fail"))
+			_, err := catalog.Show(fakeCatalogClient, "foo", "weaveworks-nginx")
+			Expect(err).To(MatchError(ContainSubstring("failed to do request: epic fail")))
+		})
+	})
+
+	When("the catalog returns 404", func() {
+		It("returns an error", func() {
+			fakeCatalogClient.DoRequestReturns(nil, 404, nil)
 
 			_, err := catalog.Show(fakeCatalogClient, "foo", "dontexist")
-			Expect(err).To(MatchError("failed to do request: not found"))
+			Expect(err).To(MatchError("unable to find profile \"dontexist\" in catalog \"foo\""))
 			path, query := fakeCatalogClient.DoRequestArgsForCall(0)
 			Expect(path).To(Equal("/profiles/foo/dontexist"))
 			Expect(query).To(BeEmpty())
 		})
 	})
 
-	When("http request fails", func() {
+	When("the catalog returns a non 200 status code", func() {
 		It("returns an error", func() {
-			fakeCatalogClient.DoRequestReturns(nil, errors.New("epic fail"))
-			_, err := catalog.Show(fakeCatalogClient, "foo", "weaveworks-nginx")
-			Expect(err).To(MatchError(ContainSubstring("failed to do request: epic fail")))
+			fakeCatalogClient.DoRequestReturns(nil, 500, nil)
+
+			_, err := catalog.Show(fakeCatalogClient, "foo", "dontexist")
+			Expect(err).To(MatchError("failed to fetch profile from catalog, status code 500"))
+			path, query := fakeCatalogClient.DoRequestArgsForCall(0)
+			Expect(path).To(Equal("/profiles/foo/dontexist"))
+			Expect(query).To(BeEmpty())
 		})
 	})
 
 	When("the profile isn't valid json", func() {
 		It("returns an error", func() {
 			httpBody := []byte(`!20342 totally n:ot json "`)
-			fakeCatalogClient.DoRequestReturns(httpBody, nil)
+			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
 			_, err := catalog.Show(fakeCatalogClient, "foo", "weaveworks-nginx")
 			Expect(err).To(MatchError(ContainSubstring("failed to parse profile")))

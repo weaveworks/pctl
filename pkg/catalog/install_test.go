@@ -34,7 +34,7 @@ var _ = Describe("Install", func() {
 	"maintainer": "WeaveWorks <gitops@weave.works>"
 }
 `)
-			fakeCatalogClient.DoRequestReturns(httpBody, nil)
+			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
 			var buf bytes.Buffer
 			writer := &writer.StringWriter{
@@ -77,7 +77,7 @@ status: {}
 	"maintainer": "WeaveWorks <gitops@weave.works>"
 }
 `)
-			fakeCatalogClient.DoRequestReturns(httpBody, nil)
+			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
 			var buf bytes.Buffer
 			writer := &writer.StringWriter{
@@ -114,7 +114,7 @@ status: {}
 		})
 
 		It("returns an error when getting the profile fails", func() {
-			fakeCatalogClient.DoRequestReturns([]byte(""), fmt.Errorf("foo"))
+			fakeCatalogClient.DoRequestReturns([]byte(""), 0, fmt.Errorf("foo"))
 
 			var buf bytes.Buffer
 			writer := &writer.StringWriter{

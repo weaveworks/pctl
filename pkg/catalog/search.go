@@ -3,6 +3,7 @@ package catalog
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
@@ -12,16 +13,17 @@ func Search(catalogClient CatalogClient, searchName string) ([]profilesv1.Profil
 	q := map[string]string{
 		"name": searchName,
 	}
-	data, err := catalogClient.DoRequest("/profiles", q)
+	data, statusCode, err := catalogClient.DoRequest("/profiles", q)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch catalog: %w", err)
+	}
+
+	if statusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch profile from catalog, status code %d", statusCode)
 	}
 	var profiles []profilesv1.ProfileDescription
 	if err := json.Unmarshal(data, &profiles); err != nil {
 		return nil, fmt.Errorf("failed to parse catalog: %w", err)
-	}
-	if len(profiles) == 0 {
-		return nil, fmt.Errorf("no profiles matching %q found", searchName)
 	}
 
 	return profiles, nil

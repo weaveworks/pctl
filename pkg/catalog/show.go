@@ -5,20 +5,21 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/weaveworks/pctl/pkg/client"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 // Show queries the catalog at catalogURL for a profile matching the provided profileName
 func Show(catalogClient CatalogClient, catalogName, profileName string) (profilesv1.ProfileDescription, error) {
-	data, err := catalogClient.DoRequest(fmt.Sprintf("/profiles/%s/%s", catalogName, profileName), nil)
+	data, code, err := catalogClient.DoRequest(fmt.Sprintf("/profiles/%s/%s", catalogName, profileName), nil)
 	if err != nil {
-		if se, ok := err.(*client.StatusError); ok {
-			if se.Code() == http.StatusNotFound {
-				return profilesv1.ProfileDescription{}, fmt.Errorf("unable to find profile `%s` in catalog `%s`", profileName, catalogName)
-			}
-		}
 		return profilesv1.ProfileDescription{}, fmt.Errorf("failed to do request: %w", err)
+	}
+
+	if code != http.StatusOK {
+		if code == http.StatusNotFound {
+			return profilesv1.ProfileDescription{}, fmt.Errorf("unable to find profile %q in catalog %q", profileName, catalogName)
+		}
+		return profilesv1.ProfileDescription{}, fmt.Errorf("failed to fetch profile from catalog, status code %d", code)
 	}
 
 	var profile profilesv1.ProfileDescription
