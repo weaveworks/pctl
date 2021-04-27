@@ -1,10 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/urfave/cli/v2"
-	"github.com/weaveworks/pctl/pkg/profile"
+	"github.com/weaveworks/pctl/pkg/subscription"
 	"k8s.io/kops/util/pkg/tables"
 )
 
@@ -18,24 +19,28 @@ func listCmd() *cli.Command {
 			if err != nil {
 				return err
 			}
-			profiles, err := profile.New(cl).List()
+			profiles, err := subscription.NewManager(cl).List()
 			if err != nil {
 				return err
+			}
+			if len(profiles) == 0 {
+				fmt.Println("no profiles found")
+				return nil
 			}
 			return printSubscriptions(profiles)
 		},
 	}
 }
 
-func printSubscriptions(subs []profile.SubscriptionDescription) error {
+func printSubscriptions(subs []subscription.SubscriptionDescription) error {
 	table := tables.Table{}
-	table.AddColumn("NAMESPACE", func(sub profile.SubscriptionDescription) string {
+	table.AddColumn("NAMESPACE", func(sub subscription.SubscriptionDescription) string {
 		return sub.Namespace
 	})
-	table.AddColumn("NAME", func(sub profile.SubscriptionDescription) string {
+	table.AddColumn("NAME", func(sub subscription.SubscriptionDescription) string {
 		return sub.Name
 	})
-	table.AddColumn("READY", func(sub profile.SubscriptionDescription) string {
+	table.AddColumn("READY", func(sub subscription.SubscriptionDescription) string {
 		return sub.Ready
 	})
 	return table.Render(subs, os.Stdout, "NAMESPACE", "NAME", "READY")

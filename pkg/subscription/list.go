@@ -1,11 +1,9 @@
-package profile
+package subscription
 
 import (
-	"context"
 	"fmt"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // SubscriptionDescription contains a description of a subscription
@@ -15,22 +13,8 @@ type SubscriptionDescription struct {
 	Ready     string
 }
 
-// SubscriptionManager manages getting and list profile subscriptions
-type SubscriptionManager struct {
-	kClient client.Client
-	ctx     context.Context
-}
-
-// New returns a SubscriptionManager
-func New(kClient client.Client) *SubscriptionManager {
-	return &SubscriptionManager{
-		kClient: kClient,
-		ctx:     context.TODO(),
-	}
-}
-
 // List returns a list of subscriptions
-func (sm *SubscriptionManager) List() ([]SubscriptionDescription, error) {
+func (sm *Manager) List() ([]SubscriptionDescription, error) {
 	var subscriptions profilesv1.ProfileSubscriptionList
 	err := sm.kClient.List(sm.ctx, &subscriptions)
 	if err != nil {

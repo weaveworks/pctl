@@ -1,4 +1,4 @@
-package profile
+package subscription
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ type SubscriptionSummary struct {
 }
 
 // Get returns a SubscriptionSummary for a given subscription
-func (sm *SubscriptionManager) Get(namespace, name string) (SubscriptionSummary, error) {
+func (sm *Manager) Get(namespace, name string) (SubscriptionSummary, error) {
 	var sub profilesv1.ProfileSubscription
 	var summary SubscriptionSummary
 	err := sm.kClient.Get(sm.ctx, client.ObjectKey{Name: name, Namespace: namespace}, &sub)

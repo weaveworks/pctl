@@ -1,11 +1,11 @@
-package profile_test
+package subscription_test
 
 import (
 	"context"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/profile"
+	"github.com/weaveworks/pctl/pkg/subscription"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,7 +15,7 @@ import (
 
 var _ = Describe("List", func() {
 	var (
-		sm              *profile.SubscriptionManager
+		sm              *subscription.Manager
 		fakeClient      client.Client
 		profileTypeMeta = metav1.TypeMeta{
 			Kind:       "ProfileSubscription",
@@ -63,19 +63,19 @@ var _ = Describe("List", func() {
 		pSub2New.Status.Conditions = conditions
 		Expect(fakeClient.Status().Patch(context.TODO(), pSub2New, client.MergeFrom(pSub2))).To(Succeed())
 
-		sm = profile.New(fakeClient)
+		sm = subscription.NewManager(fakeClient)
 	})
 
 	It("returns a list of profiles deployed in the cluster", func() {
 		subs, err := sm.List()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(subs).To(ConsistOf(
-			profile.SubscriptionDescription{
+			subscription.SubscriptionDescription{
 				Name:      sub1,
 				Namespace: namespace1,
 				Ready:     "True",
 			},
-			profile.SubscriptionDescription{
+			subscription.SubscriptionDescription{
 				Name:      sub2,
 				Namespace: namespace2,
 				Ready:     "False",
@@ -88,7 +88,7 @@ var _ = Describe("List", func() {
 			//remove profilesv1 from scheme
 			scheme := runtime.NewScheme()
 			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
-			sm = profile.New(fakeClient)
+			sm = subscription.NewManager(fakeClient)
 		})
 
 		It("returns an error", func() {
@@ -116,12 +116,12 @@ var _ = Describe("List", func() {
 			subs, err := sm.List()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(subs).To(ConsistOf(
-				profile.SubscriptionDescription{
+				subscription.SubscriptionDescription{
 					Name:      sub1,
 					Namespace: namespace1,
 					Ready:     "Unknown",
 				},
-				profile.SubscriptionDescription{
+				subscription.SubscriptionDescription{
 					Name:      sub2,
 					Namespace: namespace2,
 					Ready:     "Unknown",

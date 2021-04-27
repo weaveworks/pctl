@@ -4,14 +4,14 @@ import (
 	"fmt"
 
 	"github.com/urfave/cli/v2"
-	"github.com/weaveworks/pctl/pkg/profile"
+	"github.com/weaveworks/pctl/pkg/subscription"
 )
 
 func getCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "get",
 		Usage:     "get a profile Subscription",
-		UsageText: "pctl --kubeconfig=<kubeconfig-path> list",
+		UsageText: "pctl --kubeconfig=<kubeconfig-path> get --name my-sub --namespace default",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "name",
@@ -34,7 +34,7 @@ func getCmd() *cli.Command {
 			if err != nil {
 				return err
 			}
-			profile, err := profile.New(cl).Get(namespace, name)
+			profile, err := subscription.NewManager(cl).Get(namespace, name)
 			if err != nil {
 				return err
 			}
@@ -44,7 +44,7 @@ func getCmd() *cli.Command {
 	}
 }
 
-func printSubscription(sub profile.SubscriptionSummary) {
+func printSubscription(sub subscription.SubscriptionSummary) {
 	fmt.Printf(`Subscription: %s
 Namespace: %s
 Ready: %s
