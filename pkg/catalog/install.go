@@ -8,6 +8,7 @@ import (
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
+	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/writer"
 )
 
@@ -56,6 +57,34 @@ func Install(cfg InstallConfig) error {
 	}
 	if err := cfg.Writer.Output(&subscription); err != nil {
 		return fmt.Errorf("failed to output subscription information: %w", err)
+	}
+	return nil
+}
+
+// CreatePullRequest creates a pull request from the current changes.
+func CreatePullRequest(scm git.SCMClient, g git.Git) error {
+	if err := g.IsRepository(); err != nil {
+		return fmt.Errorf("directory is not a git repository: %w", err)
+	}
+
+	if err := g.CreateBranch(); err != nil {
+		return fmt.Errorf("failed to create branch: %w", err)
+	}
+
+	if err := g.Add(); err != nil {
+		return fmt.Errorf("failed to add changes: %w", err)
+	}
+
+	if err := g.Commit(); err != nil {
+		return fmt.Errorf("failed to commit changes: %w", err)
+	}
+
+	if err := g.Push(); err != nil {
+		return fmt.Errorf("failed to push changes: %w", err)
+	}
+
+	if err := scm.CreatePullRequest(); err != nil {
+		return fmt.Errorf("failed to create pull request: %w", err)
 	}
 	return nil
 }
