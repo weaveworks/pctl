@@ -213,13 +213,16 @@ func createPullRequest(c *cli.Context) error {
 	}
 	fmt.Printf("Creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
 	r := &git.CLIRunner{}
-	g := git.NewCLIGit(git.CLIGitConfig{
+	g, err := git.NewCLIGit(git.CLIGitConfig{
 		Filename: filename,
 		Location: filepath.Dir(filename),
 		Branch:   branch,
 		Remote:   remote,
 		Base:     base,
 	}, r)
+	if err != nil {
+		return fmt.Errorf("failed to create new git cli client: %w", err)
+	}
 	scmClient, err := git.NewClient(git.SCMConfig{
 		Branch: branch,
 		Base:   base,

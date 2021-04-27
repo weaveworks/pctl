@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 )
 
@@ -46,11 +47,14 @@ type CLIGit struct {
 }
 
 // NewCLIGit creates a new command line based Git.
-func NewCLIGit(cfg CLIGitConfig, r Runner) *CLIGit {
+func NewCLIGit(cfg CLIGitConfig, r Runner) (*CLIGit, error) {
+	if _, err := exec.LookPath("git"); err != nil {
+		return nil, err
+	}
 	return &CLIGit{
 		CLIGitConfig: cfg,
 		Runner:       r,
-	}
+	}, nil
 }
 
 // Make sure CLIGit implements all the required methods.

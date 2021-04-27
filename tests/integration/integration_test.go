@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	repositoryNameTemplate = "https://%s@github.com/weaveworks/pctl-test-repo.git"
+	repositoryNameTemplate = "https://.:%s@github.com/weaveworks/pctl-test-repo.git"
 )
 
 var _ = Describe("PCTL", func() {
@@ -181,6 +181,7 @@ status: {}
 					"weaveworks/pctl-test-repo",
 					"nginx-catalog/weaveworks-nginx")
 				output, err := cmd.CombinedOutput()
+				fmt.Println("Combined Output: ", string(output))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(output)).To(ContainSubstring("PR created with number:"))
 			})
