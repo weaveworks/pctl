@@ -243,6 +243,65 @@ default		failed-sub	False`))
 		})
 	})
 
+	Context("get", func() {
+		var (
+			namespace        = "default"
+			subscriptionName = "failed-sub"
+			ctx              = context.TODO()
+			pSub             profilesv1.ProfileSubscription
+		)
+
+		BeforeEach(func() {
+			profileURL := "https://github.com/weaveworks/nginx-profile"
+			pSub = profilesv1.ProfileSubscription{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ProfileSubscription",
+					APIVersion: "profilesubscriptions.weave.works/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      subscriptionName,
+					Namespace: namespace,
+				},
+				Spec: profilesv1.ProfileSubscriptionSpec{
+					ProfileURL: profileURL,
+					Branch:     "invalid-artifact",
+				},
+			}
+			Expect(kClient.Create(ctx, &pSub)).Should(Succeed())
+
+			profile := profilesv1.ProfileSubscription{}
+			Eventually(func() bool {
+				err := kClient.Get(ctx, client.ObjectKey{Name: subscriptionName, Namespace: namespace}, &profile)
+				return err == nil && len(profile.Status.Conditions) > 0
+			}, 10*time.Second, 1*time.Second).Should(BeTrue())
+
+			Expect(profile.Status.Conditions[0].Message).To(Equal("error when reconciling profile artifacts"))
+			Expect(profile.Status.Conditions[0].Type).To(Equal("Ready"))
+			Expect(profile.Status.Conditions[0].Status).To(Equal(metav1.ConditionStatus("False")))
+			Expect(profile.Status.Conditions[0].Reason).To(Equal("CreateFailed"))
+		})
+
+		AfterEach(func() {
+			Expect(kClient.Delete(ctx, &pSub)).Should(Succeed())
+		})
+
+		It("returns the subscrptions", func() {
+
+			getCmd := func() string {
+				cmd := exec.Command(binaryPath, "get", "--namespace", namespace, "--name", subscriptionName)
+				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(session).Should(gexec.Exit(0))
+				return string(session.Out.Contents())
+			}
+			Eventually(getCmd).Should(ContainSubstring(`Subscription: failed-sub
+Namespace: default
+Ready: False
+Reason:
+ - CreateFailed`))
+		})
+	})
+
 	Context("install", func() {
 		It("generates a ProfileSubscription ready to be applied to a cluster", func() {
 			temp, err := ioutil.TempDir("", "pctl_test_install_generate_01")
