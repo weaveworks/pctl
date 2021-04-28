@@ -61,12 +61,19 @@ func searchCmd() *cli.Command {
 			if err != nil {
 				return err
 			}
+			outFormat := c.String("output")
+			if outFormat == "table" {
+				if len(profiles) == 0 {
+					fmt.Printf("No profiles found matching: '%s'\n", searchName)
+					return nil
+				}
+			}
 
 			var f formatter.Formatter
 			f = formatter.NewTableFormatter()
 			getter := searchDataFunc(profiles)
 
-			if c.String("output") == "json" {
+			if outFormat == "json" {
 				f = formatter.NewJSONFormatter()
 				getter = func() interface{} { return profiles }
 			}
@@ -139,7 +146,7 @@ func installCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "install",
 		Usage:     "generate a profile subscription for a profile in a catalog",
-		UsageText: "pctl --catalog-url <URL> install --subscription-name pctl-profile --namespace default --branch main --config-secret configmap-name --out profile_subscription.yaml <CATALOG>/<PROFILE>",
+		UsageText: "pctl [--kubeconfig-path=<kubeconfig-path>] install --subscription-name pctl-profile --namespace default --branch main --config-secret configmap-name --out profile_subscription.yaml <CATALOG>/<PROFILE>",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "subscription-name",
