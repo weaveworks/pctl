@@ -229,7 +229,7 @@ Reason:
 			Expect(kClient.Delete(ctx, &pSub)).Should(Succeed())
 		})
 
-		It("returns the subscrptions", func() {
+		It("returns the subscriptions", func() {
 
 			listCmd := func() string {
 				cmd := exec.Command(binaryPath, "list")
