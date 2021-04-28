@@ -21,7 +21,7 @@ func (sm *Manager) Get(namespace, name string) (SubscriptionSummary, error) {
 	var summary SubscriptionSummary
 	err := sm.kClient.Get(sm.ctx, client.ObjectKey{Name: name, Namespace: namespace}, &sub)
 	if err != nil {
-		return summary, fmt.Errorf("failed to get profile subscriptions: %w", err)
+		return SubscriptionSummary{}, fmt.Errorf("failed to get profile subscriptions: %w", err)
 	}
 	status := "Unknown"
 	reason := "-"

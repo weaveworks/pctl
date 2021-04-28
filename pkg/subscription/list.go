@@ -6,21 +6,14 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
-// SubscriptionDescription contains a description of a subscription
-type SubscriptionDescription struct {
-	Name      string
-	Namespace string
-	Ready     string
-}
-
 // List returns a list of subscriptions
-func (sm *Manager) List() ([]SubscriptionDescription, error) {
+func (sm *Manager) List() ([]SubscriptionSummary, error) {
 	var subscriptions profilesv1.ProfileSubscriptionList
 	err := sm.kClient.List(sm.ctx, &subscriptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list profile subscriptions: %w", err)
 	}
-	var descriptions []SubscriptionDescription
+	var descriptions []SubscriptionSummary
 	for _, sub := range subscriptions.Items {
 		status := "Unknown"
 		for _, cond := range sub.Status.Conditions {
@@ -30,7 +23,7 @@ func (sm *Manager) List() ([]SubscriptionDescription, error) {
 			}
 		}
 
-		descriptions = append(descriptions, SubscriptionDescription{
+		descriptions = append(descriptions, SubscriptionSummary{
 			Name:      sub.Name,
 			Namespace: sub.Namespace,
 			Ready:     status,

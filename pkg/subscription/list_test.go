@@ -70,12 +70,12 @@ var _ = Describe("List", func() {
 		subs, err := sm.List()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(subs).To(ConsistOf(
-			subscription.SubscriptionDescription{
+			subscription.SubscriptionSummary{
 				Name:      sub1,
 				Namespace: namespace1,
 				Ready:     "True",
 			},
-			subscription.SubscriptionDescription{
+			subscription.SubscriptionSummary{
 				Name:      sub2,
 				Namespace: namespace2,
 				Ready:     "False",
@@ -116,12 +116,12 @@ var _ = Describe("List", func() {
 			subs, err := sm.List()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(subs).To(ConsistOf(
-				subscription.SubscriptionDescription{
+				subscription.SubscriptionSummary{
 					Name:      sub1,
 					Namespace: namespace1,
 					Ready:     "Unknown",
 				},
-				subscription.SubscriptionDescription{
+				subscription.SubscriptionSummary{
 					Name:      sub2,
 					Namespace: namespace2,
 					Ready:     "Unknown",

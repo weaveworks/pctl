@@ -32,15 +32,15 @@ func listCmd() *cli.Command {
 	}
 }
 
-func printSubscriptions(subs []subscription.SubscriptionDescription) error {
+func printSubscriptions(subs []subscription.SubscriptionSummary) error {
 	table := tables.Table{}
-	table.AddColumn("NAMESPACE", func(sub subscription.SubscriptionDescription) string {
+	table.AddColumn("NAMESPACE", func(sub subscription.SubscriptionSummary) string {
 		return sub.Namespace
 	})
-	table.AddColumn("NAME", func(sub subscription.SubscriptionDescription) string {
+	table.AddColumn("NAME", func(sub subscription.SubscriptionSummary) string {
 		return sub.Name
 	})
-	table.AddColumn("READY", func(sub subscription.SubscriptionDescription) string {
+	table.AddColumn("READY", func(sub subscription.SubscriptionSummary) string {
 		return sub.Ready
 	})
 	return table.Render(subs, os.Stdout, "NAMESPACE", "NAME", "READY")
