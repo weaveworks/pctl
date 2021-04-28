@@ -1,14 +1,47 @@
 # pctl
-pctl is a cli for interacting with [Profiles](https://github.com/weaveworks/profiles)
+pctl is a cli tool for interacting with [Profiles](https://github.com/weaveworks/profiles)
 
-## Commands
+<!--
+To update the TOC, install https://github.com/kubernetes-sigs/mdtoc
+and run: mdtoc -inplace README.md
+-->
+
+ <!-- toc -->
+- [Usage](#usage)
+  - [Search](#search)
+  - [Show](#show)
+  - [Install](#install)
+  - [Catalog service options](#catalog-service-options)
+- [Development](#development)
+  - [Tests](#tests)
+<!-- /toc -->
+
+## Usage
+
+For more information on all commands, run `pctl --help` or `pctl <subcommand> --help`.
 
 ### Search
 pctl can be used to search a catalog for profiles, example:
+```sh
+$ pctl search nginx
+CATALOG/PROFILE                         VERSION DESCRIPTION
+nginx-catalog-1/weaveworks-nginx        0.0.1   This installs nginx.
+nginx-catalog-1/some-other-nginx        1.0.1   This installs some other nginx.
 ```
-$ pctl search --catalog-url=$CATALOG_URL nginx
-searching for profiles matching "nginx":
-weaveworks-nginx: This installs nginx.
+
+### Show
+
+pctl can be used to get more information about a specific profile, example:
+
+```
+$ pctl show nginx-catalog-1/weaveworks-nginx
+Catalog         nginx-catalog-1
+Name            weaveworks-nginx
+Version         0.0.1
+Description     This installs nginx.
+URL             https://github.com/weaveworks/nginx-profile
+Maintainer      weaveworks (https://github.com/weaveworks/profiles)
+Prerequisites   Kubernetes 1.18+
 ```
 
 ### Install
@@ -16,15 +49,19 @@ weaveworks-nginx: This installs nginx.
 pctl can be used to install a profile subscription for a profile, example:
 
 ```
-pctl --catalog-url http://localhost:8000 install nginx-catalog/weaveworks-nginx
+pctl install nginx-catalog/weaveworks-nginx
 generating subscription for profile nginx-catalog/weaveworks-nginx:
 ```
 
 Then the result will be in profile-subscription.yaml file.
 
-## Local testing
+### Catalog service options
 
-In order to test the CLI you need a profiles catalog controller up and running along with its API.
+The catalog service options can be configured via `--catalog-service-name`, `--catalog-service-port` and `--catalog-service-namespace`
+
+## Development
+
+In order to run CLI commands you need a profiles catalog controller up and running along with its API in a cluster.
 To get a local setup clone the [Profiles repo](https://github.com/weaveworks/profiles) and run `make local-env`.
 This will deploy a local kind cluster with the catalog controller and API running. Once the environment is setup
 run the following to use pctl against it:
@@ -32,6 +69,13 @@ run the following to use pctl against it:
 1. Create your catalog, for example there is a `examples/profile-catalog-source.yaml` file in the profiles repo
 `kubectl apply -f profiles/examples/profile-catalog-source.yaml`
 1. Ensure the current context in kubeconfig is set to the `profiles` cluster (`kubectl config current-context` should return `kind-profiles`)
-1. Run `pctl search <query>` to search for your profile
-1. To see more details of a profile, run `pctl show <catalog-name>/<profile-name>`
-1. [Optional] The catalog service options can be configured via `--catalog-service-name`, `--catalog-service-port` and `--catalog-service-namespace`
+1. Create a `pctl` binary with `make build`.
+
+### Tests
+
+1. Run `make integration` for integration tests _(This will set up the required env, no need to do anything beforehand.
+   Note: if you have a `local-env` running and have created profile catalog sources in it, this will influence your tests.)_
+1. Run `make unit` for unit tests
+1. Run `make test` to run all tests
+
+See `make help` for all development commands.
