@@ -84,13 +84,33 @@ var _ = Describe("PCTL", func() {
 			session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(session).Should(gexec.Exit(0))
-			Expect(string(session.Out.Contents())).To(ContainSubstring("retrieving information for profile nginx-catalog/weaveworks-nginx"))
-			Expect(string(session.Out.Contents())).To(ContainSubstring("name: weaveworks-nginx"))
-			Expect(string(session.Out.Contents())).To(ContainSubstring("description: This installs nginx."))
-			Expect(string(session.Out.Contents())).To(ContainSubstring("version: 0.0.1"))
-			Expect(string(session.Out.Contents())).To(ContainSubstring("catalog: nginx-catalog"))
-			Expect(string(session.Out.Contents())).To(ContainSubstring("prerequisites:\n- Kubernetes 1.18+"))
-			Expect(string(session.Out.Contents())).To(ContainSubstring("maintainer: weaveworks (https://github.com/weaveworks/profiles)"))
+			Expect(string(session.Out.Contents())).To(ContainSubstring("Catalog      \tnginx-catalog                                      \t\n" +
+				"Name         \tweaveworks-nginx                                   \t\n" +
+				"Version      \t0.0.1                                              \t\n" +
+				"Description  \tThis installs nginx.                               \t\n" +
+				"URL          \thttps://github.com/weaveworks/nginx-profile        \t\n" +
+				"Maintainer   \tweaveworks (https://github.com/weaveworks/profiles)\t\n" +
+				"Prerequisites\tKubernetes 1.18+                                   \t\n"))
+		})
+
+		When("-o is set to json", func() {
+			It("returns the profile info in json", func() {
+				cmd := exec.Command(binaryPath, "show", "-o", "json", "nginx-catalog/weaveworks-nginx")
+				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(session).Should(gexec.Exit(0))
+				Expect(string(session.Out.Contents())).To(ContainSubstring(`{
+  "name": "weaveworks-nginx",
+  "description": "This installs nginx.",
+  "version": "0.0.1",
+  "catalog": "nginx-catalog",
+  "url": "https://github.com/weaveworks/nginx-profile",
+  "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
+  "prerequisites": [
+    "Kubernetes 1.18+"
+  ]
+}`))
+			})
 		})
 
 		When("a name argument is not provided", func() {
@@ -103,6 +123,7 @@ var _ = Describe("PCTL", func() {
 			})
 		})
 	})
+
 	Context("install", func() {
 		It("generates a ProfileSubscription ready to be applied to a cluster", func() {
 			temp, err := ioutil.TempDir("", "pctl_test_install_generate_01")
@@ -214,6 +235,7 @@ status: {}
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(output)).To(ContainSubstring("PR created with number:"))
 			})
+
 			It("fails if repo is not defined", func() {
 				temp, err := ioutil.TempDir("", "pctl_test_install_create_pr_02")
 				Expect(err).NotTo(HaveOccurred())
@@ -234,6 +256,7 @@ status: {}
 				Eventually(session).Should(gexec.Exit(1))
 				Expect(string(session.Err.Contents())).To(ContainSubstring("repo must be defined if create-pr is true"))
 			})
+
 			It("fails if target location is not a git repository", func() {
 				if _, ok := os.LookupEnv("GIT_TOKEN"); !ok {
 					// Set up a dummy token, because the SCM client is created before we check the git repo.
@@ -261,6 +284,7 @@ status: {}
 				Eventually(session).Should(gexec.Exit(1))
 				Expect(string(session.Err.Contents())).To(ContainSubstring("directory is not a git repository"))
 			})
+
 			It("fails if target location for install is a folder rather than a file", func() {
 				temp, err := ioutil.TempDir("", "pctl_test_install_create_pr_04")
 				Expect(err).NotTo(HaveOccurred())
