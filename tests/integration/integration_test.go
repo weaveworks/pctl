@@ -24,7 +24,37 @@ var _ = Describe("PCTL", func() {
 			session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(session).Should(gexec.Exit(0))
-			Expect(string(session.Out.Contents())).To(ContainSubstring("weaveworks-nginx: This installs nginx"))
+			Expect(string(session.Out.Contents())).To(ContainSubstring("CATALOG/PROFILE               	VERSION	DESCRIPTION                     \n" +
+				"nginx-catalog/weaveworks-nginx	0.0.1  	This installs nginx.           \t\n" +
+				"nginx-catalog/some-other-nginx	       	This installs some other nginx.\t\n"),
+			)
+		})
+
+		When("-o is set to json", func() {
+			It("returns the matching profiles in json", func() {
+				cmd := exec.Command(binaryPath, "search", "-o", "json", "nginx")
+				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(session).Should(gexec.Exit(0))
+				Expect(string(session.Out.Contents())).To(ContainSubstring(`[
+  {
+    "name": "weaveworks-nginx",
+    "description": "This installs nginx.",
+    "version": "0.0.1",
+    "catalog": "nginx-catalog",
+    "url": "https://github.com/weaveworks/nginx-profile",
+    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
+    "prerequisites": [
+      "Kubernetes 1.18+"
+    ]
+  },
+  {
+    "name": "some-other-nginx",
+    "description": "This installs some other nginx.",
+    "catalog": "nginx-catalog"
+  }
+]`))
+			})
 		})
 
 		When("kubeconfig is incorrectly set", func() {

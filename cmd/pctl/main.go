@@ -12,12 +12,12 @@ import (
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/util/homedir"
 
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
-
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
+	"github.com/weaveworks/pctl/pkg/formatter"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/writer"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 func main() {
@@ -41,7 +41,16 @@ func searchCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "search",
 		Usage:     "search for a profile",
-		UsageText: "pctl --kubeconfig=<kubeconfig-path> search <QUERY>",
+		UsageText: "pctl [--kubeconfig=<kubeconfig-path>] search [--output table|json] <QUERY>",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "output",
+				Aliases:     []string{"o"},
+				DefaultText: "table",
+				Value:       "table",
+				Usage:       "Output format. json|table",
+			},
+		},
 		Action: func(c *cli.Context) error {
 			searchName, catalogClient, err := parseArgs(c)
 			if err != nil {
@@ -49,14 +58,26 @@ func searchCmd() *cli.Command {
 				return err
 			}
 
-			fmt.Printf("searching for profiles matching %q:\n", searchName)
 			profiles, err := catalog.Search(catalogClient, searchName)
 			if err != nil {
 				return err
 			}
-			for _, profile := range profiles {
-				fmt.Printf("%s: %s\n", profile.Name, profile.Description)
+
+			var f formatter.Formatter
+			f = formatter.NewTableFormatter()
+			getter := searchDataFunc(profiles)
+
+			if c.String("output") == "json" {
+				f = formatter.NewJSONFormatter()
+				getter = func() interface{} { return profiles }
 			}
+
+			out, err := f.Format(getter)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(out)
 			return nil
 		},
 	}
@@ -285,12 +306,27 @@ func parseArgs(c *cli.Context) (string, *client.Client, error) {
 	return c.Args().First(), client, nil
 }
 
+func searchDataFunc(profiles []profilesv1.ProfileDescription) func() interface{} {
+	return func() interface{} {
+		tc := formatter.TableContents{
+			Headers: []string{"Catalog/Profile", "Version", "Description"},
+		}
+		for _, profile := range profiles {
+			tc.Data = append(tc.Data, []string{
+				fmt.Sprintf("%s/%s", profile.Catalog, profile.Name),
+				profile.Version,
+				profile.Description,
+			})
+		}
+		return tc
+	}
+}
+
 func printProfile(profile profilesv1.ProfileDescription) error {
 	out, err := yaml.Marshal(profile)
 	if err != nil {
 		return err
 	}
-
 	fmt.Println(string(out))
 	return nil
 }
