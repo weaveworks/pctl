@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
-	"github.com/weaveworks/pctl/pkg/cluster"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/util/homedir"
 
@@ -17,8 +16,14 @@ import (
 
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
+	"github.com/weaveworks/pctl/pkg/cluster"
 	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/pctl/pkg/runner"
 	"github.com/weaveworks/pctl/pkg/writer"
+)
+
+const (
+	releaseUrl = "https://github.com/weaveworks/profiles/releases"
 )
 
 func main() {
@@ -214,7 +219,7 @@ func createPullRequest(c *cli.Context) error {
 		return errors.New("repo must be defined if create-pr is true")
 	}
 	fmt.Printf("Creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
-	r := &git.CLIRunner{}
+	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{
 		Filename: filename,
 		Location: filepath.Dir(filename),
@@ -245,14 +250,14 @@ func prepareCmd() *cli.Command {
 				Value: false,
 			},
 			&cli.StringFlag{
-				Name:        "location",
-				Usage:       "Define the location where to put the manifest files to.",
-				Value:       os.TempDir(),
-				DefaultText: "Operating system Temp Folder",
+				Name:  "version",
+				Usage: "Define the tagged version to use which can be found under releases in the profiles repository. Exp: [v]0.0.1",
 			},
 			&cli.StringFlag{
-				Name:  "version",
-				Usage: "Define the tagged version to use which can be found under releases in the profiles repository. v0.0.1",
+				Name:        "baseurl",
+				Usage:       "Define the url to go and fetch releases from.",
+				Value:       releaseUrl,
+				DefaultText: releaseUrl,
 			},
 			&cli.StringFlag{
 				Name:  "context",
@@ -260,13 +265,15 @@ func prepareCmd() *cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			p := cluster.NewPreparer(cluster.PrepConfig{
-				Location:    c.String("location"),
+			p, err := cluster.NewPreparer(cluster.PrepConfig{
 				Version:     c.String("version"),
 				KubeConfig:  c.String("kubeconfig"),
 				KubeContext: c.String("context"),
 				DryRun:      c.Bool("dry-run"),
 			})
+			if err != nil {
+				return err
+			}
 			return p.Prepare()
 		},
 	}

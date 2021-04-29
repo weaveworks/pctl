@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/pctl/pkg/runner"
 )
 
 type FakeRunner struct {
@@ -115,4 +115,4 @@ func (fake *FakeRunner) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ git.Runner = new(FakeRunner)
+var _ runner.Runner = new(FakeRunner)

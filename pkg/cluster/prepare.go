@@ -4,15 +4,16 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/fluxcd/pkg/untar"
-	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/pctl/pkg/runner"
 )
 
 const (
-	releaseUrl = "https://github.com/weaveworks/profiles/releases"
 	kubectlCmd = "kubectl"
 )
 
@@ -23,7 +24,7 @@ type Fetcher struct {
 
 // Applier applies the previously generated manifest files.
 type Applier struct {
-	Runner git.Runner
+	Runner runner.Runner
 }
 
 // Preparer will prepare an environment.
@@ -46,30 +47,34 @@ type PrepConfig struct {
 }
 
 // NewPreparer creates a preparer with set dependencies ready to be used.
-func NewPreparer(cfg PrepConfig) *Preparer {
-	if cfg.BaseURL == "" {
-		cfg.BaseURL = releaseUrl
+func NewPreparer(cfg PrepConfig) (*Preparer, error) {
+	tmp, err := ioutil.TempDir("", "pctl-manifests")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp folder for manifest files: %w", err)
 	}
+	cfg.Location = tmp
 	return &Preparer{
 		PrepConfig: cfg,
 		Fetcher: &Fetcher{
 			Client: http.DefaultClient,
 		},
 		Applier: &Applier{
-			Runner: &git.CLIRunner{},
+			Runner: &runner.CLIRunner{},
 		},
-	}
+	}, nil
 }
 
 // Prepare will prepare an environment with everything that is needed to run profiles.
 func (p *Preparer) Prepare() error {
+	defer func() {
+		if err := os.RemoveAll(p.Location); err != nil {
+			fmt.Printf("failed to remove temporary folder at location: %s. Please clean manually.", p.Location)
+		}
+	}()
 	if err := p.Fetcher.Fetch(context.Background(), p.BaseURL, p.Version, p.Location); err != nil {
 		return err
 	}
-	if err := p.Applier.Apply(p.Location, p.KubeContext, p.KubeConfig, p.DryRun); err != nil {
-		return err
-	}
-	return nil
+	return p.Applier.Apply(p.Location, p.KubeContext, p.KubeConfig, p.DryRun)
 }
 
 // Fetch the latest or a version of the released manifest files for profiles.
@@ -109,7 +114,7 @@ func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
 func (a *Applier) Apply(folder string, kubeContext string, kubeConfig string, dryRun bool) error {
 	kubectlArgs := []string{"apply", "-f", folder}
 	if dryRun {
-		kubectlArgs = append(kubectlArgs, "--dry-run=client")
+		kubectlArgs = append(kubectlArgs, "--dry-run=client", "--output=yaml")
 	}
 	if kubeContext != "" {
 		kubectlArgs = append(kubectlArgs, "--context="+kubeContext)
@@ -119,11 +124,6 @@ func (a *Applier) Apply(folder string, kubeContext string, kubeConfig string, dr
 	}
 	if _, err := a.Runner.Run(kubectlCmd, kubectlArgs...); err != nil {
 		return fmt.Errorf("install failed: %w", err)
-	}
-
-	if dryRun {
-		fmt.Println("install dry-run finished")
-		return nil
 	}
 
 	// In a follow up ticket, make this wait for all the possible resources to be condition=available.
