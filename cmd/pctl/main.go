@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/util/homedir"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
@@ -17,6 +16,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
 	"github.com/weaveworks/pctl/pkg/cluster"
+	"github.com/weaveworks/pctl/pkg/formatter"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/runner"
 	"github.com/weaveworks/pctl/pkg/writer"
@@ -48,7 +48,16 @@ func searchCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "search",
 		Usage:     "search for a profile",
-		UsageText: "pctl --kubeconfig=<kubeconfig-path> search <QUERY>",
+		UsageText: "pctl [--kubeconfig=<kubeconfig-path>] search [--output table|json] <QUERY>",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "output",
+				Aliases:     []string{"o"},
+				DefaultText: "table",
+				Value:       "table",
+				Usage:       "Output format. json|table",
+			},
+		},
 		Action: func(c *cli.Context) error {
 			searchName, catalogClient, err := parseArgs(c)
 			if err != nil {
@@ -56,14 +65,33 @@ func searchCmd() *cli.Command {
 				return err
 			}
 
-			fmt.Printf("searching for profiles matching %q:\n", searchName)
 			profiles, err := catalog.Search(catalogClient, searchName)
 			if err != nil {
 				return err
 			}
-			for _, profile := range profiles {
-				fmt.Printf("%s: %s\n", profile.Name, profile.Description)
+			outFormat := c.String("output")
+			if outFormat == "table" {
+				if len(profiles) == 0 {
+					fmt.Printf("No profiles found matching: '%s'\n", searchName)
+					return nil
+				}
 			}
+
+			var f formatter.Formatter
+			f = formatter.NewTableFormatter()
+			getter := searchDataFunc(profiles)
+
+			if outFormat == "json" {
+				f = formatter.NewJSONFormatter()
+				getter = func() interface{} { return profiles }
+			}
+
+			out, err := f.Format(getter)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(out)
 			return nil
 		},
 	}
@@ -73,7 +101,16 @@ func showCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "show",
 		Usage:     "display information about a profile",
-		UsageText: "pctl --kubeconfig=<kubeconfig-path> show <CATALOG>/<PROFILE>",
+		UsageText: "pctl [--kubeconfig=<kubeconfig-path>] show <CATALOG>/<PROFILE>",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "output",
+				Aliases:     []string{"o"},
+				DefaultText: "table",
+				Value:       "table",
+				Usage:       "Output format. json|table",
+			},
+		},
 		Action: func(c *cli.Context) error {
 			profilePath, catalogClient, err := parseArgs(c)
 			if err != nil {
@@ -88,12 +125,27 @@ func showCmd() *cli.Command {
 			}
 			catalogName, profileName := parts[0], parts[1]
 
-			fmt.Printf("retrieving information for profile %s/%s:\n\n", catalogName, profileName)
 			profile, err := catalog.Show(catalogClient, catalogName, profileName)
 			if err != nil {
 				return err
 			}
-			return printProfile(profile)
+
+			var f formatter.Formatter
+			f = formatter.NewTableFormatter()
+			getter := showDataFunc(profile)
+
+			if c.String("output") == "json" {
+				f = formatter.NewJSONFormatter()
+				getter = func() interface{} { return profile }
+			}
+
+			out, err := f.Format(getter)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(out)
+			return nil
 		},
 	}
 }
@@ -102,7 +154,7 @@ func installCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "install",
 		Usage:     "generate a profile subscription for a profile in a catalog",
-		UsageText: "pctl --catalog-url <URL> install --subscription-name pctl-profile --namespace default --branch main --config-secret configmap-name --out profile_subscription.yaml <CATALOG>/<PROFILE>",
+		UsageText: "pctl [--kubeconfig-path=<kubeconfig-path>] install --subscription-name pctl-profile --namespace default --branch main --config-secret configmap-name --out profile_subscription.yaml <CATALOG>/<PROFILE>",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "subscription-name",
@@ -333,12 +385,34 @@ func parseArgs(c *cli.Context) (string, *client.Client, error) {
 	return c.Args().First(), client, nil
 }
 
-func printProfile(profile profilesv1.ProfileDescription) error {
-	out, err := yaml.Marshal(profile)
-	if err != nil {
-		return err
+func searchDataFunc(profiles []profilesv1.ProfileDescription) func() interface{} {
+	return func() interface{} {
+		tc := formatter.TableContents{
+			Headers: []string{"Catalog/Profile", "Version", "Description"},
+		}
+		for _, profile := range profiles {
+			tc.Data = append(tc.Data, []string{
+				fmt.Sprintf("%s/%s", profile.Catalog, profile.Name),
+				profile.Version,
+				profile.Description,
+			})
+		}
+		return tc
 	}
+}
 
-	fmt.Println(string(out))
-	return nil
+func showDataFunc(profile profilesv1.ProfileDescription) func() interface{} {
+	return func() interface{} {
+		return formatter.TableContents{
+			Data: [][]string{
+				{"Catalog", profile.Catalog},
+				{"Name", profile.Name},
+				{"Version", profile.Version},
+				{"Description", profile.Description},
+				{"URL", profile.URL},
+				{"Maintainer", profile.Maintainer},
+				{"Prerequisites", strings.Join(profile.Prerequisites, ", ")},
+			},
+		}
+	}
 }

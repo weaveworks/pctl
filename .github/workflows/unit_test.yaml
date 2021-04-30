@@ -24,4 +24,4 @@ jobs:
           go get -u github.com/onsi/ginkgo/ginkgo
       - name: Test
         run: |
-          PATH=$PATH:$(go env GOPATH)/bin make unit-test
+          PATH=$PATH:$(go env GOPATH)/bin make unit
