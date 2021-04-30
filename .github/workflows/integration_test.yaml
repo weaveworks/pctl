@@ -35,6 +35,6 @@ jobs:
         uses: fluxcd/flux2/action@main
       - name: Test
         run: |
-          PATH=$PATH:$(go env GOPATH)/bin make integration-test
+          PATH=$PATH:$(go env GOPATH)/bin make integration
     env:
       GIT_TOKEN: ${{secrets.GITHUB_TOKEN}}

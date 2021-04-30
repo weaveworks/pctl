@@ -1,11 +1,11 @@
 ##@ Test
 
-test: lint unit-test integration-test ## Run all tests
+test: lint unit integration ## Run all tests
 
-unit-test: ## Run the unit tests
+unit: ## Run the unit tests
 	ginkgo -r ./pkg
 
-integration-test: build local-env ## Run the integration tests
+integration: build local-env ## Run the integration tests
 	ginkgo -r ./tests/...
 
 local-env: submodule
