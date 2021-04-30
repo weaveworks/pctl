@@ -58,7 +58,7 @@ var _ = Describe("prepare", func() {
 			Expect(runner.RunCallCount()).To(Equal(1))
 			arg, args := runner.RunArgsForCall(0)
 			Expect(arg).To(Equal("kubectl"))
-			Expect(args).To(Equal([]string{"apply", "-f", tmp, "--dry-run=client", "--output=yaml"}))
+			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "config", "release"), "--dry-run=client", "--output=yaml"}))
 		})
 	})
 	When("dry-run is not set", func() {
@@ -93,7 +93,7 @@ var _ = Describe("prepare", func() {
 			Expect(runner.RunCallCount()).To(Equal(1))
 			arg, args := runner.RunArgsForCall(0)
 			Expect(arg).To(Equal("kubectl"))
-			Expect(args).To(Equal([]string{"apply", "-f", tmp}))
+			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "config", "release")}))
 		})
 	})
 	When("context and config is provided", func() {
@@ -130,7 +130,7 @@ var _ = Describe("prepare", func() {
 			Expect(runner.RunCallCount()).To(Equal(1))
 			arg, args := runner.RunArgsForCall(0)
 			Expect(arg).To(Equal("kubectl"))
-			Expect(args).To(Equal([]string{"apply", "-f", tmp, "--context=context", "--kubeconfig=kubeconfig"}))
+			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "config", "release"), "--context=context", "--kubeconfig=kubeconfig"}))
 		})
 	})
 	When("there is an error running kubectl apply", func() {
