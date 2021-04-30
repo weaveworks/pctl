@@ -12,8 +12,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/cluster"
 
+	"github.com/weaveworks/pctl/pkg/cluster"
 	"github.com/weaveworks/pctl/pkg/runner/fakes"
 )
 

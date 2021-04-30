@@ -318,6 +318,7 @@ func prepareCmd() *cli.Command {
 		},
 		Action: func(c *cli.Context) error {
 			p, err := cluster.NewPreparer(cluster.PrepConfig{
+				BaseURL:     c.String("baseurl"),
 				Version:     c.String("version"),
 				KubeConfig:  c.String("kubeconfig"),
 				KubeContext: c.String("context"),

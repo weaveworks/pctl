@@ -6,7 +6,7 @@ unit: ## Run the unit tests
 	ginkgo -r ./pkg
 
 integration: build local-env ## Run the integration tests
-	ginkgo -r ./tests/...
+	ginkgo --focus="prepare" -r ./tests/...
 
 local-env: submodule
 	cd dependencies/profiles && make local-env

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/fluxcd/pkg/untar"
@@ -14,7 +15,8 @@ import (
 )
 
 const (
-	kubectlCmd = "kubectl"
+	kubectlCmd     = "kubectl"
+	manifestFolder = "./config/release"
 )
 
 // Fetcher will download a manifest tar file from a remote repository.
@@ -103,7 +105,7 @@ func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
 		return fmt.Errorf("failed to download manifests.tar.gz from %s, status: %s", ghURL, resp.Status)
 	}
 
-	if _, err = untar.Untar(resp.Body, dir); err != nil {
+	if _, err := untar.Untar(resp.Body, dir); err != nil {
 		return fmt.Errorf("failed to untar manifests.tar.gz from %s, error: %w", ghURL, err)
 	}
 
@@ -112,7 +114,7 @@ func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
 
 // Apply applies the fetched manifest files to a cluster.
 func (a *Applier) Apply(folder string, kubeContext string, kubeConfig string, dryRun bool) error {
-	kubectlArgs := []string{"apply", "-f", folder}
+	kubectlArgs := []string{"apply", "-f", filepath.Join(folder, manifestFolder)}
 	if dryRun {
 		kubectlArgs = append(kubectlArgs, "--dry-run=client", "--output=yaml")
 	}
@@ -122,10 +124,14 @@ func (a *Applier) Apply(folder string, kubeContext string, kubeConfig string, dr
 	if kubeConfig != "" {
 		kubectlArgs = append(kubectlArgs, "--kubeconfig="+kubeConfig)
 	}
-	if _, err := a.Runner.Run(kubectlCmd, kubectlArgs...); err != nil {
+	output, err := a.Runner.Run(kubectlCmd, kubectlArgs...)
+	if err != nil {
 		return fmt.Errorf("install failed: %w", err)
 	}
-
+	if dryRun {
+		fmt.Print(string(output))
+		return nil
+	}
 	// In a follow up ticket, make this wait for all the possible resources to be condition=available.
 	fmt.Println("install finished")
 	return nil

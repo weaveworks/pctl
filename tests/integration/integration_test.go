@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -298,6 +300,52 @@ status: {}
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(session).Should(gexec.Exit(1))
 				Expect(string(session.Err.Contents())).To(ContainSubstring("is a directory"))
+			})
+		})
+	})
+
+	Context("prepare", func() {
+		When("prepare is called without any arguments", func() {
+			It("downloads and installs the latest release of manifest files from the profile repository", func() {
+				cmd := exec.Command(binaryPath, "prepare")
+				output, err := cmd.CombinedOutput()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(output)).To(Equal("install finished\n"))
+			})
+		})
+		When("dry-run is provided", func() {
+			It("displays the to be applied content", func() {
+				cmd := exec.Command(binaryPath, "prepare", "--dry-run")
+				output, err := cmd.CombinedOutput()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(output)).To(ContainSubstring("kind: List"))
+			})
+		})
+		When("baseurl is provided", func() {
+			It("will use that to fetch releases", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusTeapot)
+				}))
+				cmd := exec.Command(binaryPath, "prepare", "--baseurl="+server.URL)
+				output, err := cmd.CombinedOutput()
+				Expect(err).To(HaveOccurred())
+				Expect(string(output)).To(ContainSubstring("status: 418 I'm a teapot"))
+			})
+		})
+		When("version is provided", func() {
+			It("will fetch that specific version", func() {
+				cmd := exec.Command(binaryPath, "prepare", "--version=v0.0.1")
+				output, err := cmd.CombinedOutput()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(output)).To(Equal("install finished\n"))
+			})
+		})
+		When("the provided version is missing", func() {
+			It("will put out an understandable error message", func() {
+				cmd := exec.Command(binaryPath, "prepare", "--version=vnope")
+				output, err := cmd.CombinedOutput()
+				Expect(err).To(HaveOccurred())
+				Expect(string(output)).To(ContainSubstring("status: 404 Not Found"))
 			})
 		})
 	})
