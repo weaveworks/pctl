@@ -301,6 +301,11 @@ func prepareCmd() *cli.Command {
 				Usage: "If defined, nothing will be applied.",
 				Value: false,
 			},
+			&cli.BoolFlag{
+				Name:  "keep",
+				Usage: "Keep the downloaded manifest files.",
+				Value: false,
+			},
 			&cli.StringFlag{
 				Name:  "version",
 				Usage: "Define the tagged version to use which can be found under releases in the profiles repository. Exp: [v]0.0.1",
@@ -323,6 +328,7 @@ func prepareCmd() *cli.Command {
 				KubeConfig:  c.String("kubeconfig"),
 				KubeContext: c.String("context"),
 				DryRun:      c.Bool("dry-run"),
+				Keep:        c.Bool("keep"),
 			})
 			if err != nil {
 				return err

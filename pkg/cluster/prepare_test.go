@@ -29,7 +29,7 @@ var _ = Describe("prepare", func() {
 	When("dry run is set", func() {
 		It("can prepare the environment with everything that profiles needs without actually modifying the cluster", func() {
 			runner := &fakes.FakeRunner{}
-			content, err := ioutil.ReadFile(filepath.Join("testdata", "manifests.tar.gz"))
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
 				Transport: &mockTransport{
@@ -58,13 +58,13 @@ var _ = Describe("prepare", func() {
 			Expect(runner.RunCallCount()).To(Equal(1))
 			arg, args := runner.RunArgsForCall(0)
 			Expect(arg).To(Equal("kubectl"))
-			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "config", "release"), "--dry-run=client", "--output=yaml"}))
+			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "prepare.yaml"), "--dry-run=client", "--output=yaml"}))
 		})
 	})
 	When("dry-run is not set", func() {
 		It("sets up the environment with everything that profiles needs", func() {
 			runner := &fakes.FakeRunner{}
-			content, err := ioutil.ReadFile(filepath.Join("testdata", "manifests.tar.gz"))
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
 				Transport: &mockTransport{
@@ -93,13 +93,13 @@ var _ = Describe("prepare", func() {
 			Expect(runner.RunCallCount()).To(Equal(1))
 			arg, args := runner.RunArgsForCall(0)
 			Expect(arg).To(Equal("kubectl"))
-			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "config", "release")}))
+			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "prepare.yaml")}))
 		})
 	})
 	When("context and config is provided", func() {
 		It("passes that over to kubernetes", func() {
 			runner := &fakes.FakeRunner{}
-			content, err := ioutil.ReadFile(filepath.Join("testdata", "manifests.tar.gz"))
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
 				Transport: &mockTransport{
@@ -130,14 +130,14 @@ var _ = Describe("prepare", func() {
 			Expect(runner.RunCallCount()).To(Equal(1))
 			arg, args := runner.RunArgsForCall(0)
 			Expect(arg).To(Equal("kubectl"))
-			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "config", "release"), "--context=context", "--kubeconfig=kubeconfig"}))
+			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "prepare.yaml"), "--context=context", "--kubeconfig=kubeconfig"}))
 		})
 	})
 	When("there is an error running kubectl apply", func() {
 		It("will fail and show a proper error to the user", func() {
 			runner := &fakes.FakeRunner{}
 			runner.RunReturns([]byte("nope"), errors.New("nope"))
-			content, err := ioutil.ReadFile(filepath.Join("testdata", "manifests.tar.gz"))
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
 				Transport: &mockTransport{
@@ -159,30 +159,10 @@ var _ = Describe("prepare", func() {
 			Expect(err).To(MatchError("install failed: nope"))
 		})
 	})
-	When("there is an invalid tar file being downloaded", func() {
-		It("fails to untar it", func() {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-type", "application/gzip")
-				_, _ = w.Write([]byte("invalid-tar"))
-			}))
-			p, err := cluster.NewPreparer(cluster.PrepConfig{
-				BaseURL: server.URL,
-			})
-			Expect(err).NotTo(HaveOccurred())
-			p.Fetcher = &cluster.Fetcher{
-				Client: server.Client(),
-			}
-			err = p.Prepare()
-			Expect(err).To(HaveOccurred())
-			fmt.Println("error: ", err)
-			msg := fmt.Sprintf("failed to untar manifests.tar.gz from %s/latest/download/manifests.tar.gz, error: requires gzip-compressed body: gzip: invalid header", server.URL)
-			Expect(err.Error()).To(Equal(msg))
-		})
-	})
 	When("a specific version is defined", func() {
 		It("the fetcher will respect the version and try to download that", func() {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				Expect(r.URL.String()).To(Equal("/download/v0.0.1/manifests.tar.gz"))
+				Expect(r.URL.String()).To(Equal("/download/v0.0.1/prepare.yaml"))
 			}))
 			p, err := cluster.NewPreparer(cluster.PrepConfig{
 				BaseURL: server.URL,
@@ -197,7 +177,7 @@ var _ = Describe("prepare", func() {
 		})
 		It("will only try and fetch versions starting with (v)", func() {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				Expect(r.URL.String()).To(Equal("/latest/download/manifests.tar.gz"))
+				Expect(r.URL.String()).To(Equal("/latest/download/prepare.yaml"))
 			}))
 			p, err := cluster.NewPreparer(cluster.PrepConfig{
 				BaseURL: server.URL,
@@ -224,7 +204,7 @@ var _ = Describe("prepare", func() {
 				Client: server.Client(),
 			}
 			err = p.Prepare()
-			msg := fmt.Sprintf("failed to download manifests.tar.gz from %s/latest/download/manifests.tar.gz, status: 502 Bad Gateway", server.URL)
+			msg := fmt.Sprintf("failed to download prepare.yaml from %s/latest/download/prepare.yaml, status: 502 Bad Gateway", server.URL)
 			Expect(err).To(MatchError(msg))
 		})
 	})
@@ -239,10 +219,45 @@ var _ = Describe("prepare", func() {
 			Expect(err.Error()).To(ContainSubstring("unsupported protocol scheme"))
 		})
 	})
+	When("the user decided to keep the downloaded file(s)", func() {
+		It("will not delete the downloaded file(s)", func() {
+			runner := &fakes.FakeRunner{}
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+			client := &http.Client{
+				Transport: &mockTransport{
+					res: &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(bytes.NewReader(content)),
+					},
+				},
+			}
+			tmp, err := ioutil.TempDir("", "prepare_should_keep_things")
+			Expect(err).NotTo(HaveOccurred())
+			p := &cluster.Preparer{
+				PrepConfig: cluster.PrepConfig{
+					BaseURL:  "https://github.com/weaveworks/profiles/releases",
+					Location: tmp,
+					Keep:     true,
+				},
+				Fetcher: &cluster.Fetcher{
+					Client: client,
+				},
+				Applier: &cluster.Applier{
+					Runner: runner,
+				},
+			}
+			err = p.Prepare()
+			Expect(err).NotTo(HaveOccurred())
+			downloadedContent, err := ioutil.ReadFile(filepath.Join(tmp, "prepare.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(downloadedContent).To(Equal(content))
+		})
+	})
 	When("when all is done", func() {
 		It("should remove any temporary folders", func() {
 			runner := &fakes.FakeRunner{}
-			content, err := ioutil.ReadFile(filepath.Join("testdata", "manifests.tar.gz"))
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
 				Transport: &mockTransport{

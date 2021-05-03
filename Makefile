@@ -8,6 +8,10 @@ unit: ## Run the unit tests
 integration: build local-env ## Run the integration tests
 	ginkgo -r ./tests/...
 
+test-env: submodule ## Create an environment for tests
+	cd dependencies/profiles && make docker-build-local kind-up docker-push-local
+	flux install --components="source-controller,helm-controller,kustomize-controller"
+
 ##@ Build
 
 lint: ## Run the linter

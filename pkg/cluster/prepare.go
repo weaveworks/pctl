@@ -10,13 +10,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/fluxcd/pkg/untar"
 	"github.com/weaveworks/pctl/pkg/runner"
 )
 
 const (
-	kubectlCmd     = "kubectl"
-	manifestFolder = "./config/release"
+	kubectlCmd = "kubectl"
+	// profiles bundles ready to be installed files under `prepare`. The rest of the resources
+	// are left for manual configuration.
+	prepareManifestFile = "prepare.yaml"
 )
 
 // Fetcher will download a manifest tar file from a remote repository.
@@ -46,6 +47,7 @@ type PrepConfig struct {
 	KubeContext string
 	KubeConfig  string
 	DryRun      bool
+	Keep        bool
 }
 
 // NewPreparer creates a preparer with set dependencies ready to be used.
@@ -69,6 +71,9 @@ func NewPreparer(cfg PrepConfig) (*Preparer, error) {
 // Prepare will prepare an environment with everything that is needed to run profiles.
 func (p *Preparer) Prepare() error {
 	defer func() {
+		if p.Keep {
+			return
+		}
 		if err := os.RemoveAll(p.Location); err != nil {
 			fmt.Printf("failed to remove temporary folder at location: %s. Please clean manually.", p.Location)
 		}
@@ -81,9 +86,9 @@ func (p *Preparer) Prepare() error {
 
 // Fetch the latest or a version of the released manifest files for profiles.
 func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
-	ghURL := fmt.Sprintf("%s/latest/download/manifests.tar.gz", url)
+	ghURL := fmt.Sprintf("%s/latest/download/%s", url, prepareManifestFile)
 	if strings.HasPrefix(version, "v") {
-		ghURL = fmt.Sprintf("%s/download/%s/manifests.tar.gz", url, version)
+		ghURL = fmt.Sprintf("%s/download/%s/%s", url, version, prepareManifestFile)
 	}
 
 	req, err := http.NewRequest("GET", ghURL, nil)
@@ -93,7 +98,7 @@ func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
 
 	resp, err := f.Client.Do(req.WithContext(ctx))
 	if err != nil {
-		return fmt.Errorf("failed to download manifests.tar.gz from %s, error: %w", ghURL, err)
+		return fmt.Errorf("failed to download prepare.yaml from %s, error: %w", ghURL, err)
 	}
 	defer func(body io.ReadCloser) {
 		if err := body.Close(); err != nil {
@@ -102,11 +107,16 @@ func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
 	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to download manifests.tar.gz from %s, status: %s", ghURL, resp.Status)
+		return fmt.Errorf("failed to download prepare.yaml from %s, status: %s", ghURL, resp.Status)
 	}
 
-	if _, err := untar.Untar(resp.Body, dir); err != nil {
-		return fmt.Errorf("failed to untar manifests.tar.gz from %s, error: %w", ghURL, err)
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read body of the response: %w", err)
+	}
+
+	if err := ioutil.WriteFile(filepath.Join(dir, prepareManifestFile), content, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to write out file to location: %w", err)
 	}
 
 	return nil
@@ -114,7 +124,7 @@ func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
 
 // Apply applies the fetched manifest files to a cluster.
 func (a *Applier) Apply(folder string, kubeContext string, kubeConfig string, dryRun bool) error {
-	kubectlArgs := []string{"apply", "-f", filepath.Join(folder, manifestFolder)}
+	kubectlArgs := []string{"apply", "-f", filepath.Join(folder, prepareManifestFile)}
 	if dryRun {
 		kubectlArgs = append(kubectlArgs, "--dry-run=client", "--output=yaml")
 	}
@@ -126,6 +136,7 @@ func (a *Applier) Apply(folder string, kubeContext string, kubeConfig string, dr
 	}
 	output, err := a.Runner.Run(kubectlCmd, kubectlArgs...)
 	if err != nil {
+		fmt.Println("Log from kubectl: ", string(output))
 		return fmt.Errorf("install failed: %w", err)
 	}
 	if dryRun {
