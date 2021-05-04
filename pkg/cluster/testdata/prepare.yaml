@@ -584,7 +584,7 @@ spec:
             - --leader-elect
           command:
             - /manager
-          image: skarlso/profiles-controller:latest
+          image: weaveworks/profiles-controller:latest
           livenessProbe:
             httpGet:
               path: /healthz

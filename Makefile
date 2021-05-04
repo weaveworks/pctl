@@ -5,7 +5,7 @@ test: lint unit integration docs ## Lint, run all tests and update the docs
 unit: ## Run the unit tests
 	ginkgo -r ./pkg
 
-integration: build local-env ## Run the integration tests
+integration: build test-env ## Run the integration tests
 	ginkgo -r ./tests/...
 
 test-env: submodule ## Create an environment for tests

@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -87,7 +88,8 @@ func (p *Preparer) Prepare() error {
 // Fetch the latest or a version of the released manifest files for profiles.
 func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
 	ghURL := fmt.Sprintf("%s/latest/download/%s", url, prepareManifestFile)
-	if strings.HasPrefix(version, "v") {
+	hasVersionPrefix := strings.HasPrefix(version, "v")
+	if hasVersionPrefix {
 		ghURL = fmt.Sprintf("%s/download/%s/%s", url, version, prepareManifestFile)
 	}
 
@@ -113,6 +115,13 @@ func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read body of the response: %w", err)
+	}
+
+	// make sure the right version of the controller is pulled
+	if hasVersionPrefix {
+		content = bytes.ReplaceAll(content,
+			[]byte("weaveworks/profiles-controller:latest"),
+			[]byte("weaveworks/profiles-controller:"+version))
 	}
 
 	if err := ioutil.WriteFile(filepath.Join(dir, prepareManifestFile), content, os.ModePerm); err != nil {

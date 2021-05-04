@@ -304,15 +304,6 @@ status: {}
 		})
 	})
 	Context("prepare", func() {
-		When("prepare is called without any arguments", func() {
-			It("downloads and installs the latest release of manifest files from the profile repository", func() {
-				// this needs to be re-thought since it could seriously mess with the test structure.
-				//cmd := exec.Command(binaryPath, "prepare")
-				//output, err := cmd.CombinedOutput()
-				//Expect(err).ToNot(HaveOccurred())
-				//Expect(string(output)).To(Equal("install finished\n"))
-			})
-		})
 		When("dry-run is provided", func() {
 			It("displays the to be applied content", func() {
 				cmd := exec.Command(binaryPath, "prepare", "--dry-run")

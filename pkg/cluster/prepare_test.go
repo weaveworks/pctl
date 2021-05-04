@@ -160,7 +160,7 @@ var _ = Describe("prepare", func() {
 		})
 	})
 	When("a specific version is defined", func() {
-		It("the fetcher will respect the version and try to download that", func() {
+		It("will respect the version and try to download that", func() {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				Expect(r.URL.String()).To(Equal("/download/v0.0.1/prepare.yaml"))
 			}))
@@ -174,6 +174,41 @@ var _ = Describe("prepare", func() {
 			}
 			// we deliberately ignore the error here. the important part is the called url.
 			_ = p.Prepare()
+		})
+		It("will update the controller's image version so the right version is downloaded", func() {
+			runner := &fakes.FakeRunner{}
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+			client := &http.Client{
+				Transport: &mockTransport{
+					res: &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(bytes.NewReader(content)),
+					},
+				},
+			}
+			tmp, err := ioutil.TempDir("", "prepare_change_version_01")
+			Expect(err).NotTo(HaveOccurred())
+			p := &cluster.Preparer{
+				PrepConfig: cluster.PrepConfig{
+					Location: tmp,
+					DryRun:   true,
+					Keep:     true,
+					Version:  "v0.0.1",
+				},
+				Fetcher: &cluster.Fetcher{
+					Client: client,
+				},
+				Applier: &cluster.Applier{
+					Runner: runner,
+				},
+			}
+			err = p.Prepare()
+			Expect(err).NotTo(HaveOccurred())
+			content, err = ioutil.ReadFile(filepath.Join(tmp, "prepare.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(ContainSubstring("weaveworks/profiles-controller:v0.0.1"))
+
 		})
 		It("will only try and fetch versions starting with (v)", func() {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
