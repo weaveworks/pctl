@@ -179,11 +179,10 @@ var _ = Describe("PCTL", func() {
 				Eventually(session).Should(gexec.Exit(0))
 				return string(session.Out.Contents())
 			}
-			Eventually(getCmd).Should(ContainSubstring(`Subscription: failed-sub
-Namespace: default
-Ready: False
-Reason:
- - CreateFailed`))
+			Eventually(getCmd).Should(ContainSubstring("Subscription\tfailed-sub                              \t\n" +
+				"Namespace   \tdefault                                 \t\n" +
+				"Ready       \tFalse                                   \t\n" +
+				"Reason      \terror when reconciling profile artifacts\t\n"))
 		})
 	})
 
@@ -238,8 +237,8 @@ Reason:
 				Eventually(session).Should(gexec.Exit(0))
 				return string(session.Out.Contents())
 			}
-			Eventually(listCmd).Should(ContainSubstring(`NAMESPACE	NAME		READY
-default		failed-sub	False`))
+			Eventually(listCmd).Should(ContainSubstring("NAMESPACE	NAME      \tREADY \n" +
+				"default  \tfailed-sub	False"))
 		})
 	})
 
@@ -294,11 +293,10 @@ default		failed-sub	False`))
 				Eventually(session).Should(gexec.Exit(0))
 				return string(session.Out.Contents())
 			}
-			Eventually(getCmd).Should(ContainSubstring(`Subscription: failed-sub
-Namespace: default
-Ready: False
-Reason:
- - CreateFailed`))
+			Eventually(getCmd).Should(ContainSubstring("Subscription\tfailed-sub                              \t\n" +
+				"Namespace   \tdefault                                 \t\n" +
+				"Ready       \tFalse                                   \t\n" +
+				"Reason      \terror when reconciling profile artifacts\t\n"))
 		})
 	})
 

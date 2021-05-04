@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/urfave/cli/v2"
+	"github.com/weaveworks/pctl/pkg/formatter"
 	"github.com/weaveworks/pctl/pkg/subscription"
 )
 
@@ -38,17 +39,35 @@ func getCmd() *cli.Command {
 			if err != nil {
 				return err
 			}
-			printSubscription(profile)
+			var f formatter.Formatter
+			f = formatter.NewTableFormatter()
+			getter := getDataFunc(profile)
+
+			if c.String("output") == "json" {
+				f = formatter.NewJSONFormatter()
+				getter = func() interface{} { return profile }
+			}
+
+			out, err := f.Format(getter)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(out)
 			return nil
 		},
 	}
 }
 
-func printSubscription(sub subscription.SubscriptionSummary) {
-	fmt.Printf(`Subscription: %s
-Namespace: %s
-Ready: %s
-Reason:
- - %s
-`, sub.Name, sub.Namespace, sub.Ready, sub.Reason)
+func getDataFunc(profile subscription.SubscriptionSummary) func() interface{} {
+	return func() interface{} {
+		return formatter.TableContents{
+			Data: [][]string{
+				{"Subscription", profile.Name},
+				{"Namespace", profile.Namespace},
+				{"Ready", profile.Ready},
+				{"Reason", profile.Message},
+			},
+		}
+	}
 }

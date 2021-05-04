@@ -43,7 +43,7 @@ var _ = Describe("Get", func() {
 		condition := metav1.Condition{
 			Type:               "Ready",
 			Status:             "True",
-			Reason:             "foo",
+			Message:            "foo",
 			LastTransitionTime: metav1.Now(),
 		}
 
@@ -62,7 +62,7 @@ var _ = Describe("Get", func() {
 			Name:      sub1,
 			Namespace: namespace1,
 			Ready:     "True",
-			Reason:    "foo",
+			Message:   "foo",
 		}))
 	})
 
@@ -96,7 +96,7 @@ var _ = Describe("Get", func() {
 				Name:      sub1,
 				Namespace: namespace1,
 				Ready:     "Unknown",
-				Reason:    "-",
+				Message:   "-",
 			}))
 		})
 	})

@@ -2,11 +2,10 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/urfave/cli/v2"
+	"github.com/weaveworks/pctl/pkg/formatter"
 	"github.com/weaveworks/pctl/pkg/subscription"
-	"k8s.io/kops/util/pkg/tables"
 )
 
 func listCmd() *cli.Command {
@@ -27,21 +26,39 @@ func listCmd() *cli.Command {
 				fmt.Println("no profiles found")
 				return nil
 			}
-			return printSubscriptions(profiles)
+
+			var f formatter.Formatter
+			f = formatter.NewTableFormatter()
+			getter := listDataFunc(profiles)
+
+			if c.String("output") == "json" {
+				f = formatter.NewJSONFormatter()
+				getter = func() interface{} { return profiles }
+			}
+
+			out, err := f.Format(getter)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(out)
+			return nil
 		},
 	}
 }
 
-func printSubscriptions(subs []subscription.SubscriptionSummary) error {
-	table := tables.Table{}
-	table.AddColumn("NAMESPACE", func(sub subscription.SubscriptionSummary) string {
-		return sub.Namespace
-	})
-	table.AddColumn("NAME", func(sub subscription.SubscriptionSummary) string {
-		return sub.Name
-	})
-	table.AddColumn("READY", func(sub subscription.SubscriptionSummary) string {
-		return sub.Ready
-	})
-	return table.Render(subs, os.Stdout, "NAMESPACE", "NAME", "READY")
+func listDataFunc(profiles []subscription.SubscriptionSummary) func() interface{} {
+	return func() interface{} {
+		tc := formatter.TableContents{
+			Headers: []string{"Namespace", "Name", "Ready"},
+		}
+		for _, profile := range profiles {
+			tc.Data = append(tc.Data, []string{
+				profile.Namespace,
+				profile.Name,
+				profile.Ready,
+			})
+		}
+		return tc
+	}
 }

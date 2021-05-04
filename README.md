@@ -68,12 +68,11 @@ default         nginx-profile-test      False
 ### Get
 pctl can be used to get a profile subscriptions in a cluster, example:
 ```
-pctl get --name nginx-profile-test --namespace default
-Subscrption: nginx-profile-test
-Namespace: default
-Ready: False
-Reason:
- - ArtifactNotReady
+pctl get --namespace default --name nginx-profile-test
+Subscription    nginx-profile-test
+Namespace       default
+Ready           False
+Reason          error when reconciling profile artifacts
 ```
 
 ### Catalog service options

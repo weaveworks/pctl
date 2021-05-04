@@ -12,7 +12,7 @@ type SubscriptionSummary struct {
 	Name      string
 	Namespace string
 	Ready     string
-	Reason    string
+	Message   string
 }
 
 // Get returns a SubscriptionSummary for a given subscription
@@ -24,11 +24,11 @@ func (sm *Manager) Get(namespace, name string) (SubscriptionSummary, error) {
 		return SubscriptionSummary{}, fmt.Errorf("failed to get profile subscriptions: %w", err)
 	}
 	status := "Unknown"
-	reason := "-"
+	message := "-"
 	for _, cond := range sub.Status.Conditions {
 		if cond.Type == "Ready" {
 			status = string(cond.Status)
-			reason = cond.Reason
+			message = cond.Message
 			break
 		}
 	}
@@ -37,7 +37,7 @@ func (sm *Manager) Get(namespace, name string) (SubscriptionSummary, error) {
 		Name:      sub.Name,
 		Namespace: sub.Namespace,
 		Ready:     status,
-		Reason:    reason,
+		Message:   message,
 	}
 	return summary, nil
 }
