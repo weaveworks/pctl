@@ -3,23 +3,12 @@ package integration
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os/exec"
 	"path/filepath"
-	"time"
 )
 
-const patchController = `{"spec":{"template":{"spec":{"containers":[{"name":"manager","image":"localhost:5000/profiles-controller:latest"}]}}}}`
-
 var (
-	patchArgs = []string{
-		"-n",
-		"profiles-system",
-		"patch",
-		"deployment",
-		"profiles-controller-manager",
-		"--patch",
-		patchController,
-	}
 	waitForDeploymentArgs = []string{
 		"-n",
 		"profiles-system",
@@ -50,18 +39,41 @@ var (
 // PrepareTestCluster will create a test cluster using pctl `prepare` command.
 // @binary -- location of the built pctl binary.
 func PrepareTestCluster(binaryPath string) error {
-	cmd := exec.Command(binaryPath, "prepare")
+	cmd := exec.Command(binaryPath, "prepare", "--dry-run")
 	output, err := cmd.CombinedOutput()
-	if err != nil || !bytes.Contains(output, []byte("install finished")) {
+	if err != nil || !bytes.Contains(output, []byte("kind: List")) {
 		fmt.Println("Output of prepare was: ", string(output))
 		return fmt.Errorf("failed to run prepare command: %w", err)
 	}
-	fmt.Println("Installation done successfully.")
+	fmt.Println("Install file generated successfully.")
 
-	fmt.Print("Patching controller image to localhost:5000...")
-	if err := runKubectl(patchArgs); err != nil {
-		return fmt.Errorf("failed to apply patch: %w", err)
+	fmt.Print("Replacing controller image to localhost:5000...")
+	output = bytes.ReplaceAll(output, []byte("image: weaveworks/profiles-controller:latest"), []byte("image: localhost:5000/profiles-controller:latest"))
+	fmt.Println("done.")
+
+	fmt.Print("Applying modified prepare.yaml...")
+	applyPrepareArgs := []string{"apply", "-f", "-"}
+	cmd = exec.Command("kubectl", applyPrepareArgs...)
+	in, err := cmd.StdinPipe()
+	if err != nil {
+		return fmt.Errorf("failed to get in pipe for kubectl: %w", err)
 	}
+
+	go func() {
+		defer func(in io.WriteCloser) {
+			_ = in.Close()
+		}(in)
+		if _, err := io.WriteString(in, string(output)); err != nil {
+			fmt.Println("Failed to write to kubectl apply: ", err)
+		}
+	}()
+
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Output from kubectl apply: ", string(output))
+		return fmt.Errorf("failed to apply prepare yaml: %w", err)
+	}
+	fmt.Println("done.")
 
 	fmt.Print("Waiting for deployment...")
 	if err := runKubectl(waitForDeploymentArgs); err != nil {
@@ -72,9 +84,6 @@ func PrepareTestCluster(binaryPath string) error {
 	if err := runKubectl(waitForPodsArgs); err != nil {
 		return fmt.Errorf("failed to wait for pods to be active: %w", err)
 	}
-
-	// TODO remove this: sleep for testing why the pod wait isn't enough
-	time.Sleep(2 * time.Second)
 
 	fmt.Print("Applying test catalog...")
 	if err := runKubectl(applySourceCatalogArgs); err != nil {
