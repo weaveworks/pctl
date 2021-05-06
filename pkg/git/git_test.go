@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/git/fakes"
+	"github.com/weaveworks/pctl/pkg/runner/fakes"
 )
 
 var _ = Describe("git", func() {
