@@ -11,6 +11,8 @@ and run: mdtoc -inplace README.md
   - [Search](#search)
   - [Show](#show)
   - [Install](#install)
+  - [List](#list)
+  - [Get](#get)
   - [Prepare](#prepare)
   - [Catalog service options](#catalog-service-options)
 - [Development](#development)
@@ -55,6 +57,24 @@ generating subscription for profile nginx-catalog/weaveworks-nginx:
 ```
 
 Then the result will be in profile-subscription.yaml file.
+
+### List
+pctl can be used to list the profile subscriptions in a cluster, example:
+```
+pctl list
+NAMESPACE       NAME                    READY
+default         nginx-profile-test      False
+```
+
+### Get
+pctl can be used to get a profile subscriptions in a cluster, example:
+```
+pctl get --namespace default --name nginx-profile-test
+Subscription    nginx-profile-test
+Namespace       default
+Ready           False
+Reason          error when reconciling profile artifacts
+```
 
 ### Prepare
 
