@@ -584,7 +584,7 @@ spec:
             - --leader-elect
           command:
             - /manager
-          image: weaveworks/profiles-controller:latest
+          image: weaveworks/profiles-controller:v0.0.1
           livenessProbe:
             httpGet:
               path: /healthz

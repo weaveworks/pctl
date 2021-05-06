@@ -175,7 +175,7 @@ var _ = Describe("prepare", func() {
 			// we deliberately ignore the error here. the important part is the called url.
 			_ = p.Prepare()
 		})
-		It("will update the controller's image version so the right version is downloaded", func() {
+		It("the controller has the right version in the file", func() {
 			runner := &fakes.FakeRunner{}
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())

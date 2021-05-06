@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -115,13 +114,6 @@ func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read body of the response: %w", err)
-	}
-
-	// make sure the right version of the controller is pulled
-	if hasVersionPrefix {
-		content = bytes.ReplaceAll(content,
-			[]byte("weaveworks/profiles-controller:latest"),
-			[]byte("weaveworks/profiles-controller:"+version))
 	}
 
 	if err := ioutil.WriteFile(filepath.Join(dir, prepareManifestFile), content, os.ModePerm); err != nil {

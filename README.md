@@ -11,6 +11,7 @@ and run: mdtoc -inplace README.md
   - [Search](#search)
   - [Show](#show)
   - [Install](#install)
+  - [Prepare](#prepare)
   - [Catalog service options](#catalog-service-options)
 - [Development](#development)
   - [Tests](#tests)

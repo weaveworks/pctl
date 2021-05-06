@@ -6,6 +6,7 @@ import (
 	"io"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 )
 
 var (
@@ -48,7 +49,8 @@ func PrepareTestCluster(binaryPath string) error {
 	fmt.Println("Install file generated successfully.")
 
 	fmt.Print("Replacing controller image to localhost:5000...")
-	output = bytes.ReplaceAll(output, []byte("image: weaveworks/profiles-controller:latest"), []byte("image: localhost:5000/profiles-controller:latest"))
+	re := regexp.MustCompile(`weaveworks/profiles-controller:.*`)
+	out := re.ReplaceAllString(string(output), "localhost:5000/profiles-controller:latest")
 	fmt.Println("done.")
 
 	fmt.Print("Applying modified prepare.yaml...")
@@ -63,7 +65,7 @@ func PrepareTestCluster(binaryPath string) error {
 		defer func(in io.WriteCloser) {
 			_ = in.Close()
 		}(in)
-		if _, err := io.WriteString(in, string(output)); err != nil {
+		if _, err := io.WriteString(in, out); err != nil {
 			fmt.Println("Failed to write to kubectl apply: ", err)
 		}
 	}()
