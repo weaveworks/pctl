@@ -11,6 +11,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/weaveworks/pctl/tests/integration"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
@@ -36,6 +37,8 @@ var _ = BeforeSuite(func() {
 
 	kubeconfig := ctrl.GetConfigOrDie()
 	kClient, err = client.New(kubeconfig, client.Options{Scheme: scheme})
+	Expect(err).NotTo(HaveOccurred())
+	err = integration.PrepareTestCluster(binaryPath)
 	Expect(err).NotTo(HaveOccurred())
 })
 

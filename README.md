@@ -13,6 +13,7 @@ and run: mdtoc -inplace README.md
   - [Install](#install)
   - [List](#list)
   - [Get](#get)
+  - [Prepare](#prepare)
   - [Catalog service options](#catalog-service-options)
 - [Development](#development)
   - [Tests](#tests)
@@ -74,6 +75,21 @@ Namespace       default
 Ready           False
 Reason          error when reconciling profile artifacts
 ```
+
+### Prepare
+
+pctl can set up a cluster with all necessary components for `profiles` to work.
+To do that, run the following:
+
+```
+pctl prepare
+```
+
+This will take the latest manifests release under the profiles repository and install
+them into the currently set cluster.
+
+There are a number of options which can be set, such as: version, dry-run, context, kube-config.
+Please run `pctl help` for all options and defaults.
 
 ### Catalog service options
 

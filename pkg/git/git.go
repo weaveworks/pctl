@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/weaveworks/pctl/pkg/runner"
 )
 
 const (
@@ -42,11 +44,11 @@ type CLIGitConfig struct {
 // CLIGit is a new command line based Git.
 type CLIGit struct {
 	CLIGitConfig
-	Runner Runner
+	Runner runner.Runner
 }
 
 // NewCLIGit creates a new command line based Git.
-func NewCLIGit(cfg CLIGitConfig, r Runner) *CLIGit {
+func NewCLIGit(cfg CLIGitConfig, r runner.Runner) *CLIGit {
 	return &CLIGit{
 		CLIGitConfig: cfg,
 		Runner:       r,

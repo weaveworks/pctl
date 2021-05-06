@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/pctl/pkg/runner"
 	"github.com/weaveworks/pctl/pkg/writer"
 )
 
@@ -133,7 +134,7 @@ func createPullRequest(c *cli.Context) error {
 		return errors.New("repo must be defined if create-pr is true")
 	}
 	fmt.Printf("Creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
-	r := &git.CLIRunner{}
+	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{
 		Filename: filename,
 		Location: filepath.Dir(filename),

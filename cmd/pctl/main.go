@@ -7,13 +7,16 @@ import (
 	"path/filepath"
 
 	"github.com/urfave/cli/v2"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
-
 	"github.com/weaveworks/pctl/pkg/client"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	releaseUrl = "https://github.com/weaveworks/profiles/releases"
 )
 
 func main() {
@@ -26,6 +29,7 @@ func main() {
 			installCmd(),
 			listCmd(),
 			getCmd(),
+			prepareCmd(),
 		},
 	}
 

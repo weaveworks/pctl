@@ -5,8 +5,12 @@ test: lint unit integration docs ## Lint, run all tests and update the docs
 unit: ## Run the unit tests
 	ginkgo -r ./pkg
 
-integration: build local-env ## Run the integration tests
+integration: build test-env ## Run the integration tests
 	ginkgo -r ./tests/...
+
+test-env: submodule ## Create an environment for tests
+	cd dependencies/profiles && make docker-build-local kind-up docker-push-local
+	flux install --components="source-controller,helm-controller,kustomize-controller"
 
 ##@ Build
 
