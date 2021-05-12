@@ -22,12 +22,13 @@ type InstallConfig struct {
 	ProfileName   string
 	SubName       string
 	Writer        writer.Writer
+	Version       string
 }
 
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile subscription
 // writing it out with the provided profile subscription writer.
 func Install(cfg InstallConfig) error {
-	profile, err := Show(cfg.CatalogClient, cfg.CatalogName, cfg.ProfileName)
+	profile, err := Show(cfg.CatalogClient, WithCatalogName(cfg.CatalogName), WithProfileName(cfg.ProfileName), WithCatalogVersion(cfg.Version))
 	if err != nil {
 		return fmt.Errorf("failed to get profile %q in catalog %q: %w", cfg.ProfileName, cfg.CatalogName, err)
 	}

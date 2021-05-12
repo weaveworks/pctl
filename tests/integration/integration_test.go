@@ -15,9 +15,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 const (
@@ -93,11 +94,27 @@ var _ = Describe("PCTL", func() {
 			Eventually(session).Should(gexec.Exit(0))
 			Expect(string(session.Out.Contents())).To(ContainSubstring("Catalog      \tnginx-catalog                                      \t\n" +
 				"Name         \tweaveworks-nginx                                   \t\n" +
-				"Version      \t0.0.1                                              \t\n" +
+				"Version      \tv0.1.0                                             \t\n" +
 				"Description  \tThis installs nginx.                               \t\n" +
-				"URL          \thttps://github.com/weaveworks/nginx-profile        \t\n" +
+				"URL          \thttps://github.com/weaveworks/profiles-examples    \t\n" +
 				"Maintainer   \tweaveworks (https://github.com/weaveworks/profiles)\t\n" +
 				"Prerequisites\tKubernetes 1.18+                                   \t\n"))
+		})
+
+		When("version is used in the catalog", func() {
+			It("shows the right profile", func() {
+				cmd := exec.Command(binaryPath, "show", "nginx-catalog/weaveworks-nginx/v0.1.0")
+				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(session).Should(gexec.Exit(0))
+				Expect(string(session.Out.Contents())).To(ContainSubstring("Catalog      \tnginx-catalog                                      \t\n" +
+					"Name         \tweaveworks-nginx                                   \t\n" +
+					"Version      \tv0.1.0                                             \t\n" +
+					"Description  \tThis installs nginx.                               \t\n" +
+					"URL          \thttps://github.com/weaveworks/profiles-examples    \t\n" +
+					"Maintainer   \tweaveworks (https://github.com/weaveworks/profiles)\t\n" +
+					"Prerequisites\tKubernetes 1.18+                                   \t\n"))
+			})
 		})
 
 		When("-o is set to json", func() {
@@ -109,9 +126,9 @@ var _ = Describe("PCTL", func() {
 				Expect(string(session.Out.Contents())).To(ContainSubstring(`{
   "name": "weaveworks-nginx",
   "description": "This installs nginx.",
-  "version": "0.0.1",
+  "version": "v0.1.0",
   "catalog": "nginx-catalog",
-  "url": "https://github.com/weaveworks/nginx-profile",
+  "url": "https://github.com/weaveworks/profiles-examples",
   "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
   "prerequisites": [
     "Kubernetes 1.18+"
@@ -321,7 +338,7 @@ metadata:
   namespace: default
 spec:
   branch: main
-  profileURL: https://github.com/weaveworks/nginx-profile
+  profileURL: https://github.com/weaveworks/profiles-examples
 status: {}
 `))
 		})
@@ -345,7 +362,7 @@ metadata:
   namespace: my-namespace
 spec:
   branch: my_branch
-  profileURL: https://github.com/weaveworks/nginx-profile
+  profileURL: https://github.com/weaveworks/profiles-examples
 status: {}
 `))
 			})
@@ -370,13 +387,47 @@ metadata:
   namespace: default
 spec:
   branch: main
-  profileURL: https://github.com/weaveworks/nginx-profile
+  profileURL: https://github.com/weaveworks/profiles-examples
   valuesFrom:
   - kind: ConfigMap
     name: pctl-profile-values
     valuesKey: my-secret
 status: {}
 `))
+			})
+		})
+
+		When("only catalog name, profile name and version is provided", func() {
+			It("will call the catalog service to find the right values to apply", func() {
+				temp, err := ioutil.TempDir("", "pctl_test_install_with_catalog_and_version_01")
+				Expect(err).ToNot(HaveOccurred())
+				filename := filepath.Join(temp, "profile_subscription.yaml")
+				cmd := exec.Command(binaryPath, "install", "--out", filename, "nginx-catalog/weaveworks-nginx/v0.1.0")
+				err = cmd.Run()
+				Expect(err).NotTo(HaveOccurred())
+				content, err := ioutil.ReadFile(filename)
+				Expect(err).NotTo(HaveOccurred())
+				expectedFileContent := `apiVersion: weave.works/v1alpha1
+kind: ProfileSubscription
+metadata:
+  creationTimestamp: null
+  name: pctl-profile
+  namespace: default
+spec:
+  branch: main
+  profileURL: https://github.com/weaveworks/profiles-examples
+status: {}
+`
+				Expect(string(content)).To(Equal(expectedFileContent))
+			})
+		})
+
+		When("a catalog version is provided, but it's an invalid/missing version", func() {
+			It("provide an error saying the profile with these specifics can't be found", func() {
+				cmd := exec.Command(binaryPath, "install", "nginx-catalog/weaveworks-nginx/v999.9.9")
+				output, err := cmd.CombinedOutput()
+				Expect(err).To(HaveOccurred())
+				Expect(string(output)).To(ContainSubstring(`unable to find profile "weaveworks-nginx" in catalog "nginx-catalog" (with version if provided: v999.9.9)`))
 			})
 		})
 
