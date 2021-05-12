@@ -9,8 +9,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/weaveworks/pctl/pkg/runner"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -18,6 +20,7 @@ const (
 	// profiles bundles ready to be installed files under `prepare`. The rest of the resources
 	// are left for manual configuration.
 	prepareManifestFile = "prepare.yaml"
+	namespace           = "profiles-system"
 )
 
 // Fetcher will download a manifest tar file from a remote repository.
@@ -28,6 +31,7 @@ type Fetcher struct {
 // Applier applies the previously generated manifest files.
 type Applier struct {
 	Runner runner.Runner
+	Waiter Waiter
 }
 
 // Preparer will prepare an environment.
@@ -48,6 +52,7 @@ type PrepConfig struct {
 	KubeConfig  string
 	DryRun      bool
 	Keep        bool
+	K8sClient   client.Client
 }
 
 // NewPreparer creates a preparer with set dependencies ready to be used.
@@ -64,6 +69,12 @@ func NewPreparer(cfg PrepConfig) (*Preparer, error) {
 		},
 		Applier: &Applier{
 			Runner: &runner.CLIRunner{},
+			Waiter: NewKubeWaiter(KubeConfig{
+				Client:    cfg.K8sClient,
+				Interval:  5 * time.Second,
+				Timeout:   15 * time.Minute,
+				Namespace: namespace,
+			}),
 		},
 	}, nil
 }
@@ -144,7 +155,10 @@ func (a *Applier) Apply(folder string, kubeContext string, kubeConfig string, dr
 		fmt.Print(string(output))
 		return nil
 	}
-	// In a follow up ticket, make this wait for all the possible resources to be condition=available.
-	fmt.Println("install finished")
+	fmt.Print("Waiting for resources to be verified...")
+	if err := a.Waiter.Wait("profiles-controller-manager"); err != nil {
+		return fmt.Errorf("failed to wait for resources to be ready: %w", err)
+	}
+	fmt.Println("done.")
 	return nil
 }
