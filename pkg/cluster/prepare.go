@@ -18,7 +18,18 @@ const (
 	// profiles bundles ready to be installed files under `prepare`. The rest of the resources
 	// are left for manual configuration.
 	prepareManifestFile = "prepare.yaml"
+	fluxNamespace       = "flux-system"
 )
+
+// fluxCRDs are CRDs which prepare is checking if they are present in the cluster or not.
+var fluxCRDs = []string{
+	"buckets.source.toolkit.fluxcd.io",
+	"gitrepositories.source.toolkit.fluxcd.io",
+	"helmcharts.source.toolkit.fluxcd.io",
+	"helmreleases.helm.toolkit.fluxcd.io",
+	"helmrepositories.source.toolkit.fluxcd.io",
+	"kustomizations.kustomize.toolkit.fluxcd.io",
+}
 
 // Fetcher will download a manifest tar file from a remote repository.
 type Fetcher struct {
@@ -33,8 +44,9 @@ type Applier struct {
 // Preparer will prepare an environment.
 type Preparer struct {
 	PrepConfig
-	Fetcher *Fetcher
 	Applier *Applier
+	Fetcher *Fetcher
+	Runner  runner.Runner
 }
 
 // PrepConfig defines configuration options for prepare.
@@ -57,14 +69,16 @@ func NewPreparer(cfg PrepConfig) (*Preparer, error) {
 		return nil, fmt.Errorf("failed to create temp folder for manifest files: %w", err)
 	}
 	cfg.Location = tmp
+	r := &runner.CLIRunner{}
 	return &Preparer{
 		PrepConfig: cfg,
 		Fetcher: &Fetcher{
 			Client: http.DefaultClient,
 		},
 		Applier: &Applier{
-			Runner: &runner.CLIRunner{},
+			Runner: r,
 		},
+		Runner: r,
 	}, nil
 }
 
@@ -78,10 +92,36 @@ func (p *Preparer) Prepare() error {
 			fmt.Printf("failed to remove temporary folder at location: %s. Please clean manually.", p.Location)
 		}
 	}()
+	if err := p.PreFlightCheck(); err != nil {
+		return err
+	}
 	if err := p.Fetcher.Fetch(context.Background(), p.BaseURL, p.Version, p.Location); err != nil {
 		return err
 	}
 	return p.Applier.Apply(p.Location, p.KubeContext, p.KubeConfig, p.DryRun)
+}
+
+// PreFlightCheck checks whether prepare can run or not.
+func (p *Preparer) PreFlightCheck() error {
+	fmt.Printf("Checking if flux namespace exists...")
+	args := []string{"get", "namespace", fluxNamespace, "--output", "name"}
+	if output, err := p.Runner.Run(kubectlCmd, args...); err != nil {
+		fmt.Println("\nOutput from kubectl command: ", string(output))
+		return fmt.Errorf("failed to get flux namespace: %w", err)
+	}
+	fmt.Println("done.")
+	fmt.Printf("Checking for flux CRDs...")
+	// check if flux is installed
+	for _, crd := range fluxCRDs {
+		args = []string{"get", "crd", crd, "--output", "name"}
+		if output, err := p.Runner.Run(kubectlCmd, args...); err != nil {
+			fmt.Println("\nOutput from kubectl command: ", string(output))
+			return fmt.Errorf("failed to get crd %s : %w", crd, err)
+		}
+	}
+
+	fmt.Println("done.")
+	return nil
 }
 
 // Fetch the latest or a version of the released manifest files for profiles.
