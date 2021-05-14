@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -35,7 +34,9 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		// to prevent the timestamp in the output from log.Fatal.
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
