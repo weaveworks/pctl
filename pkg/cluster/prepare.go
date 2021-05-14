@@ -155,7 +155,7 @@ func (a *Applier) Apply(folder string, kubeContext string, kubeConfig string, dr
 		fmt.Print(string(output))
 		return nil
 	}
-	fmt.Print("Waiting for resources to be verified...")
+	fmt.Print("Waiting for resources to be ready...")
 	if err := a.Waiter.Wait("profiles-controller-manager"); err != nil {
 		return fmt.Errorf("failed to wait for resources to be ready: %w", err)
 	}
