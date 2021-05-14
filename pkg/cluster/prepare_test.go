@@ -351,7 +351,7 @@ var _ = Describe("prepare", func() {
 		It("runs a preflight check which will determine if prepare can run", func() {
 			applyRunner := &fakes.FakeRunner{}
 			preflightRunner := &fakes.FakeRunner{}
-			tmp, err := ioutil.TempDir("", "prepare_should_be_deleted_01")
+			tmp, err := ioutil.TempDir("", "prepare_preflight_check_01")
 			Expect(err).NotTo(HaveOccurred())
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
@@ -365,8 +365,9 @@ var _ = Describe("prepare", func() {
 			}
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
-					BaseURL:  "https://github.com/weaveworks/profiles/releases",
-					Location: tmp,
+					BaseURL:       "https://github.com/weaveworks/profiles/releases",
+					Location:      tmp,
+					FluxNamespace: "flux",
 				},
 				Fetcher: &cluster.Fetcher{
 					Client: client,
@@ -378,7 +379,88 @@ var _ = Describe("prepare", func() {
 			}
 			err = p.Prepare()
 			Expect(err).NotTo(HaveOccurred())
-			// TODO expand
+			Expect(preflightRunner.RunCallCount()).To(Equal(7))
+			arg, args := preflightRunner.RunArgsForCall(0)
+			Expect(arg).To(Equal("kubectl"))
+			Expect(args).To(Equal([]string{"get", "namespace", "flux", "--output", "name"}))
+
+			for i, crd := range cluster.FluxCRDs {
+				arg, args = preflightRunner.RunArgsForCall(i + 1)
+				Expect(arg).To(Equal("kubectl"))
+				Expect(args).To(Equal([]string{"get", "crd", crd, "--output", "name"}))
+			}
+		})
+	})
+	When("the flux namespace is not there", func() {
+		It("will run nothing else until that is resolved", func() {
+			applyRunner := &fakes.FakeRunner{}
+			preflightRunner := &fakes.FakeRunner{}
+			preflightRunner.RunReturns(nil, errors.New("nope"))
+			tmp, err := ioutil.TempDir("", "prepare_preflight_check_02")
+			Expect(err).NotTo(HaveOccurred())
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+			client := &http.Client{
+				Transport: &mockTransport{
+					res: &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(bytes.NewReader(content)),
+					},
+				},
+			}
+			p := &cluster.Preparer{
+				PrepConfig: cluster.PrepConfig{
+					BaseURL:       "https://github.com/weaveworks/profiles/releases",
+					Location:      tmp,
+					FluxNamespace: "flux",
+				},
+				Fetcher: &cluster.Fetcher{
+					Client: client,
+				},
+				Applier: &cluster.Applier{
+					Runner: applyRunner,
+				},
+				Runner: preflightRunner,
+			}
+			err = p.Prepare()
+			Expect(err).To(MatchError("failed to get flux namespace: nope"))
+			Expect(applyRunner.RunCallCount()).To(Equal(0))
+		})
+	})
+	When("one of the flux crds is missing", func() {
+		It("will run nothing else until that is resolved", func() {
+			applyRunner := &fakes.FakeRunner{}
+			preflightRunner := &fakes.FakeRunner{}
+			preflightRunner.RunReturnsOnCall(2, nil, errors.New("nope"))
+			tmp, err := ioutil.TempDir("", "prepare_preflight_check_02")
+			Expect(err).NotTo(HaveOccurred())
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+			client := &http.Client{
+				Transport: &mockTransport{
+					res: &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(bytes.NewReader(content)),
+					},
+				},
+			}
+			p := &cluster.Preparer{
+				PrepConfig: cluster.PrepConfig{
+					BaseURL:       "https://github.com/weaveworks/profiles/releases",
+					Location:      tmp,
+					FluxNamespace: "flux",
+				},
+				Fetcher: &cluster.Fetcher{
+					Client: client,
+				},
+				Applier: &cluster.Applier{
+					Runner: applyRunner,
+				},
+				Runner: preflightRunner,
+			}
+			err = p.Prepare()
+			Expect(err).To(MatchError("failed to get crd gitrepositories.source.toolkit.fluxcd.io : nope"))
+			Expect(applyRunner.RunCallCount()).To(Equal(0))
 		})
 	})
 })

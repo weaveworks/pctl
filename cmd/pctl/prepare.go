@@ -6,6 +6,10 @@ import (
 	"github.com/weaveworks/pctl/pkg/cluster"
 )
 
+const (
+	fluxNamespace = "flux-system"
+)
+
 func prepareCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "prepare",
@@ -33,18 +37,32 @@ func prepareCmd() *cli.Command {
 				DefaultText: releaseUrl,
 			},
 			&cli.StringFlag{
+				Name:        "flux-namespace",
+				Usage:       "Define the namespace in which flux is installed.",
+				Value:       fluxNamespace,
+				DefaultText: fluxNamespace,
+			},
+			&cli.StringFlag{
+				Name:        "out",
+				Usage:       "Specify the output location of the downloaded prepare file.",
+				Value:       "",
+				DefaultText: "os.Temp",
+			},
+			&cli.StringFlag{
 				Name:  "context",
 				Usage: "The Kubernetes context to use to apply the manifest files .",
 			},
 		},
 		Action: func(c *cli.Context) error {
 			p, err := cluster.NewPreparer(cluster.PrepConfig{
-				BaseURL:     c.String("baseurl"),
-				Version:     c.String("version"),
-				KubeConfig:  c.String("kubeconfig"),
-				KubeContext: c.String("context"),
-				DryRun:      c.Bool("dry-run"),
-				Keep:        c.Bool("keep"),
+				BaseURL:       c.String("baseurl"),
+				Version:       c.String("version"),
+				KubeConfig:    c.String("kubeconfig"),
+				KubeContext:   c.String("context"),
+				FluxNamespace: c.String("flux-namespace"),
+				Location:      c.String("out"),
+				DryRun:        c.Bool("dry-run"),
+				Keep:          c.Bool("keep"),
 			})
 			if err != nil {
 				return err

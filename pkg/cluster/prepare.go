@@ -18,11 +18,10 @@ const (
 	// profiles bundles ready to be installed files under `prepare`. The rest of the resources
 	// are left for manual configuration.
 	prepareManifestFile = "prepare.yaml"
-	fluxNamespace       = "flux-system"
 )
 
-// fluxCRDs are CRDs which prepare is checking if they are present in the cluster or not.
-var fluxCRDs = []string{
+// FluxCRDs are CRDs which prepare is checking if they are present in the cluster or not.
+var FluxCRDs = []string{
 	"buckets.source.toolkit.fluxcd.io",
 	"gitrepositories.source.toolkit.fluxcd.io",
 	"helmcharts.source.toolkit.fluxcd.io",
@@ -53,22 +52,25 @@ type Preparer struct {
 type PrepConfig struct {
 	// BaseURL is given even one would like to download manifests from a fork
 	// or a test repo.
-	BaseURL     string
-	Location    string
-	Version     string
-	KubeContext string
-	KubeConfig  string
-	DryRun      bool
-	Keep        bool
+	BaseURL       string
+	Location      string
+	Version       string
+	KubeContext   string
+	KubeConfig    string
+	FluxNamespace string
+	DryRun        bool
+	Keep          bool
 }
 
 // NewPreparer creates a preparer with set dependencies ready to be used.
 func NewPreparer(cfg PrepConfig) (*Preparer, error) {
-	tmp, err := ioutil.TempDir("", "pctl-manifests")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temp folder for manifest files: %w", err)
+	if cfg.Location == "" {
+		tmp, err := ioutil.TempDir("", "pctl-manifests")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create temp folder for manifest files: %w", err)
+		}
+		cfg.Location = tmp
 	}
-	cfg.Location = tmp
 	r := &runner.CLIRunner{}
 	return &Preparer{
 		PrepConfig: cfg,
@@ -103,16 +105,16 @@ func (p *Preparer) Prepare() error {
 
 // PreFlightCheck checks whether prepare can run or not.
 func (p *Preparer) PreFlightCheck() error {
-	fmt.Printf("Checking if flux namespace exists...")
-	args := []string{"get", "namespace", fluxNamespace, "--output", "name"}
+	fmt.Print("Checking if flux namespace exists...")
+	args := []string{"get", "namespace", p.FluxNamespace, "--output", "name"}
 	if output, err := p.Runner.Run(kubectlCmd, args...); err != nil {
 		fmt.Println("\nOutput from kubectl command: ", string(output))
 		return fmt.Errorf("failed to get flux namespace: %w", err)
 	}
 	fmt.Println("done.")
-	fmt.Printf("Checking for flux CRDs...")
+	fmt.Print("Checking for flux CRDs...")
 	// check if flux is installed
-	for _, crd := range fluxCRDs {
+	for _, crd := range FluxCRDs {
 		args = []string{"get", "crd", crd, "--output", "name"}
 		if output, err := p.Runner.Run(kubectlCmd, args...); err != nil {
 			fmt.Println("\nOutput from kubectl command: ", string(output))
