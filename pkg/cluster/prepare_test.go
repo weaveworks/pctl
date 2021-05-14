@@ -423,7 +423,7 @@ var _ = Describe("prepare", func() {
 				Runner: preflightRunner,
 			}
 			err = p.Prepare()
-			Expect(err).To(MatchError("failed to get flux namespace: nope"))
+			Expect(err).To(MatchError("failed to get flux namespace: nope\nTo ignore this error, please see the  --ignore-preflight-checks flag."))
 			Expect(applyRunner.RunCallCount()).To(Equal(0))
 		})
 	})
@@ -459,8 +459,45 @@ var _ = Describe("prepare", func() {
 				Runner: preflightRunner,
 			}
 			err = p.Prepare()
-			Expect(err).To(MatchError("failed to get crd gitrepositories.source.toolkit.fluxcd.io : nope"))
+			Expect(err).To(MatchError("failed to get crd gitrepositories.source.toolkit.fluxcd.io : nope\nTo ignore this error, please see the  --ignore-preflight-checks flag."))
 			Expect(applyRunner.RunCallCount()).To(Equal(0))
+		})
+	})
+	When("the user decides to ignore preflight-check errors", func() {
+		It("will output them as a warning but will not stop execution", func() {
+			applyRunner := &fakes.FakeRunner{}
+			preflightRunner := &fakes.FakeRunner{}
+			preflightRunner.RunReturns(nil, errors.New("nope"))
+			tmp, err := ioutil.TempDir("", "prepare_preflight_check_02")
+			Expect(err).NotTo(HaveOccurred())
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+			client := &http.Client{
+				Transport: &mockTransport{
+					res: &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(bytes.NewReader(content)),
+					},
+				},
+			}
+			p := &cluster.Preparer{
+				PrepConfig: cluster.PrepConfig{
+					BaseURL:               "https://github.com/weaveworks/profiles/releases",
+					Location:              tmp,
+					FluxNamespace:         "flux",
+					IgnorePreflightErrors: true,
+				},
+				Fetcher: &cluster.Fetcher{
+					Client: client,
+				},
+				Applier: &cluster.Applier{
+					Runner: applyRunner,
+				},
+				Runner: preflightRunner,
+			}
+			err = p.Prepare()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(applyRunner.RunCallCount()).To(Equal(1))
 		})
 	})
 })

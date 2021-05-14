@@ -52,14 +52,15 @@ type Preparer struct {
 type PrepConfig struct {
 	// BaseURL is given even one would like to download manifests from a fork
 	// or a test repo.
-	BaseURL       string
-	Location      string
-	Version       string
-	KubeContext   string
-	KubeConfig    string
-	FluxNamespace string
-	DryRun        bool
-	Keep          bool
+	BaseURL               string
+	Location              string
+	Version               string
+	KubeContext           string
+	KubeConfig            string
+	FluxNamespace         string
+	IgnorePreflightErrors bool
+	DryRun                bool
+	Keep                  bool
 }
 
 // NewPreparer creates a preparer with set dependencies ready to be used.
@@ -109,7 +110,11 @@ func (p *Preparer) PreFlightCheck() error {
 	args := []string{"get", "namespace", p.FluxNamespace, "--output", "name"}
 	if output, err := p.Runner.Run(kubectlCmd, args...); err != nil {
 		fmt.Println("\nOutput from kubectl command: ", string(output))
-		return fmt.Errorf("failed to get flux namespace: %w", err)
+		if p.IgnorePreflightErrors {
+			fmt.Println("WARNING: failed to get flux namespace. Flux is required for profiles to work.")
+		} else {
+			return fmt.Errorf("failed to get flux namespace: %w\nTo ignore this error, please see the  --ignore-preflight-checks flag.", err)
+		}
 	}
 	fmt.Println("done.")
 	fmt.Print("Checking for flux CRDs...")
@@ -118,7 +123,11 @@ func (p *Preparer) PreFlightCheck() error {
 		args = []string{"get", "crd", crd, "--output", "name"}
 		if output, err := p.Runner.Run(kubectlCmd, args...); err != nil {
 			fmt.Println("\nOutput from kubectl command: ", string(output))
-			return fmt.Errorf("failed to get crd %s : %w", crd, err)
+			if p.IgnorePreflightErrors {
+				fmt.Println("WARNING: failed to find flux crd resource. Flux is required for profiles to work.")
+			} else {
+				return fmt.Errorf("failed to get crd %s : %w\nTo ignore this error, please see the  --ignore-preflight-checks flag.", crd, err)
+			}
 		}
 	}
 
