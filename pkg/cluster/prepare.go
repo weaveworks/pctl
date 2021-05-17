@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -9,6 +10,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
+	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
+	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 
 	"github.com/weaveworks/pctl/pkg/runner"
 )
@@ -22,12 +27,12 @@ const (
 
 // FluxCRDs are CRDs which prepare is checking if they are present in the cluster or not.
 var FluxCRDs = []string{
-	"buckets.source.toolkit.fluxcd.io",
-	"gitrepositories.source.toolkit.fluxcd.io",
-	"helmcharts.source.toolkit.fluxcd.io",
-	"helmreleases.helm.toolkit.fluxcd.io",
-	"helmrepositories.source.toolkit.fluxcd.io",
-	"kustomizations.kustomize.toolkit.fluxcd.io",
+	strings.ToLower(helmv2.HelmReleaseKind),
+	strings.ToLower(kustomizev1.KustomizationKind),
+	strings.ToLower(sourcev1.BucketKind),
+	strings.ToLower(sourcev1.GitRepositoryKind),
+	strings.ToLower(sourcev1.HelmChartKind),
+	strings.ToLower(sourcev1.HelmRepositoryKind),
 }
 
 // Fetcher will download a manifest tar file from a remote repository.
@@ -118,15 +123,27 @@ func (p *Preparer) PreFlightCheck() error {
 	}
 	fmt.Println("done.")
 	fmt.Print("Checking for flux CRDs...")
-	// check if flux is installed
+	output, err := p.Runner.Run(kubectlCmd, "get", "crds", "--output", "jsonpath='{.items[*].spec.names.singular}'")
+	if err != nil {
+		if p.IgnorePreflightErrors {
+			fmt.Println("WARNING: failed to list all installed crds. Flux is required for profiles to work.")
+		} else {
+			return fmt.Errorf("failed to list all installed crds: %w", err)
+		}
+	}
+	// the output contains an opening an closing '
+	output = bytes.Trim(output, "'")
+	// create an easily searchable list of installed CRDs for verification
+	crds := map[string]struct{}{}
+	for _, c := range strings.Split(string(output), " ") {
+		crds[c] = struct{}{}
+	}
 	for _, crd := range FluxCRDs {
-		args = []string{"get", "crd", crd, "--output", "name"}
-		if output, err := p.Runner.Run(kubectlCmd, args...); err != nil {
-			fmt.Println("\nOutput from kubectl command: ", string(output))
+		if _, ok := crds[crd]; !ok {
 			if p.IgnorePreflightErrors {
 				fmt.Println("WARNING: failed to find flux crd resource. Flux is required for profiles to work.")
 			} else {
-				return fmt.Errorf("failed to get crd %s : %w\nTo ignore this error, please see the  --ignore-preflight-checks flag.", crd, err)
+				return fmt.Errorf("failed to get crd %s\nTo ignore this error, please see the  --ignore-preflight-checks flag.", crd)
 			}
 		}
 	}
