@@ -1,9 +1,10 @@
 name: Integration Test
 
 on:
-  push:
-    branches:
-      - main
+#  push:
+#    branches:
+#      - main
+  pull_request: {}
 
 jobs:
   test:
@@ -33,8 +34,23 @@ jobs:
           go get -u github.com/onsi/ginkgo/ginkgo
       - name: Setup Flux v2 CLI
         uses: fluxcd/flux2/action@main
+      - name: Setup SSH known hosts
+        shell: bash
+        run: |
+          mkdir -p ${SSH} && chmod 700 ${SSH}
+          ssh-keyscan github.com >> ${SSH}/known_hosts
+      - name: Setup SSH key
+        shell: bash
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add - <<< "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}"
       - name: Test
         run: |
-          PATH=$PATH:$(go env GOPATH)/bin make integration
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          PATH=$PATH:$(go env GOPATH)/bin make integration-test
     env:
-      GIT_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      GIT_TOKEN: ${{secrets.GIT_TOKEN}}
+      SSH: "~/.ssh"
