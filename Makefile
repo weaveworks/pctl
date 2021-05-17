@@ -8,7 +8,7 @@ unit: ## Run the unit tests
 integration: build test-env ## Run the integration tests
 	ginkgo -r ./tests/...
 
-test-env: submodule ## Create an environment for tests
+test-env: ## Create an environment for tests
 	cd dependencies/profiles && make docker-build-local kind-up docker-push-local
 	flux install --components="source-controller,helm-controller,kustomize-controller"
 
@@ -20,7 +20,7 @@ lint: ## Run the linter
 build: ## Build the pctl binary to ./pctl
 	go build -o pctl ./cmd/pctl
 
-local-env: submodule ## Create local environment
+local-env: ## Create local environment
 	cd dependencies/profiles && make local-env
 	kubectl apply -f dependencies/profiles/examples/profile-catalog-source.yaml
 
