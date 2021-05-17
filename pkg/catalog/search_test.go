@@ -5,9 +5,11 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 var _ = Describe("Search", func() {
