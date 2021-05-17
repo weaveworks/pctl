@@ -11,7 +11,7 @@ require (
 	github.com/onsi/ginkgo v1.16.2
 	github.com/onsi/gomega v1.12.0
 	github.com/urfave/cli/v2 v2.3.0
-	github.com/weaveworks/profiles v0.0.2-0.20210517072357-d9b33cd22006
+	github.com/weaveworks/profiles v0.0.0-20210415085322-61383f6e66ed
 	k8s.io/apimachinery v0.20.5
 	k8s.io/client-go v0.20.5
 	sigs.k8s.io/controller-runtime v0.8.3
