@@ -14,7 +14,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -29,22 +28,20 @@ var _ = Describe("PCTL", func() {
 	Context("search", func() {
 		It("returns the matching profiles", func() {
 			cmd := exec.Command(binaryPath, "search", "nginx")
-			session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			session, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(0))
 			expected := "CATALOG/PROFILE               	VERSION	DESCRIPTION                     \n" +
 				"nginx-catalog/weaveworks-nginx	v0.1.0 	This installs nginx.           \t\n" +
 				"nginx-catalog/some-other-nginx	       	This installs some other nginx.\t\n\n"
-			Expect(string(session.Out.Contents())).To(ContainSubstring(expected))
+			Expect(string(session)).To(ContainSubstring(expected))
 		})
 
 		When("-o is set to json", func() {
 			It("returns the matching profiles in json", func() {
 				cmd := exec.Command(binaryPath, "search", "-o", "json", "nginx")
-				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				session, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit(0))
-				Expect(string(session.Out.Contents())).To(ContainSubstring(`{
+				Expect(string(session)).To(ContainSubstring(`{
     "name": "weaveworks-nginx",
     "description": "This installs nginx.",
     "version": "v0.1.0",
@@ -66,20 +63,18 @@ var _ = Describe("PCTL", func() {
 		When("kubeconfig is incorrectly set", func() {
 			It("returns a useful error", func() {
 				cmd := exec.Command(binaryPath, "--kubeconfig=/non-existing/path/kubeconfig", "search", "nginx")
-				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("failed to create config from kubeconfig path"))
+				session, err := cmd.CombinedOutput()
+				Expect(err).To(HaveOccurred())
+				Expect(string(session)).To(ContainSubstring("failed to create config from kubeconfig path"))
 			})
 		})
 
 		When("a search string is not provided", func() {
 			It("returns a useful error", func() {
 				cmd := exec.Command(binaryPath, "search")
-				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("argument must be provided"))
+				session, err := cmd.CombinedOutput()
+				Expect(err).To(HaveOccurred())
+				Expect(string(session)).To(ContainSubstring("argument must be provided"))
 			})
 		})
 	})
@@ -87,10 +82,9 @@ var _ = Describe("PCTL", func() {
 	Context("show", func() {
 		It("returns information about the given profile", func() {
 			cmd := exec.Command(binaryPath, "show", "nginx-catalog/weaveworks-nginx")
-			session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			session, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(0))
-			Expect(string(session.Out.Contents())).To(ContainSubstring("Catalog      \tnginx-catalog                                      \t\n" +
+			Expect(string(session)).To(ContainSubstring("Catalog      \tnginx-catalog                                      \t\n" +
 				"Name         \tweaveworks-nginx                                   \t\n" +
 				"Version      \tv0.1.0                                             \t\n" +
 				"Description  \tThis installs nginx.                               \t\n" +
@@ -117,10 +111,9 @@ var _ = Describe("PCTL", func() {
 		When("-o is set to json", func() {
 			It("returns the profile info in json", func() {
 				cmd := exec.Command(binaryPath, "show", "-o", "json", "nginx-catalog/weaveworks-nginx")
-				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				session, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit(0))
-				Expect(string(session.Out.Contents())).To(ContainSubstring(`{
+				Expect(string(session)).To(ContainSubstring(`{
   "name": "weaveworks-nginx",
   "description": "This installs nginx.",
   "version": "v0.1.0",
@@ -137,10 +130,9 @@ var _ = Describe("PCTL", func() {
 		When("a name argument is not provided", func() {
 			It("returns a useful error", func() {
 				cmd := exec.Command(binaryPath, "show")
-				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("argument must be provided"))
+				session, err := cmd.CombinedOutput()
+				Expect(err).To(HaveOccurred())
+				Expect(string(session)).To(ContainSubstring("argument must be provided"))
 			})
 		})
 	})
@@ -192,10 +184,9 @@ var _ = Describe("PCTL", func() {
 			Skip("will be updated / removed later")
 			getCmd := func() string {
 				cmd := exec.Command(binaryPath, "get", "--namespace", namespace, "--name", subscriptionName)
-				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				session, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit(0))
-				return string(session.Out.Contents())
+				return string(session)
 			}
 			Eventually(getCmd).Should(ContainSubstring("Subscription\tfailed-sub                              \t\n" +
 				"Namespace   \tdefault                                 \t\n" +
@@ -252,10 +243,9 @@ var _ = Describe("PCTL", func() {
 			Skip("will be updated / removed later")
 			listCmd := func() string {
 				cmd := exec.Command(binaryPath, "list")
-				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				session, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit(0))
-				return string(session.Out.Contents())
+				return string(session)
 			}
 			Eventually(listCmd).Should(ContainSubstring("NAMESPACE	NAME      \tREADY \n" +
 				"default  \tfailed-sub	False"))
@@ -268,9 +258,8 @@ var _ = Describe("PCTL", func() {
 			Expect(err).ToNot(HaveOccurred())
 			filename := filepath.Join(temp, "profile_subscription.yaml")
 			cmd := exec.Command(binaryPath, "install", "--out", filename, "nginx-catalog/weaveworks-nginx")
-			session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			err = cmd.Run()
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(0))
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
@@ -292,9 +281,8 @@ status: {}
 				Expect(err).ToNot(HaveOccurred())
 				filename := filepath.Join(temp, "profile_subscription.yaml")
 				cmd := exec.Command(binaryPath, "install", "--out", filename, "--branch", "my_branch", "--namespace", "my-namespace", "nginx-catalog/weaveworks-nginx")
-				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				err = cmd.Run()
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit(0))
 				content, err := ioutil.ReadFile(filename)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
@@ -317,9 +305,8 @@ status: {}
 				Expect(err).ToNot(HaveOccurred())
 				filename := filepath.Join(temp, "profile_subscription.yaml")
 				cmd := exec.Command(binaryPath, "install", "--out", filename, "--config-secret", "my-secret", "nginx-catalog/weaveworks-nginx")
-				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				err = cmd.Run()
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit(0))
 				content, err := ioutil.ReadFile(filename)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
@@ -423,10 +410,9 @@ status: {}
 					"--branch",
 					branch,
 					"nginx-catalog/weaveworks-nginx")
-				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("repo must be defined if create-pr is true"))
+				session, err := cmd.CombinedOutput()
+				Expect(err).To(HaveOccurred())
+				Expect(string(session)).To(ContainSubstring("repo must be defined if create-pr is true"))
 			})
 
 			It("fails if target location is not a git repository", func() {
@@ -451,10 +437,9 @@ status: {}
 					"--repo",
 					"doesnt/matter",
 					"nginx-catalog/weaveworks-nginx")
-				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("directory is not a git repository"))
+				session, err := cmd.CombinedOutput()
+				Expect(err).To(HaveOccurred())
+				Expect(string(session)).To(ContainSubstring("directory is not a git repository"))
 			})
 
 			It("fails if target location for install is a folder rather than a file", func() {
@@ -466,10 +451,9 @@ status: {}
 					"--out",
 					temp,
 					"nginx-catalog/weaveworks-nginx")
-				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit(1))
-				Expect(string(session.Err.Contents())).To(ContainSubstring("is a directory"))
+				session, err := cmd.CombinedOutput()
+				Expect(err).To(HaveOccurred())
+				Expect(string(session)).To(ContainSubstring("is a directory"))
 			})
 		})
 	})
