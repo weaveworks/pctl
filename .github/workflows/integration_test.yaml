@@ -46,6 +46,7 @@ jobs:
         run: |
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
           ssh-add - <<< "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}"
+          ssh-add -l
       - name: Test
         run: |
           git config --global user.email "action@github.com"
