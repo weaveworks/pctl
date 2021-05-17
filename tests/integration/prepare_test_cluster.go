@@ -35,7 +35,7 @@ var (
 	applySourceCatalogArgs = []string{
 		"apply",
 		"-f",
-		filepath.Join("..", "..", "dependencies/profiles/examples/profile-catalog-source.yaml"),
+		"catalog-source.yaml",
 	}
 )
 

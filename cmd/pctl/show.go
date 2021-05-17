@@ -6,17 +6,18 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
-	"github.com/weaveworks/pctl/pkg/catalog"
-	"github.com/weaveworks/pctl/pkg/formatter"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
+	"github.com/weaveworks/pctl/pkg/catalog"
+	"github.com/weaveworks/pctl/pkg/formatter"
 )
 
 func showCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "show",
 		Usage:     "display information about a profile",
-		UsageText: "pctl [--kubeconfig=<kubeconfig-path>] show <CATALOG>/<PROFILE>",
+		UsageText: "pctl [--kubeconfig=<kubeconfig-path>] show <CATALOG>/<PROFILE>[/<VERSION>]",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "output",
@@ -39,8 +40,11 @@ func showCmd() *cli.Command {
 				return errors.New("both catalog name and profile name must be provided")
 			}
 			catalogName, profileName := parts[0], parts[1]
-
-			profile, err := catalog.Show(catalogClient, catalogName, profileName)
+			var catalogVersion string
+			if len(parts) == 3 {
+				catalogVersion = parts[2]
+			}
+			profile, err := catalog.Show(catalogClient, catalogName, profileName, catalogVersion)
 			if err != nil {
 				return err
 			}
@@ -69,7 +73,7 @@ func showDataFunc(profile profilesv1.ProfileDescription) func() interface{} {
 	return func() interface{} {
 		return formatter.TableContents{
 			Data: [][]string{
-				{"Catalog", profile.Catalog},
+				{"Catalog", profile.CatalogSource},
 				{"Name", profile.Name},
 				{"Version", profile.Version},
 				{"Description", profile.Description},

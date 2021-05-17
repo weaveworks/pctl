@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
+
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/runner"
@@ -17,7 +18,7 @@ func installCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "install",
 		Usage:     "generate a profile subscription for a profile in a catalog",
-		UsageText: "pctl --catalog-url <URL> install --subscription-name pctl-profile --namespace default --branch main --config-secret configmap-name --out profile_subscription.yaml <CATALOG>/<PROFILE>",
+		UsageText: "pctl --catalog-url <URL> install --subscription-name pctl-profile --namespace default --branch main --config-secret configmap-name --out profile_subscription.yaml <CATALOG>/<PROFILE>[/<VERSION>]",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "subscription-name",
@@ -119,6 +120,9 @@ func install(c *cli.Context) error {
 		ProfileName:   profileName,
 		SubName:       subName,
 		Writer:        w,
+	}
+	if len(parts) == 3 {
+		cfg.Version = parts[2]
 	}
 	return catalog.Install(cfg)
 }
