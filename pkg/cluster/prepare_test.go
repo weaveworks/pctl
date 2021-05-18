@@ -27,10 +27,21 @@ func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 var _ = Describe("prepare", func() {
+	var (
+		waiter          *fakes.FakeWaiter
+		applyRunner     *runnerfake.FakeRunner
+		preflightRunner *runnerfake.FakeRunner
+	)
+
+	BeforeEach(func() {
+		waiter = &fakes.FakeWaiter{}
+		applyRunner = &runnerfake.FakeRunner{}
+		preflightRunner = &runnerfake.FakeRunner{}
+	})
+
 	When("dry run is set", func() {
 		It("can prepare the environment with everything that profiles needs without actually modifying the cluster", func() {
-			waiter := &fakes.FakeWaiter{}
-			runner := &runnerfake.FakeRunner{}
+			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
@@ -52,14 +63,17 @@ var _ = Describe("prepare", func() {
 					Client: client,
 				},
 				Applier: &cluster.Applier{
-					Runner: runner,
 					Waiter: waiter,
+					Runner: applyRunner,
 				},
+				Runner: preflightRunner,
 			}
 			err = p.Prepare()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(runner.RunCallCount()).To(Equal(1))
-			arg, args := runner.RunArgsForCall(0)
+			Expect(preflightRunner.RunCallCount()).To(Equal(2))
+
+			Expect(applyRunner.RunCallCount()).To(Equal(1))
+			arg, args := applyRunner.RunArgsForCall(0)
 			Expect(arg).To(Equal("kubectl"))
 			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "prepare.yaml"), "--dry-run=client", "--output=yaml"}))
 			Expect(waiter.WaitCallCount()).To(Equal(0))
@@ -67,8 +81,7 @@ var _ = Describe("prepare", func() {
 	})
 	When("dry-run is not set", func() {
 		It("sets up the environment with everything that profiles needs", func() {
-			runner := &runnerfake.FakeRunner{}
-			waiter := &fakes.FakeWaiter{}
+			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
@@ -90,14 +103,16 @@ var _ = Describe("prepare", func() {
 					Client: client,
 				},
 				Applier: &cluster.Applier{
-					Runner: runner,
 					Waiter: waiter,
+					Runner: applyRunner,
 				},
+				Runner: preflightRunner,
 			}
 			err = p.Prepare()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(runner.RunCallCount()).To(Equal(1))
-			arg, args := runner.RunArgsForCall(0)
+			Expect(preflightRunner.RunCallCount()).To(Equal(2))
+			Expect(applyRunner.RunCallCount()).To(Equal(1))
+			arg, args := applyRunner.RunArgsForCall(0)
 			Expect(arg).To(Equal("kubectl"))
 			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "prepare.yaml")}))
 			Expect(waiter.WaitCallCount()).To(Equal(1))
@@ -107,8 +122,7 @@ var _ = Describe("prepare", func() {
 	})
 	When("context and config is provided", func() {
 		It("passes that over to kubernetes", func() {
-			runner := &runnerfake.FakeRunner{}
-			waiter := &fakes.FakeWaiter{}
+			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
@@ -132,14 +146,15 @@ var _ = Describe("prepare", func() {
 					Client: client,
 				},
 				Applier: &cluster.Applier{
-					Runner: runner,
 					Waiter: waiter,
+					Runner: applyRunner,
 				},
+				Runner: preflightRunner,
 			}
 			err = p.Prepare()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(runner.RunCallCount()).To(Equal(1))
-			arg, args := runner.RunArgsForCall(0)
+			Expect(applyRunner.RunCallCount()).To(Equal(1))
+			arg, args := applyRunner.RunArgsForCall(0)
 			Expect(arg).To(Equal("kubectl"))
 			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "prepare.yaml"), "--context=context", "--kubeconfig=kubeconfig"}))
 			Expect(waiter.WaitCallCount()).To(Equal(1))
@@ -149,9 +164,8 @@ var _ = Describe("prepare", func() {
 	})
 	When("there is an error running kubectl apply", func() {
 		It("will fail and show a proper error to the user", func() {
-			runner := &runnerfake.FakeRunner{}
-			runner.RunReturns([]byte("nope"), errors.New("nope"))
-			waiter := &fakes.FakeWaiter{}
+			applyRunner.RunReturns([]byte("nope"), errors.New("nope"))
+			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
@@ -175,9 +189,10 @@ var _ = Describe("prepare", func() {
 					Client: client,
 				},
 				Applier: &cluster.Applier{
-					Runner: runner,
+					Runner: applyRunner,
 					Waiter: waiter,
 				},
+				Runner: preflightRunner,
 			}
 			err = p.Prepare()
 			Expect(err).To(MatchError("install failed: nope"))
@@ -185,13 +200,12 @@ var _ = Describe("prepare", func() {
 	})
 	When("a specific version is defined", func() {
 		It("will respect the version and try to download that", func() {
-			runner := &runnerfake.FakeRunner{}
-			waiter := &fakes.FakeWaiter{}
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				Expect(r.URL.String()).To(Equal("/download/v0.0.1/prepare.yaml"))
 			}))
 			tmp, err := ioutil.TempDir("", "specific_version_01")
 			Expect(err).NotTo(HaveOccurred())
+			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL:     server.URL,
@@ -204,16 +218,16 @@ var _ = Describe("prepare", func() {
 					Client: server.Client(),
 				},
 				Applier: &cluster.Applier{
-					Runner: runner,
+					Runner: applyRunner,
 					Waiter: waiter,
 				},
+				Runner: preflightRunner,
 			}
 			// we deliberately ignore the error here. the important part is the called url.
 			_ = p.Prepare()
 		})
 		It("the controller has the right version in the file", func() {
-			runner := &runnerfake.FakeRunner{}
-			waiter := &fakes.FakeWaiter{}
+			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
@@ -237,9 +251,10 @@ var _ = Describe("prepare", func() {
 					Client: client,
 				},
 				Applier: &cluster.Applier{
-					Runner: runner,
 					Waiter: waiter,
+					Runner: applyRunner,
 				},
+				Runner: preflightRunner,
 			}
 			err = p.Prepare()
 			Expect(err).NotTo(HaveOccurred())
@@ -250,13 +265,12 @@ var _ = Describe("prepare", func() {
 
 		})
 		It("will only try and fetch versions starting with (v)", func() {
-			runner := &runnerfake.FakeRunner{}
-			waiter := &fakes.FakeWaiter{}
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				Expect(r.URL.String()).To(Equal("/latest/download/prepare.yaml"))
 			}))
 			tmp, err := ioutil.TempDir("", "specific_version_01")
 			Expect(err).NotTo(HaveOccurred())
+			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL:     server.URL,
@@ -269,9 +283,10 @@ var _ = Describe("prepare", func() {
 					Client: server.Client(),
 				},
 				Applier: &cluster.Applier{
-					Runner: runner,
+					Runner: applyRunner,
 					Waiter: waiter,
 				},
+				Runner: preflightRunner,
 			}
 			// we deliberately ignore the error here. the important part is the called url.
 			_ = p.Prepare()
@@ -282,6 +297,7 @@ var _ = Describe("prepare", func() {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusBadGateway)
 			}))
+			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL:     server.URL,
@@ -291,6 +307,7 @@ var _ = Describe("prepare", func() {
 				Fetcher: &cluster.Fetcher{
 					Client: server.Client(),
 				},
+				Runner: preflightRunner,
 			}
 			err := p.Prepare()
 			msg := fmt.Sprintf("failed to download prepare.yaml from %s/latest/download/prepare.yaml, status: 502 Bad Gateway", server.URL)
@@ -299,6 +316,7 @@ var _ = Describe("prepare", func() {
 	})
 	When("the base url is invalid", func() {
 		It("will provide a sensible failure", func() {
+			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL: "invalid",
@@ -306,6 +324,7 @@ var _ = Describe("prepare", func() {
 				Fetcher: &cluster.Fetcher{
 					Client: http.DefaultClient,
 				},
+				Runner: preflightRunner,
 			}
 			err := p.Prepare()
 			Expect(err).To(HaveOccurred())
@@ -314,8 +333,7 @@ var _ = Describe("prepare", func() {
 	})
 	When("the user decided to keep the downloaded file(s)", func() {
 		It("will not delete the downloaded file(s)", func() {
-			runner := &runnerfake.FakeRunner{}
-			waiter := &fakes.FakeWaiter{}
+			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
@@ -338,9 +356,10 @@ var _ = Describe("prepare", func() {
 					Client: client,
 				},
 				Applier: &cluster.Applier{
-					Runner: runner,
 					Waiter: waiter,
+					Runner: applyRunner,
 				},
+				Runner: preflightRunner,
 			}
 			err = p.Prepare()
 			Expect(err).NotTo(HaveOccurred())
@@ -351,8 +370,7 @@ var _ = Describe("prepare", func() {
 	})
 	When("when all is done", func() {
 		It("should remove any temporary folders", func() {
-			runner := &runnerfake.FakeRunner{}
-			waiter := &fakes.FakeWaiter{}
+			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
@@ -374,9 +392,10 @@ var _ = Describe("prepare", func() {
 					Client: client,
 				},
 				Applier: &cluster.Applier{
-					Runner: runner,
 					Waiter: waiter,
+					Runner: applyRunner,
 				},
+				Runner: preflightRunner,
 			}
 			err = p.Prepare()
 			Expect(err).NotTo(HaveOccurred())
@@ -386,9 +405,8 @@ var _ = Describe("prepare", func() {
 	})
 	When("the waiter fails to wait", func() {
 		It("prepare should fail in a meaningful way", func() {
-			runner := &runnerfake.FakeRunner{}
-			waiter := &fakes.FakeWaiter{}
 			waiter.WaitReturns(errors.New("nope"))
+			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
@@ -410,13 +428,162 @@ var _ = Describe("prepare", func() {
 					Client: client,
 				},
 				Applier: &cluster.Applier{
-					Runner: runner,
+					Runner: applyRunner,
 					Waiter: waiter,
 				},
+				Runner: preflightRunner,
 			}
 			err = p.Prepare()
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("failed to wait for resources to be ready: nope"))
+		})
+	})
+	When("prepare is executed", func() {
+		It("runs a preflight check which will determine if prepare can run", func() {
+			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
+			tmp, err := ioutil.TempDir("", "prepare_preflight_check_01")
+			Expect(err).NotTo(HaveOccurred())
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+			client := &http.Client{
+				Transport: &mockTransport{
+					res: &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(bytes.NewReader(content)),
+					},
+				},
+			}
+			p := &cluster.Preparer{
+				PrepConfig: cluster.PrepConfig{
+					BaseURL:       "https://github.com/weaveworks/profiles/releases",
+					Location:      tmp,
+					FluxNamespace: "flux",
+				},
+				Fetcher: &cluster.Fetcher{
+					Client: client,
+				},
+				Applier: &cluster.Applier{
+					Runner: applyRunner,
+					Waiter: waiter,
+				},
+				Runner: preflightRunner,
+			}
+			err = p.Prepare()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(preflightRunner.RunCallCount()).To(Equal(2))
+			arg, args := preflightRunner.RunArgsForCall(0)
+			Expect(arg).To(Equal("kubectl"))
+			Expect(args).To(Equal([]string{"get", "namespace", "flux", "--output", "name"}))
+
+			arg, args = preflightRunner.RunArgsForCall(1)
+			Expect(arg).To(Equal("kubectl"))
+			Expect(args).To(Equal([]string{"get", "crds", "--output", "jsonpath='{.items[*].spec.names.singular}'"}))
+		})
+	})
+	When("the flux namespace is not there", func() {
+		It("will run nothing else until that is resolved", func() {
+			preflightRunner.RunReturns(nil, errors.New("nope"))
+			tmp, err := ioutil.TempDir("", "prepare_preflight_check_02")
+			Expect(err).NotTo(HaveOccurred())
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+			client := &http.Client{
+				Transport: &mockTransport{
+					res: &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(bytes.NewReader(content)),
+					},
+				},
+			}
+			p := &cluster.Preparer{
+				PrepConfig: cluster.PrepConfig{
+					BaseURL:       "https://github.com/weaveworks/profiles/releases",
+					Location:      tmp,
+					FluxNamespace: "flux",
+				},
+				Fetcher: &cluster.Fetcher{
+					Client: client,
+				},
+				Applier: &cluster.Applier{
+					Runner: applyRunner,
+					Waiter: waiter,
+				},
+				Runner: preflightRunner,
+			}
+			err = p.Prepare()
+			Expect(err).To(MatchError("failed to get flux namespace: nope\nTo ignore this error, please see the  --ignore-preflight-checks flag."))
+			Expect(applyRunner.RunCallCount()).To(Equal(0))
+		})
+	})
+	When("one of the flux crds is missing", func() {
+		It("will run nothing else until that is resolved", func() {
+			preflightRunner.RunReturnsOnCall(2, nil, errors.New("nope"))
+			tmp, err := ioutil.TempDir("", "prepare_preflight_check_02")
+			Expect(err).NotTo(HaveOccurred())
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+			client := &http.Client{
+				Transport: &mockTransport{
+					res: &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(bytes.NewReader(content)),
+					},
+				},
+			}
+			p := &cluster.Preparer{
+				PrepConfig: cluster.PrepConfig{
+					BaseURL:       "https://github.com/weaveworks/profiles/releases",
+					Location:      tmp,
+					FluxNamespace: "flux",
+				},
+				Fetcher: &cluster.Fetcher{
+					Client: client,
+				},
+				Applier: &cluster.Applier{
+					Runner: applyRunner,
+					Waiter: waiter,
+				},
+				Runner: preflightRunner,
+			}
+			err = p.Prepare()
+			Expect(err).To(MatchError("failed to get crd helmrelease\nTo ignore this error, please see the  --ignore-preflight-checks flag."))
+			Expect(applyRunner.RunCallCount()).To(Equal(0))
+		})
+	})
+	When("the user decides to ignore preflight-check errors", func() {
+		It("will output them as a warning but will not stop execution", func() {
+			preflightRunner.RunReturns(nil, errors.New("nope"))
+			tmp, err := ioutil.TempDir("", "prepare_preflight_check_02")
+			Expect(err).NotTo(HaveOccurred())
+			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
+			Expect(err).NotTo(HaveOccurred())
+			client := &http.Client{
+				Transport: &mockTransport{
+					res: &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(bytes.NewReader(content)),
+					},
+				},
+			}
+			p := &cluster.Preparer{
+				PrepConfig: cluster.PrepConfig{
+					BaseURL:               "https://github.com/weaveworks/profiles/releases",
+					Location:              tmp,
+					FluxNamespace:         "flux",
+					IgnorePreflightErrors: true,
+				},
+				Fetcher: &cluster.Fetcher{
+					Client: client,
+				},
+				Applier: &cluster.Applier{
+					Runner: applyRunner,
+					Waiter: waiter,
+				},
+				Runner: preflightRunner,
+			}
+			err = p.Prepare()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(applyRunner.RunCallCount()).To(Equal(1))
 		})
 	})
 })

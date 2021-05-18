@@ -4,9 +4,11 @@ import (
 	"fmt"
 
 	"github.com/urfave/cli/v2"
+
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/formatter"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 func searchCmd() *cli.Command {
@@ -69,7 +71,7 @@ func searchDataFunc(profiles []profilesv1.ProfileDescription) func() interface{}
 		}
 		for _, profile := range profiles {
 			tc.Data = append(tc.Data, []string{
-				fmt.Sprintf("%s/%s", profile.Catalog, profile.Name),
+				fmt.Sprintf("%s/%s", profile.CatalogSource, profile.Name),
 				profile.Version,
 				profile.Description,
 			})
