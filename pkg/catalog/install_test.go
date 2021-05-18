@@ -104,7 +104,7 @@ var _ = Describe("Install", func() {
 			artifactFile := filepath.Join(profileDir, "kustomize-0.yaml")
 			Expect(files).To(ConsistOf(profileDir, profileFile, artifactFile))
 
-			content, err := os.ReadFile(profileFile)
+			content, err := ioutil.ReadFile(profileFile)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
 kind: ProfileSubscription
@@ -118,7 +118,7 @@ spec:
 status: {}
 `))
 
-			content, err = os.ReadFile(artifactFile)
+			content, err = ioutil.ReadFile(artifactFile)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(content)).To(Equal(`apiVersion: api
 kind: kustomize

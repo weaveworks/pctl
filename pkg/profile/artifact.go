@@ -49,7 +49,7 @@ func (p *Profile) makeArtifacts(profileRepos []string) ([]runtime.Object, error)
 			}
 			nestedProfileDef, err := getProfileDefinition(artifact.Profile.URL, branchOrTag, path)
 			if err != nil {
-				return nil, fmt.Errorf("failed to fetch profile %q: %w", artifact.Name, err)
+				return nil, fmt.Errorf("failed to get profile definition %s on branch %s: %w", artifact.Profile.URL, branchOrTag, err)
 			}
 			nestedProfile := p.subscription.DeepCopyObject().(*profilesv1.ProfileSubscription)
 			nestedProfile.Spec.ProfileURL = artifact.Profile.URL

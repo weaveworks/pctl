@@ -7,18 +7,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// gitRepoRequiresUpdate checks if the git repository resource requires updating
-func gitRepoRequiresUpdate(existingRes, newRes *sourcev1.GitRepository) bool {
-	switch {
-	case existingRes.Spec.URL != newRes.Spec.URL:
-		return true
-	case existingRes.Spec.Reference.Branch != newRes.Spec.Reference.Branch:
-		return true
-	default:
-		return false
-	}
-}
-
 func (p *Profile) makeGitRepository() *sourcev1.GitRepository {
 	ref := &sourcev1.GitRepositoryRef{
 		Branch: p.subscription.Spec.Branch,

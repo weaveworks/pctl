@@ -2,7 +2,6 @@ package profile
 
 import (
 	"path"
-	"reflect"
 	"time"
 
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
@@ -10,24 +9,6 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// kustomizeRequiresUpdate checks if the git kustomization resource requires updating
-func kustomizeRequiresUpdate(existingRes, desiredRes *kustomizev1.Kustomization) bool {
-	switch {
-	case existingRes.Spec.Path != desiredRes.Spec.Path:
-		return true
-	case existingRes.Spec.Interval != desiredRes.Spec.Interval:
-		return true
-	case existingRes.Spec.Prune != desiredRes.Spec.Prune:
-		return true
-	case existingRes.Spec.TargetNamespace != desiredRes.Spec.TargetNamespace:
-		return true
-	case !reflect.DeepEqual(existingRes.Spec.SourceRef, desiredRes.Spec.SourceRef):
-		return true
-	default:
-		return false
-	}
-}
 
 func (p *Profile) makeKustomization(artifact profilesv1.Artifact, repoPath string) *kustomizev1.Kustomization {
 	return &kustomizev1.Kustomization{

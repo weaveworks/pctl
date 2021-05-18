@@ -2,7 +2,6 @@ package profile
 
 import (
 	"path"
-	"reflect"
 	"strings"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
@@ -10,34 +9,6 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// helmReleaseRequiresUpdate checks if the helm release resource requires updating
-func helmReleaseRequiresUpdate(existingRes, newRes *helmv2.HelmRelease) bool {
-	switch {
-	case existingRes.Spec.Chart.Spec.Chart != newRes.Spec.Chart.Spec.Chart:
-		return true
-	case existingRes.Spec.Chart.Spec.Version != newRes.Spec.Chart.Spec.Version:
-		return true
-	case !reflect.DeepEqual(existingRes.Spec.Chart.Spec.SourceRef, newRes.Spec.Chart.Spec.SourceRef):
-		return true
-	case !reflect.DeepEqual(existingRes.Spec.Values, newRes.Spec.Values):
-		return true
-	case !reflect.DeepEqual(existingRes.Spec.ValuesFrom, newRes.Spec.ValuesFrom):
-		return true
-	default:
-		return false
-	}
-}
-
-// HelmRepoRequiresUpdate checks if the helm repository resource requires updating
-func helmRepoRequiresUpdate(existingRes, newRes *sourcev1.HelmRepository) bool {
-	switch {
-	case existingRes.Spec.URL != newRes.Spec.URL:
-		return true
-	default:
-		return false
-	}
-}
 
 func (p *Profile) makeHelmRepository(url string, name string) *sourcev1.HelmRepository {
 	return &sourcev1.HelmRepository{
