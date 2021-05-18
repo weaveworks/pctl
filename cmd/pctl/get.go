@@ -22,7 +22,7 @@ func getCmd() *cli.Command {
 				Name:        "namespace",
 				DefaultText: "default",
 				Value:       "default",
-				Usage:       "The namespace the subscrption is in",
+				Usage:       "The namespace the subscription is in",
 			},
 		},
 		Action: func(c *cli.Context) error {

@@ -14,6 +14,7 @@ and run: mdtoc -inplace README.md
   - [List](#list)
   - [Get](#get)
   - [Prepare](#prepare)
+    - [Pre-Flight check](#pre-flight-check)
   - [Catalog service options](#catalog-service-options)
 - [Development](#development)
   - [Tests](#tests)
@@ -90,6 +91,20 @@ them into the currently set cluster.
 
 There are a number of options which can be set, such as: version, dry-run, context, kube-config.
 Please run `pctl help` for all options and defaults.
+
+#### Pre-Flight check
+
+`prepare` will also check whether some needed components are already present in the cluster or not.
+The main component which needs to be present is [flux](https://github.com/fluxcd/flux2). This is
+checked by looking for some specific CRDs which needs to be present in order for `profiles` to work.
+These are as follows:
+
+- buckets.source.toolkit.fluxcd.io
+- gitrepositories.source.toolkit.fluxcd.io
+- helmcharts.source.toolkit.fluxcd.io
+- helmreleases.helm.toolkit.fluxcd.io
+- helmrepositories.source.toolkit.fluxcd.io
+- kustomizations.kustomize.toolkit.fluxcd.io
 
 ### Catalog service options
 
