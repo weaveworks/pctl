@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 )
 
@@ -39,7 +42,16 @@ var (
 // PrepareTestCluster will create a test cluster using pctl `prepare` command.
 // @binary -- location of the built pctl binary.
 func PrepareTestCluster(binaryPath string) error {
-	cmd := exec.Command(binaryPath, "prepare", "--dry-run")
+	tmp, err := ioutil.TempDir("", "prepare_integration_test_01")
+	if err != nil {
+		return fmt.Errorf("failed to create temp folder for test: %w", err)
+	}
+	defer func() {
+		if err := os.RemoveAll(tmp); err != nil {
+			fmt.Printf("failed to remove temporary folder at location: %s. Please clean manually.", tmp)
+		}
+	}()
+	cmd := exec.Command(binaryPath, "prepare", "--dry-run", "--out", tmp, "--keep")
 	output, err := cmd.CombinedOutput()
 	if err != nil || !bytes.Contains(output, []byte("kind: List")) {
 		fmt.Println("Output of prepare was: ", string(output))
@@ -47,9 +59,13 @@ func PrepareTestCluster(binaryPath string) error {
 	}
 	fmt.Println("Install file generated successfully.")
 
+	content, err := ioutil.ReadFile(filepath.Join(tmp, "prepare.yaml"))
+	if err != nil {
+		return fmt.Errorf("failed to read prepare.yaml from location %s: %w", tmp, err)
+	}
 	fmt.Print("Replacing controller image to localhost:5000...")
 	re := regexp.MustCompile(`weaveworks/profiles-controller:.*`)
-	out := re.ReplaceAllString(string(output), "localhost:5000/profiles-controller:latest")
+	out := re.ReplaceAllString(string(content), "localhost:5000/profiles-controller:latest")
 	fmt.Println("done.")
 
 	fmt.Print("Applying modified prepare.yaml...")
@@ -71,7 +87,7 @@ func PrepareTestCluster(binaryPath string) error {
 
 	output, err = cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Output from kubectl apply: ", string(output))
+		fmt.Println("\nOutput from kubectl apply: ", string(output))
 		return fmt.Errorf("failed to apply prepare yaml: %w", err)
 	}
 	fmt.Println("done.")

@@ -4,6 +4,8 @@ go 1.16
 
 require (
 	github.com/fluxcd/helm-controller/api v0.10.1
+	github.com/fluxcd/kustomize-controller/api v0.12.0
+	github.com/fluxcd/source-controller/api v0.12.1
 	github.com/jenkins-x/go-scm v1.8.1
 	github.com/olekukonko/tablewriter v0.0.0-20210304033056-74c60be0ef68
 	github.com/onsi/ginkgo v1.16.2
