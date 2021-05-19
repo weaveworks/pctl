@@ -50,14 +50,15 @@ Prerequisites   Kubernetes 1.18+
 
 ### Install
 
-pctl can be used to install a profile subscription for a profile, example:
+pctl can be used to install a profile, example:
 
 ```
 pctl install nginx-catalog/weaveworks-nginx
-generating subscription for profile nginx-catalog/weaveworks-nginx:
+generating subscription and artifacts for profile nginx-catalog/weaveworks-nginx:
 ```
 
-Then the result will be in profile-subscription.yaml file.
+Then the result will be in profile-subscription.yaml file and a series of artifact.yaml files. These yamls can be applied
+to the cluster to deploy the profile.
 
 ### List
 pctl can be used to list the profile subscriptions in a cluster, example:

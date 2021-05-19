@@ -2,14 +2,16 @@ package catalog
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
-
 	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/writer"
+	"github.com/weaveworks/pctl/pkg/profile"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 )
 
 // InstallConfig defines parameters for the installation call.
@@ -21,12 +23,17 @@ type InstallConfig struct {
 	Namespace     string
 	ProfileName   string
 	SubName       string
-	Writer        writer.Writer
 	Version       string
+	Directory     string
 }
 
+//MakeArtifacts returns artifacts for a subscription
+type MakeArtifacts func(sub profilesv1.ProfileSubscription) ([]runtime.Object, error)
+
+var makeArtifacts = profile.MakeArtifacts
+
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile subscription
-// writing it out with the provided profile subscription writer.
+// and its artifacts
 func Install(cfg InstallConfig) error {
 	profile, err := Show(cfg.CatalogClient, cfg.CatalogName, cfg.ProfileName, cfg.Version)
 	if err != nil {
@@ -44,7 +51,7 @@ func Install(cfg InstallConfig) error {
 		},
 		Spec: profilesv1.ProfileSubscriptionSpec{
 			ProfileURL: profile.URL,
-			Branch:     cfg.Branch,
+			Version:    filepath.Join(profile.Name, profile.Version),
 		},
 	}
 	if cfg.ConfigMap != "" {
@@ -56,10 +63,43 @@ func Install(cfg InstallConfig) error {
 			},
 		}
 	}
-	if err := cfg.Writer.Output(&subscription); err != nil {
-		return fmt.Errorf("failed to output subscription information: %w", err)
+
+	artifacts, err := makeArtifacts(subscription)
+	if err != nil {
+		return fmt.Errorf("failed to generate artifacts: %w", err)
 	}
-	return nil
+
+	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
+	directory := filepath.Join(cfg.Directory, profile.Name)
+	err = os.Mkdir(directory, 0777)
+	if err != nil {
+		return fmt.Errorf("failed to create directory")
+	}
+
+	generateOutput := func(filename string, o runtime.Object) error {
+		f, err := os.OpenFile(filepath.Join(directory, filename), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
+		if err != nil {
+			return err
+		}
+		defer func(f *os.File) {
+			if err := f.Close(); err != nil {
+				fmt.Printf("Failed to properly close file %s\n", f.Name())
+			}
+		}(f)
+		if err := e.Encode(o, f); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	for i, a := range artifacts {
+		filename := fmt.Sprintf("%s-%d.%s", a.GetObjectKind().GroupVersionKind().Kind, i, "yaml")
+		if err := generateOutput(filename, a); err != nil {
+			return err
+		}
+	}
+
+	return generateOutput("profile.yaml", &subscription)
 }
 
 // CreatePullRequest creates a pull request from the current changes.

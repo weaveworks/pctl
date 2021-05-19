@@ -1,4 +1,4 @@
-package writer_test
+package repo_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestWriter(t *testing.T) {
+func TestGit(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Writer Suite")
+	RunSpecs(t, "Git Suite")
 }

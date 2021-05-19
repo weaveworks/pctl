@@ -10,14 +10,19 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
+	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+	v1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -136,6 +141,7 @@ var _ = Describe("PCTL", func() {
 			})
 		})
 	})
+
 	Context("get", func() {
 		var (
 			namespace        = "default"
@@ -253,103 +259,139 @@ var _ = Describe("PCTL", func() {
 	})
 
 	Context("install", func() {
-		It("generates a ProfileSubscription ready to be applied to a cluster", func() {
-			temp, err := ioutil.TempDir("", "pctl_test_install_generate_01")
+		var temp string
+
+		BeforeEach(func() {
+			var err error
+			temp, err = ioutil.TempDir("", "pctl_test_install_generate_branch_01")
 			Expect(err).ToNot(HaveOccurred())
-			filename := filepath.Join(temp, "profile_subscription.yaml")
-			cmd := exec.Command(binaryPath, "install", "--out", filename, "nginx-catalog/weaveworks-nginx")
-			err = cmd.Run()
+		})
+
+		AfterEach(func() {
+			_ = os.RemoveAll(temp)
+		})
+
+		It("generates valid artifacts to the local directory", func() {
+			namespace := uuid.New().String()
+			subName := "pctl-profile"
+			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "nginx-catalog/weaveworks-nginx/v0.1.0")
+			cmd.Dir = temp
+			err := cmd.Run()
 			Expect(err).ToNot(HaveOccurred())
+
+			var files []string
+			profilesDir := filepath.Join(temp, "weaveworks-nginx")
+			err = filepath.Walk(profilesDir, func(path string, info os.FileInfo, err error) error {
+				files = append(files, strings.TrimPrefix(path, profilesDir+"/"))
+				return nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("creating the artifacts")
+			Expect(files).To(ContainElements(
+				"profile.yaml",
+				"GitRepository-0.yaml",
+				"GitRepository-1.yaml",
+				"HelmRelease-2.yaml",
+				"HelmRelease-4.yaml",
+				"HelmRepository-5.yaml",
+				"Kustomization-3.yaml",
+			))
+
+			filename := filepath.Join(temp, "weaveworks-nginx", "profile.yaml")
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
+			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
 kind: ProfileSubscription
 metadata:
   creationTimestamp: null
   name: pctl-profile
-  namespace: default
+  namespace: %s
 spec:
-  branch: main
   profileURL: https://github.com/weaveworks/profiles-examples
+  version: weaveworks-nginx/v0.1.0
 status: {}
-`))
-		})
+`, namespace)))
 
-		When("a branch and namespace is provided", func() {
-			It("will use that branch and namespace", func() {
-				temp, err := ioutil.TempDir("", "pctl_test_install_generate_branch_01")
-				Expect(err).ToNot(HaveOccurred())
-				filename := filepath.Join(temp, "profile_subscription.yaml")
-				cmd := exec.Command(binaryPath, "install", "--out", filename, "--branch", "my_branch", "--namespace", "my-namespace", "nginx-catalog/weaveworks-nginx")
-				err = cmd.Run()
-				Expect(err).ToNot(HaveOccurred())
-				content, err := ioutil.ReadFile(filename)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
-kind: ProfileSubscription
-metadata:
-  creationTimestamp: null
-  name: pctl-profile
-  namespace: my-namespace
-spec:
-  branch: my_branch
-  profileURL: https://github.com/weaveworks/profiles-examples
-status: {}
-`))
-			})
-		})
+			By("the artifacts being deployable")
+			nsp := v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
+				},
+			}
+			Expect(kClient.Create(context.Background(), &nsp)).To(Succeed())
 
-		When("a config-secret is provided", func() {
-			It("will add a valueFrom section to the profile subscription", func() {
-				temp, err := ioutil.TempDir("", "pctl_test_install_generate_values_from_01")
-				Expect(err).ToNot(HaveOccurred())
-				filename := filepath.Join(temp, "profile_subscription.yaml")
-				cmd := exec.Command(binaryPath, "install", "--out", filename, "--config-secret", "my-secret", "nginx-catalog/weaveworks-nginx")
-				err = cmd.Run()
-				Expect(err).ToNot(HaveOccurred())
-				content, err := ioutil.ReadFile(filename)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
-kind: ProfileSubscription
-metadata:
-  creationTimestamp: null
-  name: pctl-profile
-  namespace: default
-spec:
-  branch: main
-  profileURL: https://github.com/weaveworks/profiles-examples
-  valuesFrom:
-  - kind: ConfigMap
-    name: pctl-profile-values
-    valuesKey: my-secret
-status: {}
-`))
-			})
-		})
+			cmd = exec.Command("kubectl", "apply", "-f", profilesDir)
+			cmd.Dir = temp
+			err = cmd.Run()
+			Expect(err).ToNot(HaveOccurred())
 
-		When("only catalog name, profile name and version is provided", func() {
-			It("will call the catalog service to find the right values to apply", func() {
-				temp, err := ioutil.TempDir("", "pctl_test_install_with_catalog_and_version_01")
-				Expect(err).ToNot(HaveOccurred())
-				filename := filepath.Join(temp, "profile_subscription.yaml")
-				cmd := exec.Command(binaryPath, "install", "--out", filename, "nginx-catalog/weaveworks-nginx/v0.1.0")
-				err = cmd.Run()
+			By("successfully deploying the helm release")
+			helmReleaseName := fmt.Sprintf("%s-%s-%s", subName, "bitnami-nginx", "nginx-server")
+			var helmRelease *helmv2.HelmRelease
+			Eventually(func() bool {
+				helmRelease = &helmv2.HelmRelease{}
+				err := kClient.Get(context.Background(), client.ObjectKey{Name: helmReleaseName, Namespace: namespace}, helmRelease)
+				if err != nil {
+					return false
+				}
+				for _, condition := range helmRelease.Status.Conditions {
+					if condition.Type == "Ready" && condition.Status == "True" {
+						return true
+					}
+				}
+				return false
+			}, 3*time.Minute, 5*time.Second).Should(BeTrue())
+
+			helmOpts := []client.ListOption{
+				client.InNamespace(namespace),
+				client.MatchingLabels{"app.kubernetes.io/name": "nginx"},
+			}
+			var podList *v1.PodList
+			Eventually(func() v1.PodPhase {
+				podList = &v1.PodList{}
+				err := kClient.List(context.Background(), podList, helmOpts...)
 				Expect(err).NotTo(HaveOccurred())
-				content, err := ioutil.ReadFile(filename)
+				if len(podList.Items) == 0 {
+					return v1.PodPhase("")
+				}
+				return podList.Items[0].Status.Phase
+			}, 2*time.Minute, 5*time.Second).Should(Equal(v1.PodPhase("Running")))
+
+			Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("docker.io/bitnami/nginx:1.19.8-debian-10-r0"))
+
+			By("successfully deploying the kustomize resource")
+			kustomizeName := fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "nginx-deployment")
+			var kustomize *kustomizev1.Kustomization
+			Eventually(func() bool {
+				kustomize = &kustomizev1.Kustomization{}
+				err := kClient.Get(context.Background(), client.ObjectKey{Name: kustomizeName, Namespace: namespace}, kustomize)
+				if err != nil {
+					return false
+				}
+				for _, condition := range kustomize.Status.Conditions {
+					if condition.Type == "Ready" && condition.Status == "True" {
+						return true
+					}
+				}
+				return false
+			}, 2*time.Minute, 5*time.Second).Should(BeTrue())
+
+			kustomizeOpts := []client.ListOption{
+				client.InNamespace(namespace),
+				client.MatchingLabels{"app": "nginx"},
+			}
+			Eventually(func() v1.PodPhase {
+				podList = &v1.PodList{}
+				err := kClient.List(context.Background(), podList, kustomizeOpts...)
 				Expect(err).NotTo(HaveOccurred())
-				expectedFileContent := `apiVersion: weave.works/v1alpha1
-kind: ProfileSubscription
-metadata:
-  creationTimestamp: null
-  name: pctl-profile
-  namespace: default
-spec:
-  branch: main
-  profileURL: https://github.com/weaveworks/profiles-examples
-status: {}
-`
-				Expect(string(content)).To(Equal(expectedFileContent))
-			})
+				if len(podList.Items) == 0 {
+					return v1.PodPhase("no pods found")
+				}
+				return podList.Items[0].Status.Phase
+			}, 2*time.Minute, 5*time.Second).Should(Equal(v1.PodPhase("Running")))
+
+			Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("nginx:1.14.2"))
 		})
 
 		When("a catalog version is provided, but it's an invalid/missing version", func() {
@@ -367,14 +409,13 @@ status: {}
 				if _, ok := os.LookupEnv("GIT_TOKEN"); !ok {
 					Skip("GIT_TOKEN not set, skipping...")
 				}
-				temp, err := ioutil.TempDir("", "pctl_test_install_create_pr_01")
-				Expect(err).NotTo(HaveOccurred())
 				repoLocation := filepath.Join(temp, "repo")
 				// clone
 				token := os.Getenv("GIT_TOKEN")
 				cloneWithToken := fmt.Sprintf(repositoryNameTemplate, token)
 				cmd := exec.Command("git", "clone", cloneWithToken, repoLocation)
-				err = cmd.Run()
+				cmd.Dir = temp
+				err := cmd.Run()
 				Expect(err).NotTo(HaveOccurred())
 				filename := filepath.Join(repoLocation, "profile_subscription.yaml")
 				suffix, err := randString(3)
@@ -396,16 +437,11 @@ status: {}
 			})
 
 			It("fails if repo is not defined", func() {
-				temp, err := ioutil.TempDir("", "pctl_test_install_create_pr_02")
-				Expect(err).NotTo(HaveOccurred())
-				filename := filepath.Join(temp, "profile_subscription.yaml")
 				suffix, err := randString(3)
 				Expect(err).NotTo(HaveOccurred())
 				branch := "prtest_" + suffix
 				cmd := exec.Command(binaryPath,
 					"install",
-					"--out",
-					filename,
 					"--create-pr",
 					"--branch",
 					branch,
@@ -421,42 +457,25 @@ status: {}
 					err := os.Setenv("GIT_TOKEN", "dummy")
 					Expect(err).ToNot(HaveOccurred())
 				}
-				temp, err := ioutil.TempDir("", "pctl_test_install_create_pr_03")
-				Expect(err).NotTo(HaveOccurred())
 				suffix, err := randString(3)
 				Expect(err).NotTo(HaveOccurred())
-				filename := filepath.Join(temp, "profile_subscription.yaml")
 				branch := "prtest_" + suffix
 				cmd := exec.Command(binaryPath,
 					"install",
-					"--out",
-					filename,
 					"--create-pr",
 					"--branch",
 					branch,
 					"--repo",
 					"doesnt/matter",
 					"nginx-catalog/weaveworks-nginx")
+				cmd.Dir = temp
 				session, err := cmd.CombinedOutput()
 				Expect(err).To(HaveOccurred())
 				Expect(string(session)).To(ContainSubstring("directory is not a git repository"))
 			})
-
-			It("fails if target location for install is a folder rather than a file", func() {
-				temp, err := ioutil.TempDir("", "pctl_test_install_create_pr_04")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(err).NotTo(HaveOccurred())
-				cmd := exec.Command(binaryPath,
-					"install",
-					"--out",
-					temp,
-					"nginx-catalog/weaveworks-nginx")
-				session, err := cmd.CombinedOutput()
-				Expect(err).To(HaveOccurred())
-				Expect(string(session)).To(ContainSubstring("is a directory"))
-			})
 		})
 	})
+
 	Context("prepare", func() {
 		When("dry-run is provided", func() {
 			It("displays the to be applied content", func() {
