@@ -11,14 +11,13 @@ import (
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/runner"
-	"github.com/weaveworks/pctl/pkg/writer"
 )
 
 func installCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "install",
 		Usage:     "generate a profile subscription for a profile in a catalog",
-		UsageText: "pctl --catalog-url <URL> install --subscription-name pctl-profile --namespace default --branch main --config-secret configmap-name --out profile_subscription.yaml <CATALOG>/<PROFILE>[/<VERSION>]",
+		UsageText: "pctl --catalog-url <URL> install --subscription-name pctl-profile --namespace default --branch main --config-secret configmap-name <CATALOG>/<PROFILE>[/<VERSION>]",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "subscription-name",
@@ -42,12 +41,6 @@ func installCmd() *cli.Command {
 				Name:  "config-secret",
 				Value: "",
 				Usage: "The name of the ConfigMap which contains values for this profile.",
-			},
-			&cli.StringFlag{
-				Name:        "out",
-				Value:       "profile_subscription.yaml",
-				DefaultText: "profile_subscription.yaml",
-				Usage:       "Filename to use for the generated content.",
 			},
 			&cli.BoolFlag{
 				Name:  "create-pr",
@@ -100,7 +93,6 @@ func install(c *cli.Context) error {
 	subName := c.String("subscription-name")
 	namespace := c.String("namespace")
 	configValues := c.String("config-secret")
-	filename := c.String("out")
 
 	parts := strings.Split(profilePath, "/")
 	if len(parts) < 2 {
@@ -110,7 +102,6 @@ func install(c *cli.Context) error {
 	catalogName, profileName := parts[0], parts[1]
 
 	fmt.Printf("generating subscription for profile %s/%s:\n\n", catalogName, profileName)
-	w := &writer.FileWriter{Filename: filename}
 	cfg := catalog.InstallConfig{
 		Branch:        branch,
 		CatalogName:   catalogName,
@@ -119,7 +110,6 @@ func install(c *cli.Context) error {
 		Namespace:     namespace,
 		ProfileName:   profileName,
 		SubName:       subName,
-		Writer:        w,
 	}
 	if len(parts) == 3 {
 		cfg.Version = parts[2]

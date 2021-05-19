@@ -11,6 +11,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
+	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	"github.com/weaveworks/pctl/tests/integration"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
@@ -34,6 +36,8 @@ var _ = BeforeSuite(func() {
 	scheme := runtime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
 	Expect(profilesv1.AddToScheme(scheme)).To(Succeed())
+	Expect(helmv2.AddToScheme(scheme)).To(Succeed())
+	Expect(kustomizev1.AddToScheme(scheme)).To(Succeed())
 
 	kubeconfig := ctrl.GetConfigOrDie()
 	kClient, err = client.New(kubeconfig, client.Options{Scheme: scheme})
