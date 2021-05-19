@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/urfave/cli/v2"
 
 	"github.com/weaveworks/pctl/pkg/cluster"
@@ -59,6 +61,11 @@ func prepareCmd() *cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) error {
+			kubeConfig := c.String("kubeconfig")
+			k8sClient, err := buildK8sClient(kubeConfig)
+			if err != nil {
+				return fmt.Errorf("failed to build kubernetes client: %w", err)
+			}
 			p, err := cluster.NewPreparer(cluster.PrepConfig{
 				BaseURL:               c.String("baseurl"),
 				Version:               c.String("version"),
@@ -69,6 +76,7 @@ func prepareCmd() *cli.Command {
 				DryRun:                c.Bool("dry-run"),
 				Keep:                  c.Bool("keep"),
 				IgnorePreflightErrors: c.Bool("ignore-preflight-errors"),
+				K8sClient:             k8sClient,
 			})
 			if err != nil {
 				return err
