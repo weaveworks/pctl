@@ -34,7 +34,9 @@ jobs:
       - name: Setup Flux v2 CLI
         uses: fluxcd/flux2/action@main
       - name: Test
+        env:
+          GIT_TOKEN: ${{secrets.GIT_TOKEN}}
         run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
           PATH=$PATH:$(go env GOPATH)/bin make integration
-    env:
-      GIT_TOKEN: ${{secrets.GITHUB_TOKEN}}
