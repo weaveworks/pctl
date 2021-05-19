@@ -10,12 +10,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 
 	"github.com/weaveworks/pctl/pkg/runner"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -23,6 +25,7 @@ const (
 	// profiles bundles ready to be installed files under `prepare`. The rest of the resources
 	// are left for manual configuration.
 	prepareManifestFile = "prepare.yaml"
+	namespace           = "profiles-system"
 )
 
 // FluxCRDs are CRDs which prepare is checking if they are present in the cluster or not.
@@ -43,6 +46,7 @@ type Fetcher struct {
 // Applier applies the previously generated manifest files.
 type Applier struct {
 	Runner runner.Runner
+	Waiter Waiter
 }
 
 // Preparer will prepare an environment.
@@ -66,6 +70,7 @@ type PrepConfig struct {
 	IgnorePreflightErrors bool
 	DryRun                bool
 	Keep                  bool
+	K8sClient             client.Client
 }
 
 // NewPreparer creates a preparer with set dependencies ready to be used.
@@ -84,6 +89,12 @@ func NewPreparer(cfg PrepConfig) (*Preparer, error) {
 			Client: http.DefaultClient,
 		},
 		Applier: &Applier{
+			Waiter: NewKubeWaiter(KubeConfig{
+				Client:    cfg.K8sClient,
+				Interval:  5 * time.Second,
+				Timeout:   15 * time.Minute,
+				Namespace: namespace,
+			}),
 			Runner: r,
 		},
 		Runner: r,
@@ -212,7 +223,10 @@ func (a *Applier) Apply(folder string, kubeContext string, kubeConfig string, dr
 		fmt.Print(string(output))
 		return nil
 	}
-	// In a follow up ticket, make this wait for all the possible resources to be condition=available.
-	fmt.Println("install finished")
+	fmt.Print("Waiting for resources to be ready...")
+	if err := a.Waiter.Wait("profiles-controller-manager"); err != nil {
+		return fmt.Errorf("failed to wait for resources to be ready: %w", err)
+	}
+	fmt.Println("done.")
 	return nil
 }
