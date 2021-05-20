@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -142,75 +143,15 @@ var _ = Describe("PCTL", func() {
 		})
 	})
 
-	Context("get", func() {
-		var (
-			namespace        = "default"
-			subscriptionName = "failed-sub"
-			ctx              = context.TODO()
-			pSub             profilesv1.ProfileSubscription
-		)
-
-		BeforeEach(func() {
-			Skip("will be updated / removed later")
-			profileURL := "https://github.com/weaveworks/profiles-examples"
-			pSub = profilesv1.ProfileSubscription{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ProfileSubscription",
-					APIVersion: "profilesubscriptions.weave.works/v1alpha1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      subscriptionName,
-					Namespace: namespace,
-				},
-				Spec: profilesv1.ProfileSubscriptionSpec{
-					ProfileURL: profileURL,
-					Branch:     "invalid-artifact",
-					Path:       "weaveworks-nginx",
-				},
-			}
-			Expect(kClient.Create(ctx, &pSub)).Should(Succeed())
-
-			profile := profilesv1.ProfileSubscription{}
-			Eventually(func() bool {
-				err := kClient.Get(ctx, client.ObjectKey{Name: subscriptionName, Namespace: namespace}, &profile)
-				return err == nil && len(profile.Status.Conditions) > 0
-			}, 10*time.Second, 1*time.Second).Should(BeTrue())
-
-			Expect(profile.Status.Conditions[0].Message).To(Equal("error when reconciling profile artifacts"))
-			Expect(profile.Status.Conditions[0].Type).To(Equal("Ready"))
-			Expect(profile.Status.Conditions[0].Status).To(Equal(metav1.ConditionStatus("False")))
-			Expect(profile.Status.Conditions[0].Reason).To(Equal("CreateFailed"))
-		})
-
-		AfterEach(func() {
-			Expect(kClient.Delete(ctx, &pSub)).Should(Succeed())
-		})
-
-		It("returns the subscriptions", func() {
-			Skip("will be updated / removed later")
-			getCmd := func() string {
-				cmd := exec.Command(binaryPath, "get", "--namespace", namespace, "--name", subscriptionName)
-				session, err := cmd.CombinedOutput()
-				Expect(err).ToNot(HaveOccurred())
-				return string(session)
-			}
-			Eventually(getCmd).Should(ContainSubstring("Subscription\tfailed-sub                              \t\n" +
-				"Namespace   \tdefault                                 \t\n" +
-				"Ready       \tFalse                                   \t\n" +
-				"Reason      \terror when reconciling profile artifacts\t\n"))
-		})
-	})
-
 	Context("list", func() {
 		var (
 			namespace        = "default"
-			subscriptionName = "failed-sub"
+			subscriptionName = "my-sub"
 			ctx              = context.TODO()
 			pSub             profilesv1.ProfileSubscription
 		)
 
 		BeforeEach(func() {
-			Skip("will be updated / removed later")
 			profileURL := "https://github.com/weaveworks/profiles-examples"
 			pSub = profilesv1.ProfileSubscription{
 				TypeMeta: metav1.TypeMeta{
@@ -223,22 +164,15 @@ var _ = Describe("PCTL", func() {
 				},
 				Spec: profilesv1.ProfileSubscriptionSpec{
 					ProfileURL: profileURL,
-					Branch:     "invalid-artifact",
-					Path:       "weaveworks-nginx",
+					Version:    "weaveworks-nginx/v0.1.0",
+					ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
+						Catalog: "foo",
+						Profile: "bar",
+						Version: "v0.1.0",
+					},
 				},
 			}
 			Expect(kClient.Create(ctx, &pSub)).Should(Succeed())
-
-			profile := profilesv1.ProfileSubscription{}
-			Eventually(func() bool {
-				err := kClient.Get(ctx, client.ObjectKey{Name: subscriptionName, Namespace: namespace}, &profile)
-				return err == nil && len(profile.Status.Conditions) > 0
-			}, 10*time.Second, 1*time.Second).Should(BeTrue())
-
-			Expect(profile.Status.Conditions[0].Message).To(Equal("error when reconciling profile artifacts"))
-			Expect(profile.Status.Conditions[0].Type).To(Equal("Ready"))
-			Expect(profile.Status.Conditions[0].Status).To(Equal(metav1.ConditionStatus("False")))
-			Expect(profile.Status.Conditions[0].Reason).To(Equal("CreateFailed"))
 		})
 
 		AfterEach(func() {
@@ -246,15 +180,17 @@ var _ = Describe("PCTL", func() {
 		})
 
 		It("returns the subscriptions", func() {
-			Skip("will be updated / removed later")
-			listCmd := func() string {
+			listCmd := func() []string {
 				cmd := exec.Command(binaryPath, "list")
 				session, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred())
-				return string(session)
+				Eventually(session).Should(gexec.Exit(0))
+				return strings.Split(string(session), "\n")
 			}
-			Eventually(listCmd).Should(ContainSubstring("NAMESPACE	NAME      \tREADY \n" +
-				"default  \tfailed-sub	False"))
+			Eventually(listCmd).Should(ContainElements(
+				"NAMESPACE	NAME  	PROFILE	VERSION	CATALOG ",
+				"default  \tmy-sub\tbar    \tv0.1.0 \tfoo    \t",
+			))
 		})
 	})
 
@@ -311,6 +247,10 @@ metadata:
   name: pctl-profile
   namespace: %s
 spec:
+  profile_catalog_description:
+    catalog: nginx-catalog
+    profile: weaveworks-nginx
+    version: v0.1.0
   profileURL: https://github.com/weaveworks/profiles-examples
   version: weaveworks-nginx/v0.1.0
 status: {}
@@ -449,7 +389,7 @@ status: {}
 					"--create-pr",
 					"--branch",
 					branch,
-					"nginx-catalog/weaveworks-nginx")
+					"nginx-catalog/weaveworks-nginx/v0.1.0")
 				cmd.Dir = temp
 				session, err := cmd.CombinedOutput()
 				Expect(err).To(HaveOccurred())
@@ -472,7 +412,7 @@ status: {}
 					branch,
 					"--repo",
 					"doesnt/matter",
-					"nginx-catalog/weaveworks-nginx")
+					"nginx-catalog/weaveworks-nginx/v0.1.0")
 				cmd.Dir = temp
 				session, err := cmd.CombinedOutput()
 				Expect(err).To(HaveOccurred())

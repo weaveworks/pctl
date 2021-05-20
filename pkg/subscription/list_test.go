@@ -25,7 +25,11 @@ var _ = Describe("List", func() {
 		sub2       = "sub2"
 		namespace1 = "namespace1"
 		namespace2 = "namespace2"
+		profile    = "foo"
+		catalog    = "bar"
+		version    = "v0.1.0"
 	)
+
 	BeforeEach(func() {
 		scheme := runtime.NewScheme()
 		Expect(profilesv1.AddToScheme(scheme)).To(Succeed())
@@ -38,30 +42,27 @@ var _ = Describe("List", func() {
 			},
 			Spec: profilesv1.ProfileSubscriptionSpec{
 				ProfileURL: "https://github.com/org/repo-name",
+				Version:    "foo/v0.1.0",
+				ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
+					Profile: profile,
+					Catalog: catalog,
+					Version: version,
+				},
+			},
+		}
+		pSub2 := &profilesv1.ProfileSubscription{
+			TypeMeta: profileTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      sub2,
+				Namespace: namespace2,
+			},
+			Spec: profilesv1.ProfileSubscriptionSpec{
+				ProfileURL: "https://github.com/org/repo-name",
 				Branch:     "main",
 			},
 		}
-		pSub2 := pSub1.DeepCopy()
-		pSub2.Name = sub2
-		pSub2.Namespace = namespace2
 		Expect(fakeClient.Create(context.TODO(), pSub1)).To(Succeed())
 		Expect(fakeClient.Create(context.TODO(), pSub2)).To(Succeed())
-		condition := metav1.Condition{
-			Type:               "Ready",
-			Status:             "True",
-			Reason:             "foo",
-			LastTransitionTime: metav1.Now(),
-		}
-
-		conditions := []metav1.Condition{condition}
-		pSub1New := pSub1.DeepCopy()
-		pSub1New.Status.Conditions = conditions
-		Expect(fakeClient.Status().Patch(context.TODO(), pSub1New, client.MergeFrom(pSub1))).To(Succeed())
-
-		conditions[0].Status = "False"
-		pSub2New := pSub2.DeepCopy()
-		pSub2New.Status.Conditions = conditions
-		Expect(fakeClient.Status().Patch(context.TODO(), pSub2New, client.MergeFrom(pSub2))).To(Succeed())
 
 		sm = subscription.NewManager(fakeClient)
 	})
@@ -73,12 +74,16 @@ var _ = Describe("List", func() {
 			subscription.SubscriptionSummary{
 				Name:      sub1,
 				Namespace: namespace1,
-				Ready:     "True",
+				Version:   version,
+				Profile:   profile,
+				Catalog:   catalog,
 			},
 			subscription.SubscriptionSummary{
 				Name:      sub2,
 				Namespace: namespace2,
-				Ready:     "False",
+				Version:   "-",
+				Profile:   "-",
+				Catalog:   "-",
 			},
 		))
 	})
@@ -94,40 +99,6 @@ var _ = Describe("List", func() {
 		It("returns an error", func() {
 			_, err := sm.List()
 			Expect(err).To(MatchError(ContainSubstring("failed to list profile subscriptions:")))
-		})
-	})
-
-	When("no ready status condition exists", func() {
-		BeforeEach(func() {
-			pSub1 := &profilesv1.ProfileSubscription{}
-			Expect(fakeClient.Get(context.TODO(), client.ObjectKey{Name: sub1, Namespace: namespace1}, pSub1)).To(Succeed())
-			pSub1New := pSub1.DeepCopy()
-			pSub1New.Status.Conditions = nil
-			Expect(fakeClient.Status().Patch(context.TODO(), pSub1New, client.MergeFrom(pSub1))).To(Succeed())
-
-			pSub2 := &profilesv1.ProfileSubscription{}
-			Expect(fakeClient.Get(context.TODO(), client.ObjectKey{Name: sub2, Namespace: namespace2}, pSub2)).To(Succeed())
-			pSub2New := pSub2.DeepCopy()
-			pSub2New.Status.Conditions[0].Type = "not a ready status"
-			Expect(fakeClient.Status().Patch(context.TODO(), pSub2New, client.MergeFrom(pSub2))).To(Succeed())
-		})
-
-		It("sets the status to unknown", func() {
-			subs, err := sm.List()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(subs).To(ConsistOf(
-				subscription.SubscriptionSummary{
-					Name:      sub1,
-					Namespace: namespace1,
-					Ready:     "Unknown",
-				},
-				subscription.SubscriptionSummary{
-					Name:      sub2,
-					Namespace: namespace2,
-					Ready:     "Unknown",
-				},
-			))
-
 		})
 	})
 })

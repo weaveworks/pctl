@@ -65,8 +65,6 @@ func getDataFunc(profile subscription.SubscriptionSummary) func() interface{} {
 			Data: [][]string{
 				{"Subscription", profile.Name},
 				{"Namespace", profile.Namespace},
-				{"Ready", profile.Ready},
-				{"Reason", profile.Message},
 			},
 		}
 	}

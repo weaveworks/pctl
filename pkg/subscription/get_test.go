@@ -40,17 +40,6 @@ var _ = Describe("Get", func() {
 			},
 		}
 		Expect(fakeClient.Create(context.TODO(), pSub1)).To(Succeed())
-		condition := metav1.Condition{
-			Type:               "Ready",
-			Status:             "True",
-			Message:            "foo",
-			LastTransitionTime: metav1.Now(),
-		}
-
-		conditions := []metav1.Condition{condition}
-		pSub1New := pSub1.DeepCopy()
-		pSub1New.Status.Conditions = conditions
-		Expect(fakeClient.Status().Patch(context.TODO(), pSub1New, client.MergeFrom(pSub1))).To(Succeed())
 
 		sm = subscription.NewManager(fakeClient)
 	})
@@ -61,8 +50,6 @@ var _ = Describe("Get", func() {
 		Expect(sub).To(Equal(subscription.SubscriptionSummary{
 			Name:      sub1,
 			Namespace: namespace1,
-			Ready:     "True",
-			Message:   "foo",
 		}))
 	})
 
@@ -77,27 +64,6 @@ var _ = Describe("Get", func() {
 		It("returns an error", func() {
 			_, err := sm.Get(namespace1, sub1)
 			Expect(err).To(MatchError(ContainSubstring("failed to get profile subscriptions:")))
-		})
-	})
-
-	When("no ready status condition exists", func() {
-		BeforeEach(func() {
-			pSub1 := &profilesv1.ProfileSubscription{}
-			Expect(fakeClient.Get(context.TODO(), client.ObjectKey{Name: sub1, Namespace: namespace1}, pSub1)).To(Succeed())
-			pSub1New := pSub1.DeepCopy()
-			pSub1New.Status.Conditions = nil
-			Expect(fakeClient.Status().Patch(context.TODO(), pSub1New, client.MergeFrom(pSub1))).To(Succeed())
-		})
-
-		It("sets the status to unknown", func() {
-			sub, err := sm.Get(namespace1, sub1)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(sub).To(Equal(subscription.SubscriptionSummary{
-				Name:      sub1,
-				Namespace: namespace1,
-				Ready:     "Unknown",
-				Message:   "-",
-			}))
 		})
 	})
 })

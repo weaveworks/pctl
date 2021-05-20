@@ -51,7 +51,12 @@ func Install(cfg InstallConfig) error {
 		},
 		Spec: profilesv1.ProfileSubscriptionSpec{
 			ProfileURL: profile.URL,
-			Version:    filepath.Join(profile.Name, profile.Version),
+			Version:    filepath.Join(cfg.ProfileName, cfg.Version),
+			ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
+				Catalog: cfg.CatalogName,
+				Version: cfg.Version,
+				Profile: cfg.ProfileName,
+			},
 		},
 	}
 	if cfg.ConfigMap != "" {
