@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -60,6 +59,12 @@ func installCmd() *cli.Command {
 				Usage:       "The base branch to open a PR against.",
 			},
 			&cli.StringFlag{
+				Name:        "out",
+				DefaultText: "current",
+				Value:       ".",
+				Usage:       "Optional location to create the profile installation folder in.",
+			},
+			&cli.StringFlag{
 				Name:  "repo",
 				Value: "",
 				Usage: "The repository to open a pr against. Format is: org/repo-name",
@@ -93,6 +98,7 @@ func install(c *cli.Context) error {
 	subName := c.String("subscription-name")
 	namespace := c.String("namespace")
 	configValues := c.String("config-secret")
+	dir := c.String("out")
 
 	parts := strings.Split(profilePath, "/")
 	if len(parts) < 2 {
@@ -110,6 +116,7 @@ func install(c *cli.Context) error {
 		Namespace:     namespace,
 		ProfileName:   profileName,
 		SubName:       subName,
+		Directory:     dir,
 	}
 	if len(parts) == 3 {
 		cfg.Version = parts[2]
@@ -120,21 +127,20 @@ func install(c *cli.Context) error {
 // createPullRequest runs the pull request creation part of the `install` command.
 func createPullRequest(c *cli.Context) error {
 	branch := c.String("branch")
-	filename := c.String("out")
 	repo := c.String("repo")
 	base := c.String("base")
 	remote := c.String("remote")
+	directory := c.String("out")
 	if repo == "" {
 		return errors.New("repo must be defined if create-pr is true")
 	}
 	fmt.Printf("Creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{
-		Filename: filename,
-		Location: filepath.Dir(filename),
-		Branch:   branch,
-		Remote:   remote,
-		Base:     base,
+		Directory: directory,
+		Branch:    branch,
+		Remote:    remote,
+		Base:      base,
 	}, r)
 	scmClient, err := git.NewClient(git.SCMConfig{
 		Branch: branch,
