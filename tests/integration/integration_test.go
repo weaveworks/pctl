@@ -412,7 +412,9 @@ status: {}
 		// Note, the repo cleans the creates PRs via Github actions.
 		When("create-pr is enabled", func() {
 			It("creates a pull request to the remote branch", func() {
-				Skip("TODO: This test needs to be fixed after multiple files exist now.")
+				if os.Getenv("GIT_TOKEN") == "" {
+					Skip("SKIP, this test needs GIT_TOKEN to work.")
+				}
 				repoLocation := filepath.Join(temp, "repo")
 				// clone
 				token := os.Getenv("GIT_TOKEN")
@@ -420,14 +422,11 @@ status: {}
 				cmd := exec.Command("git", "clone", cloneWithToken, repoLocation)
 				err := cmd.Run()
 				Expect(err).ToNot(HaveOccurred())
-				filename := filepath.Join(repoLocation, "profile_subscription.yaml")
 				suffix, err := randString(3)
 				Expect(err).NotTo(HaveOccurred())
 				branch := "prtest_" + suffix
 				cmd = exec.Command(binaryPath,
 					"install",
-					"--out",
-					filename,
 					"--create-pr",
 					"--branch",
 					branch,
