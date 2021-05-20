@@ -16,7 +16,6 @@ import (
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -184,7 +183,6 @@ var _ = Describe("PCTL", func() {
 				cmd := exec.Command(binaryPath, "list")
 				session, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit(0))
 				return strings.Split(string(session), "\n")
 			}
 			Eventually(listCmd).Should(ContainElements(
@@ -195,20 +193,35 @@ var _ = Describe("PCTL", func() {
 	})
 
 	Context("install", func() {
-		var temp string
+		var (
+			temp      string
+			namespace string
+		)
 
 		BeforeEach(func() {
 			var err error
+			namespace = uuid.New().String()
 			temp, err = ioutil.TempDir("", "pctl_test_install_generate_branch_01")
 			Expect(err).ToNot(HaveOccurred())
+			nsp := v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
+				},
+			}
+			Expect(kClient.Create(context.Background(), &nsp)).To(Succeed())
 		})
 
 		AfterEach(func() {
 			_ = os.RemoveAll(temp)
+			nsp := v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
+				},
+			}
+			_ = kClient.Delete(context.Background(), &nsp)
 		})
 
 		It("generates valid artifacts to the local directory", func() {
-			namespace := uuid.New().String()
 			subName := "pctl-profile"
 			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "nginx-catalog/weaveworks-nginx/v0.1.0")
 			cmd.Dir = temp
@@ -257,12 +270,6 @@ status: {}
 `, namespace)))
 
 			By("the artifacts being deployable")
-			nsp := v1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: namespace,
-				},
-			}
-			Expect(kClient.Create(context.Background(), &nsp)).To(Succeed())
 
 			cmd = exec.Command("kubectl", "apply", "-f", profilesDir)
 			cmd.Dir = temp
