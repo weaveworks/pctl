@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/weaveworks/profiles/pkg/git"
+	"github.com/weaveworks/pctl/pkg/repo"
 )
 
 type FakeHTTPClient struct {
@@ -114,4 +114,4 @@ func (fake *FakeHTTPClient) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ git.HTTPClient = new(FakeHTTPClient)
+var _ repo.HTTPClient = new(FakeHTTPClient)
