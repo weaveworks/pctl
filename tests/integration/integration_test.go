@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	repositoryNameTemplate = "https://%s@github.com/weaveworks/pctl-test-repo.git"
+	pctlTestRepositoryName = "git@github.com:weaveworks/pctl-test-repo.git"
 )
 
 var _ = Describe("PCTL", func() {
@@ -417,9 +417,7 @@ status: {}
 				}
 				repoLocation := filepath.Join(temp, "repo")
 				// clone
-				token := os.Getenv("GIT_TOKEN")
-				cloneWithToken := fmt.Sprintf(repositoryNameTemplate, token)
-				cmd := exec.Command("git", "clone", cloneWithToken, repoLocation)
+				cmd := exec.Command("git", "clone", pctlTestRepositoryName, repoLocation)
 				err := cmd.Run()
 				Expect(err).ToNot(HaveOccurred())
 				suffix, err := randString(3)
