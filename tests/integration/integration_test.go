@@ -430,11 +430,15 @@ status: {}
 					"--create-pr",
 					"--branch",
 					branch,
+					"--out",
+					repoLocation,
 					"--repo",
 					"weaveworks/pctl-test-repo",
 					"nginx-catalog/weaveworks-nginx")
-				cmd.Dir = repoLocation
 				session, err := cmd.CombinedOutput()
+				if err != nil {
+					fmt.Println("Failed output from install: ", string(session))
+				}
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(session)).To(ContainSubstring("PR created with number:"))
 			})
