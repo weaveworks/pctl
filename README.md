@@ -12,7 +12,6 @@ and run: mdtoc -inplace README.md
   - [Show](#show)
   - [Install](#install)
   - [List](#list)
-  - [Get](#get)
   - [Prepare](#prepare)
     - [Pre-Flight check](#pre-flight-check)
   - [Catalog service options](#catalog-service-options)
@@ -64,19 +63,10 @@ to the cluster to deploy the profile.
 pctl can be used to list the profile subscriptions in a cluster, example:
 ```
 pctl list
-NAMESPACE       NAME                    READY
-default         nginx-profile-test      False
+NAMESPACE       NAME            PROFILE                 VERSION CATALOG
+default         pctl-profile    weaveworks-nginx        v0.1.0  nginx-catalog
 ```
 
-### Get
-pctl can be used to get a profile subscriptions in a cluster, example:
-```
-pctl get --namespace default --name nginx-profile-test
-Subscription    nginx-profile-test
-Namespace       default
-Ready           False
-Reason          error when reconciling profile artifacts
-```
 
 ### Prepare
 
