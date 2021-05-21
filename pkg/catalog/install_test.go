@@ -113,6 +113,10 @@ metadata:
   name: mysub
   namespace: default
 spec:
+  profile_catalog_description:
+    catalog: nginx
+    profile: nginx-1
+    version: v0.0.1
   profileURL: https://github.com/weaveworks/nginx-profile
   version: nginx-1/v0.0.1
 status: {}

@@ -6,6 +6,15 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
+// SubscriptionSummary contains a summary of a subscription
+type SubscriptionSummary struct {
+	Name      string
+	Namespace string
+	Version   string
+	Profile   string
+	Catalog   string
+}
+
 // List returns a list of subscriptions
 func (sm *Manager) List() ([]SubscriptionSummary, error) {
 	var subscriptions profilesv1.ProfileSubscriptionList
@@ -15,18 +24,20 @@ func (sm *Manager) List() ([]SubscriptionSummary, error) {
 	}
 	var descriptions []SubscriptionSummary
 	for _, sub := range subscriptions.Items {
-		status := "Unknown"
-		for _, cond := range sub.Status.Conditions {
-			if cond.Type == "Ready" {
-				status = string(sub.Status.Conditions[0].Status)
-				break
-			}
+		version := "-"
+		profile := "-"
+		catalog := "-"
+		if sub.Spec.ProfileCatalogDescription != nil {
+			version = sub.Spec.ProfileCatalogDescription.Version
+			profile = sub.Spec.ProfileCatalogDescription.Profile
+			catalog = sub.Spec.ProfileCatalogDescription.Catalog
 		}
-
 		descriptions = append(descriptions, SubscriptionSummary{
 			Name:      sub.Name,
 			Namespace: sub.Namespace,
-			Ready:     status,
+			Version:   version,
+			Profile:   profile,
+			Catalog:   catalog,
 		})
 	}
 	return descriptions, nil

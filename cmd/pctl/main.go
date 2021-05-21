@@ -27,7 +27,6 @@ func main() {
 			showCmd(),
 			installCmd(),
 			listCmd(),
-			getCmd(),
 			prepareCmd(),
 		},
 	}
