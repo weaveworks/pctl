@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/weaveworks/pctl/pkg/catalog"
+	"github.com/weaveworks/pctl/pkg/client"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/runner"
 )
@@ -67,7 +68,17 @@ func installCmd() *cli.Command {
 			&cli.StringFlag{
 				Name:  "repo",
 				Value: "",
-				Usage: "The repository to open a pr against. Format is: org/repo-name",
+				Usage: "The repository to open a pr against. Format is: org/repo-name.",
+			},
+			&cli.StringFlag{
+				Name:  "url",
+				Value: "",
+				Usage: "Optional value defining the URL of the profile.",
+			},
+			&cli.StringFlag{
+				Name:  "path",
+				Value: "",
+				Usage: "Value defining the path to a profile when url is provided.",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -88,10 +99,32 @@ func installCmd() *cli.Command {
 
 // install runs the install part of the `install` command.
 func install(c *cli.Context) error {
-	profilePath, catalogClient, err := parseArgs(c)
-	if err != nil {
-		_ = cli.ShowCommandHelp(c, "install")
-		return err
+	var (
+		err           error
+		catalogClient *client.Client
+		profilePath   string
+		version       string
+		catalogName   string
+		profileName   string
+	)
+
+	// only set up the catalog if a url is not provided
+	url := c.String("url")
+	if url == "" {
+		profilePath, catalogClient, err = parseArgs(c)
+		if err != nil {
+			_ = cli.ShowCommandHelp(c, "install")
+			return err
+		}
+		parts := strings.Split(profilePath, "/")
+		if len(parts) < 2 {
+			_ = cli.ShowCommandHelp(c, "install")
+			return errors.New("both catalog name and profile name must be provided")
+		}
+		if len(parts) == 3 {
+			version = parts[2]
+		}
+		catalogName, profileName = parts[0], parts[1]
 	}
 
 	branch := c.String("branch")
@@ -99,13 +132,7 @@ func install(c *cli.Context) error {
 	namespace := c.String("namespace")
 	configValues := c.String("config-secret")
 	dir := c.String("out")
-
-	parts := strings.Split(profilePath, "/")
-	if len(parts) < 2 {
-		_ = cli.ShowCommandHelp(c, "install")
-		return errors.New("both catalog name and profile name must be provided")
-	}
-	catalogName, profileName := parts[0], parts[1]
+	path := c.String("path")
 
 	fmt.Printf("generating subscription for profile %s/%s:\n\n", catalogName, profileName)
 	cfg := catalog.InstallConfig{
@@ -117,9 +144,9 @@ func install(c *cli.Context) error {
 		ProfileName:   profileName,
 		SubName:       subName,
 		Directory:     dir,
-	}
-	if len(parts) == 3 {
-		cfg.Version = parts[2]
+		URL:           url,
+		Version:       version,
+		Path:          path,
 	}
 	return catalog.Install(cfg)
 }

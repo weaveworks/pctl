@@ -13,7 +13,13 @@ import (
 // MakeArtifacts generates artifacts without owners for manual applying to
 // a personal cluster.
 func MakeArtifacts(sub profilesv1.ProfileSubscription) ([]runtime.Object, error) {
-	def, err := getProfileDefinition(sub.Spec.ProfileURL, sub.Spec.Version, strings.Split(sub.Spec.Version, "/")[0])
+	version := sub.Spec.Version
+	path := strings.Split(sub.Spec.Version, "/")[0]
+	if sub.Spec.Version == "" {
+		version = sub.Spec.Branch
+		path = sub.Spec.Path
+	}
+	def, err := getProfileDefinition(sub.Spec.ProfileURL, version, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get profile definition: %w", err)
 	}

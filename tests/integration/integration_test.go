@@ -400,6 +400,53 @@ status: {}
 			Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("nginx:1.14.2"))
 		})
 
+		When("a url is provided with a branch", func() {
+			It("will fetch information from that branch", func() {
+				namespace := uuid.New().String()
+				//subName := "pctl-profile"
+				branch := "branch_and_url"
+				path := "branch-nginx"
+				cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--url", "https://github.com/weaveworks/profiles-examples", "--branch", branch, "--path", path)
+				cmd.Dir = temp
+				session, err := cmd.CombinedOutput()
+				if err != nil {
+					fmt.Println("Output from failing command: ", string(session))
+				}
+				Expect(err).ToNot(HaveOccurred())
+
+				var files []string
+				profilesDir := filepath.Join(temp, path)
+				err = filepath.Walk(profilesDir, func(path string, info os.FileInfo, err error) error {
+					files = append(files, strings.TrimPrefix(path, profilesDir+"/"))
+					return nil
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				By("creating the artifacts")
+				fmt.Println("files: ", files)
+				Expect(files).To(ContainElements(
+					"profile.yaml",
+					"GitRepository-0.yaml",
+					"Kustomization-1.yaml",
+				))
+				filename := filepath.Join(temp, path, "profile.yaml")
+				content, err := ioutil.ReadFile(filename)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
+kind: ProfileSubscription
+metadata:
+  creationTimestamp: null
+  name: pctl-profile
+  namespace: %s
+spec:
+  branch: branch_and_url
+  path: branch-nginx
+  profileURL: https://github.com/weaveworks/profiles-examples
+status: {}
+`, namespace)))
+			})
+		})
+
 		When("a catalog version is provided, but it's an invalid/missing version", func() {
 			It("provide an error saying the profile with these specifics can't be found", func() {
 				cmd := exec.Command(binaryPath, "install", "nginx-catalog/weaveworks-nginx/v999.9.9")

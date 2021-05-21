@@ -22,6 +22,7 @@ var httpClient HTTPClient = http.DefaultClient
 
 // GetProfileDefinition returns a definition based on a url and a branch.
 func GetProfileDefinition(repoURL, branch, path string) (profilesv1.ProfileDefinition, error) {
+	fmt.Println("url, branch, path:", repoURL, branch, path)
 	if _, err := url.Parse(repoURL); err != nil {
 		return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to parse repo URL %q: %w", repoURL, err)
 	}

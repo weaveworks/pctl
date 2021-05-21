@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,6 +26,8 @@ type InstallConfig struct {
 	SubName       string
 	Version       string
 	Directory     string
+	URL           string
+	Path          string
 }
 
 //MakeArtifacts returns artifacts for a subscription
@@ -35,11 +38,10 @@ var makeArtifacts = profile.MakeArtifacts
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile subscription
 // and its artifacts
 func Install(cfg InstallConfig) error {
-	profile, err := Show(cfg.CatalogClient, cfg.CatalogName, cfg.ProfileName, cfg.Version)
+	pSpec, err := getProfileSpec(cfg)
 	if err != nil {
-		return fmt.Errorf("failed to get profile %q in catalog %q: %w", cfg.ProfileName, cfg.CatalogName, err)
+		return err
 	}
-
 	subscription := profilesv1.ProfileSubscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ProfileSubscription",
@@ -49,10 +51,7 @@ func Install(cfg InstallConfig) error {
 			Name:      cfg.SubName,
 			Namespace: cfg.Namespace,
 		},
-		Spec: profilesv1.ProfileSubscriptionSpec{
-			ProfileURL: profile.URL,
-			Version:    filepath.Join(profile.Name, profile.Version),
-		},
+		Spec: pSpec,
 	}
 	if cfg.ConfigMap != "" {
 		subscription.Spec.ValuesFrom = []helmv2.ValuesReference{
@@ -63,18 +62,20 @@ func Install(cfg InstallConfig) error {
 			},
 		}
 	}
-
 	artifacts, err := makeArtifacts(subscription)
 	if err != nil {
 		return fmt.Errorf("failed to generate artifacts: %w", err)
 	}
 
-	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
-	directory := filepath.Join(cfg.Directory, profile.Name)
+	directory := filepath.Join(cfg.Directory, cfg.ProfileName)
+	if cfg.ProfileName == "" {
+		directory = filepath.Join(cfg.Directory, cfg.Path)
+	}
 	if err = os.MkdirAll(directory, 0755); err != nil {
 		return fmt.Errorf("failed to create directory")
 	}
 
+	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
 	generateOutput := func(filename string, o runtime.Object) error {
 		f, err := os.OpenFile(filepath.Join(directory, filename), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
 		if err != nil {
@@ -99,6 +100,29 @@ func Install(cfg InstallConfig) error {
 	}
 
 	return generateOutput("profile.yaml", &subscription)
+}
+
+// getProfileSpec generates a spec based on configured properties.
+func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileSubscriptionSpec, error) {
+	if cfg.URL != "" {
+		if cfg.Path == "" {
+			return profilesv1.ProfileSubscriptionSpec{}, errors.New("path must be provided with url")
+		}
+		return profilesv1.ProfileSubscriptionSpec{
+			ProfileURL: cfg.URL,
+			Branch:     cfg.Branch,
+			Path:       cfg.Path,
+		}, nil
+	}
+	p, err := Show(cfg.CatalogClient, cfg.CatalogName, cfg.ProfileName, cfg.Version)
+	if err != nil {
+		return profilesv1.ProfileSubscriptionSpec{}, fmt.Errorf("failed to get profile %q in catalog %q: %w", cfg.ProfileName, cfg.CatalogName, err)
+	}
+
+	return profilesv1.ProfileSubscriptionSpec{
+		ProfileURL: p.URL,
+		Version:    filepath.Join(p.Name, p.Version),
+	}, nil
 }
 
 // CreatePullRequest creates a pull request from the current changes.
