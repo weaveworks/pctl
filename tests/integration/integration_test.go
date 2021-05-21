@@ -186,8 +186,8 @@ var _ = Describe("PCTL", func() {
 				return strings.Split(string(session), "\n")
 			}
 			Eventually(listCmd).Should(ContainElements(
-				"NAMESPACE	NAME  	PROFILE	VERSION	CATALOG ",
-				"default  \tmy-sub\tbar    \tv0.1.0 \tfoo    \t",
+				"NAMESPACE	NAME  	SOURCE         ",
+				"default  \tmy-sub\tfoo/bar/v0.1.0\t",
 			))
 		})
 	})
@@ -351,7 +351,7 @@ status: {}
 			It("will fetch information from that branch", func() {
 				namespace := uuid.New().String()
 				//subName := "pctl-profile"
-				branch := "branch_and_url"
+				branch := "branch-and-url"
 				path := "branch-nginx"
 				cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--url", "https://github.com/weaveworks/profiles-examples", "--branch", branch, "--path", path)
 				cmd.Dir = temp
@@ -386,7 +386,7 @@ metadata:
   name: pctl-profile
   namespace: %s
 spec:
-  branch: branch_and_url
+  branch: branch-and-url
   path: branch-nginx
   profileURL: https://github.com/weaveworks/profiles-examples
 status: {}

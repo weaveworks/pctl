@@ -241,6 +241,23 @@ status: {}
 				Expect(err).To(MatchError("path must be provided with url"))
 			})
 		})
+		When("a branch is provided which isn't domain compatible", func() {
+			It("will return an error", func() {
+				cfg = catalog.InstallConfig{
+					CatalogName:   "nginx",
+					CatalogClient: fakeCatalogClient,
+					Namespace:     "default",
+					ProfileName:   "nginx-1",
+					SubName:       "mysub",
+					URL:           "https://github.com/weaveworks/profiles-examples",
+					Directory:     tempDir,
+					Branch:        "not_domain_compatible",
+					Path:          "path",
+				}
+				err := catalog.Install(cfg)
+				Expect(err).To(MatchError("branch must match RFC 1123 subdomain format"))
+			})
+		})
 	})
 
 	Describe("create-pr", func() {
