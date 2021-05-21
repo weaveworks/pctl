@@ -155,7 +155,7 @@ status: {}
 
 		When("creating the dir fails", func() {
 			BeforeEach(func() {
-				cfg.Directory = "..1/23123~@$~!@£$~1'24!"
+				cfg.Directory = "/23123~@$~!@£$~1'24!"
 			})
 
 			It("errors", func() {

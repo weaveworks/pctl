@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	repositoryNameTemplate = "https://%s@github.com/weaveworks/pctl-test-repo.git"
+	pctlTestRepositoryName = "git@github.com:weaveworks/pctl-test-repo.git"
 )
 
 var _ = Describe("PCTL", func() {
@@ -359,30 +359,31 @@ status: {}
 		// Note, the repo cleans the creates PRs via Github actions.
 		When("create-pr is enabled", func() {
 			It("creates a pull request to the remote branch", func() {
-				Skip("TODO: This test needs to be fixed after multiple files exist now.")
+				if os.Getenv("GIT_TOKEN") == "" {
+					Skip("SKIP, this test needs GIT_TOKEN to work.")
+				}
 				repoLocation := filepath.Join(temp, "repo")
 				// clone
-				token := os.Getenv("GIT_TOKEN")
-				cloneWithToken := fmt.Sprintf(repositoryNameTemplate, token)
-				cmd := exec.Command("git", "clone", cloneWithToken, repoLocation)
+				cmd := exec.Command("git", "clone", pctlTestRepositoryName, repoLocation)
 				err := cmd.Run()
 				Expect(err).ToNot(HaveOccurred())
-				filename := filepath.Join(repoLocation, "profile_subscription.yaml")
 				suffix, err := randString(3)
 				Expect(err).NotTo(HaveOccurred())
 				branch := "prtest_" + suffix
 				cmd = exec.Command(binaryPath,
 					"install",
-					"--out",
-					filename,
 					"--create-pr",
 					"--branch",
 					branch,
+					"--out",
+					repoLocation,
 					"--repo",
 					"weaveworks/pctl-test-repo",
 					"nginx-catalog/weaveworks-nginx")
-				cmd.Dir = repoLocation
 				session, err := cmd.CombinedOutput()
+				if err != nil {
+					fmt.Println("Failed output from install: ", string(session))
+				}
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(session)).To(ContainSubstring("PR created with number:"))
 			})

@@ -76,8 +76,7 @@ func Install(cfg InstallConfig) error {
 
 	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
 	directory := filepath.Join(cfg.Directory, profile.Name)
-	err = os.Mkdir(directory, 0777)
-	if err != nil {
+	if err = os.MkdirAll(directory, 0755); err != nil {
 		return fmt.Errorf("failed to create directory")
 	}
 

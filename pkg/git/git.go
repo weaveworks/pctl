@@ -34,11 +34,10 @@ type Git interface {
 
 // CLIGitConfig defines configuration options for CLIGit.
 type CLIGitConfig struct {
-	Filename string
-	Location string
-	Branch   string
-	Remote   string
-	Base     string
+	Directory string
+	Branch    string
+	Remote    string
+	Base      string
 }
 
 // CLIGit is a new command line based Git.
@@ -68,12 +67,11 @@ func (g *CLIGit) Commit() error {
 		return nil
 	}
 	args := []string{
-		"--git-dir", filepath.Join(g.Location, ".git"),
-		"--work-tree", g.Location,
+		"--git-dir", filepath.Join(g.Directory, ".git"),
+		"--work-tree", g.Directory,
 		"commit",
-		"-m",
+		"-am",
 		"Push changes to remote",
-		g.Filename,
 	}
 	if err := g.runGitCmd(args...); err != nil {
 		return fmt.Errorf("failed to run commit: %w", err)
@@ -88,8 +86,8 @@ func (g *CLIGit) CreateBranch() error {
 	}
 	fmt.Println("creating new branch")
 	args := []string{
-		"--git-dir", filepath.Join(g.Location, ".git"),
-		"--work-tree", g.Location,
+		"--git-dir", filepath.Join(g.Directory, ".git"),
+		"--work-tree", g.Directory,
 		"checkout",
 		"-b",
 		g.Branch,
@@ -110,7 +108,7 @@ func (g *CLIGit) IsRepository() error {
 	// Note that this is redundant in case of CLI git, because the git command line utility
 	// already checks if the given location is a repository or not. Never the less we do this
 	// for posterity.
-	if _, err := os.Stat(filepath.Join(g.Location, ".git")); err != nil {
+	if _, err := os.Stat(filepath.Join(g.Directory, ".git")); err != nil {
 		return err
 	}
 	return nil
@@ -119,8 +117,8 @@ func (g *CLIGit) IsRepository() error {
 // HasChanges returns whether a location has uncommitted changes or not.
 func (g *CLIGit) HasChanges() (bool, error) {
 	args := []string{
-		"--git-dir", filepath.Join(g.Location, ".git"),
-		"--work-tree", g.Location,
+		"--git-dir", filepath.Join(g.Directory, ".git"),
+		"--work-tree", g.Directory,
 		"status",
 		"-s",
 	}
@@ -135,8 +133,8 @@ func (g *CLIGit) HasChanges() (bool, error) {
 func (g *CLIGit) Push() error {
 	fmt.Println("pushing to remote")
 	args := []string{
-		"--git-dir", filepath.Join(g.Location, ".git"),
-		"--work-tree", g.Location,
+		"--git-dir", filepath.Join(g.Directory, ".git"),
+		"--work-tree", g.Directory,
 		"push",
 		g.Remote,
 		g.Branch,
@@ -151,10 +149,10 @@ func (g *CLIGit) Push() error {
 func (g *CLIGit) Add() error {
 	fmt.Println("adding unstaged changes")
 	args := []string{
-		"--git-dir", filepath.Join(g.Location, ".git"),
-		"--work-tree", g.Location,
+		"--git-dir", filepath.Join(g.Directory, ".git"),
+		"--work-tree", g.Directory,
 		"add",
-		g.Filename,
+		".",
 	}
 	if err := g.runGitCmd(args...); err != nil {
 		return fmt.Errorf("failed to run add: %w", err)
