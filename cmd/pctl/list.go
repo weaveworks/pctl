@@ -50,13 +50,15 @@ func listCmd() *cli.Command {
 func listDataFunc(profiles []subscription.SubscriptionSummary) func() interface{} {
 	return func() interface{} {
 		tc := formatter.TableContents{
-			Headers: []string{"Namespace", "Name", "Ready"},
+			Headers: []string{"Namespace", "Name", "Profile", "Version", "Catalog"},
 		}
 		for _, profile := range profiles {
 			tc.Data = append(tc.Data, []string{
 				profile.Namespace,
 				profile.Name,
-				profile.Ready,
+				profile.Profile,
+				profile.Version,
+				profile.Catalog,
 			})
 		}
 		return tc

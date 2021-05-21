@@ -122,6 +122,11 @@ func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileSubscriptionSpec, erro
 	return profilesv1.ProfileSubscriptionSpec{
 		ProfileURL: p.URL,
 		Version:    filepath.Join(p.Name, p.Version),
+		ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
+			Catalog: cfg.CatalogName,
+			Version: cfg.Version,
+			Profile: cfg.ProfileName,
+		},
 	}, nil
 }
 

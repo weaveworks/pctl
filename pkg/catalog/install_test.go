@@ -113,6 +113,10 @@ metadata:
   name: mysub
   namespace: default
 spec:
+  profile_catalog_description:
+    catalog: nginx
+    profile: nginx-1
+    version: v0.0.1
   profileURL: https://github.com/weaveworks/nginx-profile
   version: nginx-1/v0.0.1
 status: {}
@@ -171,6 +175,7 @@ status: {}
 					SubName:       "mysub",
 					URL:           "https://github.com/weaveworks/profiles-examples",
 					Directory:     tempDir,
+					Path:          "branch-nginx",
 				}
 				err := catalog.Install(cfg)
 				Expect(err).NotTo(HaveOccurred())
@@ -197,6 +202,7 @@ metadata:
   namespace: default
 spec:
   branch: main
+  path: branch-nginx
   profileURL: https://github.com/weaveworks/profiles-examples
 status: {}
 `))
@@ -220,8 +226,8 @@ status: {}
 			})
 		})
 
-		When("a url is provided without branch", func() {
-			It("returns a sensible error that branch is required with a url", func() {
+		When("a url is provided without path", func() {
+			It("returns a sensible error that path is required with a url", func() {
 				cfg = catalog.InstallConfig{
 					CatalogName:   "nginx",
 					CatalogClient: fakeCatalogClient,
@@ -232,7 +238,7 @@ status: {}
 					Directory:     tempDir,
 				}
 				err := catalog.Install(cfg)
-				Expect(err).To(MatchError("branch must be defined if url is provided"))
+				Expect(err).To(MatchError("path must be provided with url"))
 			})
 		})
 	})
