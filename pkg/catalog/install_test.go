@@ -16,6 +16,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
 	gitfakes "github.com/weaveworks/pctl/pkg/git/fakes"
+	"github.com/weaveworks/pctl/pkg/profile"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
@@ -60,20 +61,25 @@ var _ = Describe("Install", func() {
 			Version:       "v0.0.1",
 			Directory:     tempDir,
 		}
-		fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription) ([]runtime.Object, error) {
-			return []runtime.Object{
-				&kustomizev1.Kustomization{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo",
-						Namespace: "default",
+		fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription) ([]profile.Artifact, error) {
+			return []profile.Artifact{
+				{
+					Objects: []runtime.Object{
+						&kustomizev1.Kustomization{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "foo",
+								Namespace: "default",
+							},
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "kustomize",
+								APIVersion: "api",
+							},
+							Spec: kustomizev1.KustomizationSpec{
+								Prune: true,
+							},
+						},
 					},
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "kustomize",
-						APIVersion: "api",
-					},
-					Spec: kustomizev1.KustomizationSpec{
-						Prune: true,
-					},
+					Name: "foo",
 				},
 			}, nil
 		}
@@ -95,14 +101,16 @@ var _ = Describe("Install", func() {
 			var files []string
 			profileDir := filepath.Join(tempDir, "nginx-1")
 			err = filepath.Walk(profileDir, func(path string, info os.FileInfo, err error) error {
-				files = append(files, path)
+				if !info.IsDir() {
+					files = append(files, path)
+				}
 				return nil
 			})
 			Expect(err).NotTo(HaveOccurred())
 
 			profileFile := filepath.Join(profileDir, "profile.yaml")
-			artifactFile := filepath.Join(profileDir, "kustomize-0.yaml")
-			Expect(files).To(ConsistOf(profileDir, profileFile, artifactFile))
+			artifactFile := filepath.Join(profileDir, "artifacts", "foo", "kustomize.yaml")
+			Expect(files).To(ConsistOf(profileFile, artifactFile))
 
 			content, err := ioutil.ReadFile(profileFile)
 			Expect(err).NotTo(HaveOccurred())
@@ -142,7 +150,7 @@ status: {}
 
 		When("getting the artifacts fails", func() {
 			BeforeEach(func() {
-				fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription) ([]runtime.Object, error) {
+				fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription) ([]profile.Artifact, error) {
 					return nil, fmt.Errorf("foo")
 				}
 			})
