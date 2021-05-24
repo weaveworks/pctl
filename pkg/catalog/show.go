@@ -11,12 +11,12 @@ import (
 )
 
 // Show queries the catalog at catalogURL for a profile matching the provided profileName
-func Show(catalogClient CatalogClient, catalogName, profileName, catalogVersion string) (profilesv1.ProfileDescription, error) {
+func Show(catalogClient CatalogClient, catalogName, profileName, profileVersion string) (profilesv1.ProfileDescription, error) {
 	u, err := url.Parse("/profiles")
 	if err != nil {
 		return profilesv1.ProfileDescription{}, err
 	}
-	u.Path = path.Join(u.Path, catalogName, profileName, catalogVersion)
+	u.Path = path.Join(u.Path, catalogName, profileName, profileVersion)
 	data, code, err := catalogClient.DoRequest(u.String(), nil)
 	if err != nil {
 		return profilesv1.ProfileDescription{}, fmt.Errorf("failed to do request: %w", err)
@@ -26,7 +26,7 @@ func Show(catalogClient CatalogClient, catalogName, profileName, catalogVersion 
 		if code == http.StatusNotFound {
 			return profilesv1.ProfileDescription{},
 				fmt.Errorf("unable to find profile %q in catalog %q (with version if provided: %s)",
-					profileName, catalogName, catalogVersion)
+					profileName, catalogName, profileVersion)
 		}
 		return profilesv1.ProfileDescription{}, fmt.Errorf("failed to fetch profile from catalog, status code %d", code)
 	}
