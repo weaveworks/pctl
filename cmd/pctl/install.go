@@ -15,9 +15,10 @@ import (
 
 func installCmd() *cli.Command {
 	return &cli.Command{
-		Name:      "install",
-		Usage:     "generate a profile subscription for a profile in a catalog",
-		UsageText: "pctl --catalog-url <URL> install --subscription-name pctl-profile --namespace default --branch main --config-secret configmap-name <CATALOG>/<PROFILE>[/<VERSION>]",
+		Name:  "install",
+		Usage: "generate a profile subscription for a profile in a catalog",
+		UsageText: "pctl --catalog-url <URL> install --subscription-name pctl-profile --namespace default --profile-branch main --config-secret configmap-name <CATALOG>/<PROFILE>[/<VERSION>]\n   " +
+			"pctl install --subscription-name pctl-profile --namespace default --profile-branch development --profile-url https://github.com/weaveworks/profiles-examples --profile-path bitnami-nginx",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "subscription-name",
@@ -110,9 +111,9 @@ func install(c *cli.Context) error {
 		err           error
 		catalogClient *client.Client
 		profilePath   string
-		version       string
 		catalogName   string
 		profileName   string
+		version       = "latest"
 	)
 
 	// only set up the catalog if a url is not provided
