@@ -7,7 +7,7 @@ require (
 	github.com/fluxcd/kustomize-controller/api v0.12.0
 	github.com/fluxcd/source-controller/api v0.12.2
 	github.com/google/uuid v1.2.0
-	github.com/jenkins-x/go-scm v1.8.1
+	github.com/jenkins-x/go-scm v1.9.0
 	github.com/olekukonko/tablewriter v0.0.0-20210304033056-74c60be0ef68
 	github.com/onsi/ginkgo v1.16.2
 	github.com/onsi/gomega v1.12.0
