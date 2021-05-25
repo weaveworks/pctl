@@ -91,7 +91,7 @@ directory contains all of the resources required for deploying the profile. Each
 
 
 This can be applied directly to the cluster `kubectl apply -R -f weaveworks-nginx/` or by comitting it to your
-flux repository. If your are using a flux repository the `--create-pr` flags provided an automated way for creating a PR
+flux repository. If you are using a flux repository the `--create-pr` flags provides an automated way for creating a PR
 against your flux repository. See `pctl install --help` for more details.
 
 
@@ -188,4 +188,3 @@ _Note_ that `<version>` must be in the following format: `v0.0.1`.
 1. Run `make test` to run all tests
 
 See `make help` for all development commands.
-
