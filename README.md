@@ -53,15 +53,50 @@ Prerequisites   Kubernetes 1.18+
 pctl can be used to install a profile, example:
 
 ```
-pctl install nginx-catalog/weaveworks-nginx
-generating subscription and artifacts for profile nginx-catalog/weaveworks-nginx:
+pctl install nginx-catalog/weaveworks-nginx/v0.1.0
 ```
 
-Then the result will be in profile-subscription.yaml file and a series of artifact.yaml files. These yamls can be applied
-to the cluster to deploy the profile.
+you can omit the version and pctl will install the latest by default, example:
+```
+pctl install nginx-catalog/weaveworks-nginx
+```
+
+
+This results in a profile installation folder being created (defaults to the name of the profile). Example:
+
+```
+$ pctl install nginx-catalog/weaveworks-nginx/v0.1.0
+generating a profile installation for nginx-catalog/weaveworks-nginx:
+
+$ tree weaveworks-nginx
+weaveworks-nginx
+├── artifacts
+│   ├── dokuwiki
+│   │   ├── HelmRelease.yaml
+│   │   └── HelmRepository.yaml
+│   ├── nested-profile
+│   │   └── nginx-server
+│   │       ├── GitRepository.yaml
+│   │       └── HelmRelease.yaml
+│   └── nginx-deployment
+│       ├── GitRepository.yaml
+│       └── Kustomization.yaml
+└── profile.yaml
+
+```
+
+The `profile.yaml` is the top-level Profile installation object. It describes the profile installation. The artifacts
+directory contains all of the resources required for deploying the profile. Each of the artifacts corresponds to a
+[Flux 2 resource](https://fluxcd.io/docs/components/).
+
+
+This can be applied directly to the cluster `kubectl apply -R -f weaveworks-nginx/` or by comitting it to your
+flux repository. If you are using a flux repository the `--create-pr` flags provides an automated way for creating a PR
+against your flux repository. See `pctl install --help` for more details.
+
 
 ### List
-pctl can be used to list the profile subscriptions in a cluster, example:
+pctl can be used to list the profile installed in a cluster, example:
 ```
 pctl list
 NAMESPACE       NAME            PROFILE                 VERSION CATALOG
@@ -153,4 +188,3 @@ _Note_ that `<version>` must be in the following format: `v0.0.1`.
 1. Run `make test` to run all tests
 
 See `make help` for all development commands.
-
