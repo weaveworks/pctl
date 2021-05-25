@@ -234,7 +234,9 @@ var _ = Describe("PCTL", func() {
 			var files []string
 			profilesDir := filepath.Join(temp, "weaveworks-nginx")
 			err = filepath.Walk(profilesDir, func(path string, info os.FileInfo, err error) error {
-				files = append(files, strings.TrimPrefix(path, profilesDir+"/"))
+				if !info.IsDir() {
+					files = append(files, strings.TrimPrefix(path, profilesDir+"/"))
+				}
 				return nil
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -242,12 +244,12 @@ var _ = Describe("PCTL", func() {
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
 				"profile.yaml",
-				"GitRepository-0.yaml",
-				"GitRepository-1.yaml",
-				"HelmRelease-2.yaml",
-				"HelmRelease-4.yaml",
-				"HelmRepository-5.yaml",
-				"Kustomization-3.yaml",
+				"artifacts/nested-profile/nginx-server/GitRepository.yaml",
+				"artifacts/nested-profile/nginx-server/HelmRelease.yaml",
+				"artifacts/nginx-deployment/GitRepository.yaml",
+				"artifacts/nginx-deployment/Kustomization.yaml",
+				"artifacts/dokuwiki/HelmRelease.yaml",
+				"artifacts/dokuwiki/HelmRepository.yaml",
 			))
 
 			filename := filepath.Join(temp, "weaveworks-nginx", "profile.yaml")
@@ -271,7 +273,7 @@ status: {}
 
 			By("the artifacts being deployable")
 
-			cmd = exec.Command("kubectl", "apply", "-f", profilesDir)
+			cmd = exec.Command("kubectl", "apply", "-R", "-f", profilesDir)
 			cmd.Dir = temp
 			session, err = cmd.CombinedOutput()
 			if err != nil {
@@ -347,8 +349,8 @@ status: {}
 			Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("nginx:1.14.2"))
 		})
 
-		When("a url is provided with a branch", func() {
-			It("will fetch information from that branch", func() {
+		When("a url is provided with a branch and path", func() {
+			It("will fetch information from that branch with path", func() {
 				namespace := uuid.New().String()
 				//subName := "pctl-profile"
 				branch := "branch-and-url"
@@ -362,21 +364,27 @@ status: {}
 				Expect(err).ToNot(HaveOccurred())
 
 				var files []string
-				profilesDir := filepath.Join(temp, path)
-				err = filepath.Walk(profilesDir, func(path string, info os.FileInfo, err error) error {
-					files = append(files, strings.TrimPrefix(path, profilesDir+"/"))
+				err = filepath.Walk(temp, func(path string, info os.FileInfo, err error) error {
+					files = append(files, path)
 					return nil
 				})
 				Expect(err).NotTo(HaveOccurred())
 
 				By("creating the artifacts")
-				fmt.Println("files: ", files)
+				profilesDirProfile := filepath.Join(temp, "profile.yaml")
+				profilesArtifacts := filepath.Join(temp, "artifacts")
+				profilesArtifactsDeployment := filepath.Join(temp, "artifacts", "nginx-deployment")
+				profilesArtifactsDeploymentGitRepo := filepath.Join(temp, "artifacts", "nginx-deployment", "GitRepository.yaml")
+				profilesArtifactsDeploymentKustomization := filepath.Join(temp, "artifacts", "nginx-deployment", "Kustomization.yaml")
 				Expect(files).To(ContainElements(
-					"profile.yaml",
-					"GitRepository-0.yaml",
-					"Kustomization-1.yaml",
+					temp,
+					profilesDirProfile,
+					profilesArtifacts,
+					profilesArtifactsDeployment,
+					profilesArtifactsDeploymentKustomization,
+					profilesArtifactsDeploymentGitRepo,
 				))
-				filename := filepath.Join(temp, path, "profile.yaml")
+				filename := filepath.Join(temp, "profile.yaml")
 				content, err := ioutil.ReadFile(filename)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1

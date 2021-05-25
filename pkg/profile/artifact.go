@@ -2,17 +2,23 @@ package profile
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
-	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
+//Artifact contains the name and objects belonging to a profile artifact
+type Artifact struct {
+	Objects []runtime.Object
+	Name    string
+}
+
 // MakeArtifacts generates artifacts without owners for manual applying to
 // a personal cluster.
-func MakeArtifacts(sub profilesv1.ProfileSubscription) ([]runtime.Object, error) {
+func MakeArtifacts(sub profilesv1.ProfileSubscription) ([]Artifact, error) {
 	version := sub.Spec.Version
 	path := strings.Split(sub.Spec.Version, "/")[0]
 	if sub.Spec.Version == "" {
@@ -34,17 +40,17 @@ func (p *Profile) profileRepo() string {
 	return p.subscription.Spec.ProfileURL + ":" + p.subscription.Spec.Branch + ":" + p.subscription.Spec.Path
 }
 
-func (p *Profile) makeArtifacts(profileRepos []string) ([]runtime.Object, error) {
-	var (
-		objs   []runtime.Object
-		gitRes *sourcev1.GitRepository
-	)
+func (p *Profile) makeArtifacts(profileRepos []string) ([]Artifact, error) {
+	var artifacts []Artifact
 	profileRepoPath := GetProfilePathFromSpec(p.subscription.Spec)
 
 	for _, artifact := range p.definition.Spec.Artifacts {
 		if err := artifact.Validate(); err != nil {
 			return nil, fmt.Errorf("validation failed for artifact %s: %w", artifact.Name, err)
 		}
+
+		a := Artifact{Name: artifact.Name}
+
 		switch artifact.Kind {
 		case profilesv1.ProfileKind:
 			branchOrTag := artifact.Profile.Branch
@@ -69,36 +75,32 @@ func (p *Profile) makeArtifacts(profileRepos []string) ([]runtime.Object, error)
 				return nil, fmt.Errorf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", artifact.Profile.URL, artifact.Profile.Branch)
 			}
 			profileRepos = append(profileRepos, profileRepoName)
-			nestedObjs, err := nestedSub.makeArtifacts(profileRepos)
+			nestedArtifacts, err := nestedSub.makeArtifacts(profileRepos)
 			if err != nil {
 				return nil, fmt.Errorf("failed to generate resources for nested profile %q: %w", artifact.Name, err)
 			}
-			objs = append(objs, nestedObjs...)
+			for i := range nestedArtifacts {
+				nestedArtifacts[i].Name = filepath.Join(artifact.Name, nestedArtifacts[i].Name)
+			}
+			artifacts = append(artifacts, nestedArtifacts...)
 		case profilesv1.HelmChartKind:
-			objs = append(objs, p.makeHelmRelease(artifact, profileRepoPath))
-			if artifact.Path != "" && gitRes == nil {
-				// this resource is added at the end because it's generated once.
-				gitRes = p.makeGitRepository()
+			a.Objects = append(a.Objects, p.makeHelmRelease(artifact, profileRepoPath))
+			if artifact.Path != "" {
+				a.Objects = append(a.Objects, p.makeGitRepository())
 			}
 			if artifact.Chart != nil {
-				objs = append(objs, p.makeHelmRepository(artifact.Chart.URL, artifact.Chart.Name))
+				a.Objects = append(a.Objects, p.makeHelmRepository(artifact.Chart.URL, artifact.Chart.Name))
 			}
+			artifacts = append(artifacts, a)
 		case profilesv1.KustomizeKind:
-			objs = append(objs, p.makeKustomization(artifact, profileRepoPath))
-			if gitRes == nil {
-				// this resource is added at the end because it's generated once.
-				gitRes = p.makeGitRepository()
-			}
+			a.Objects = append(a.Objects, p.makeKustomization(artifact, profileRepoPath))
+			a.Objects = append(a.Objects, p.makeGitRepository())
+			artifacts = append(artifacts, a)
 		default:
 			return nil, fmt.Errorf("artifact kind %q not recognized", artifact.Kind)
 		}
 	}
-
-	// Add the git res as the first object to be created.
-	if gitRes != nil {
-		objs = append([]runtime.Object{gitRes}, objs...)
-	}
-	return objs, nil
+	return artifacts, nil
 }
 
 func containsKey(list []string, key string) bool {
