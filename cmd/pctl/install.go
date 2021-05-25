@@ -118,6 +118,10 @@ func install(c *cli.Context) error {
 
 	// only set up the catalog if a url is not provided
 	url := c.String("profile-url")
+	if url != "" && c.Args().Len() > 0 {
+		return errors.New("it looks like you provided a url with a catalog entry; please choose either format: url/branch/path or <CATALOG>/<PROFILE>[/<VERSION>]")
+	}
+
 	if url == "" {
 		profilePath, catalogClient, err = parseArgs(c)
 		if err != nil {

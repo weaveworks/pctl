@@ -402,6 +402,23 @@ status: {}
 			})
 		})
 
+		When("url and catalog entry install format are both defined", func() {
+			It("will throw a meaningful error", func() {
+				namespace := uuid.New().String()
+				//subName := "pctl-profile"
+				branch := "branch-and-url"
+				path := "branch-nginx"
+				cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--profile-url", "https://github.com/weaveworks/profiles-examples", "--profile-branch", branch, "--profile-path", path, "catalog/profile/v0.0.1")
+				cmd.Dir = temp
+				session, err := cmd.CombinedOutput()
+				if err != nil {
+					fmt.Println("Output from failing command: ", string(session))
+				}
+				Expect(err).To(HaveOccurred())
+				Expect(string(session)).To(ContainSubstring("it looks like you provided a url with a catalog entry; please choose either format: url/branch/path or <CATALOG>/<PROFILE>[/<VERSION>]"))
+			})
+		})
+
 		When("a catalog version is provided, but it's an invalid/missing version", func() {
 			It("provide an error saying the profile with these specifics can't be found", func() {
 				cmd := exec.Command(binaryPath, "install", "nginx-catalog/weaveworks-nginx/v999.9.9")
