@@ -28,7 +28,7 @@ type InstallConfig struct {
 }
 
 //MakeArtifacts returns artifacts for a subscription
-type MakeArtifacts func(sub profilesv1.ProfileSubscription) ([]runtime.Object, error)
+type MakeArtifacts func(sub profilesv1.ProfileSubscription) ([]profile.Artifact, error)
 
 var makeArtifacts = profile.MakeArtifacts
 
@@ -51,11 +51,11 @@ func Install(cfg InstallConfig) error {
 		},
 		Spec: profilesv1.ProfileSubscriptionSpec{
 			ProfileURL: profile.URL,
-			Version:    filepath.Join(cfg.ProfileName, cfg.Version),
+			Version:    filepath.Join(profile.Name, profile.Version),
 			ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
 				Catalog: cfg.CatalogName,
-				Version: cfg.Version,
-				Profile: cfg.ProfileName,
+				Version: profile.Version,
+				Profile: profile.Name,
 			},
 		},
 	}
@@ -75,13 +75,8 @@ func Install(cfg InstallConfig) error {
 	}
 
 	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
-	directory := filepath.Join(cfg.Directory, profile.Name)
-	if err = os.MkdirAll(directory, 0755); err != nil {
-		return fmt.Errorf("failed to create directory")
-	}
-
 	generateOutput := func(filename string, o runtime.Object) error {
-		f, err := os.OpenFile(filepath.Join(directory, filename), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
+		f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
 		if err != nil {
 			return err
 		}
@@ -96,14 +91,23 @@ func Install(cfg InstallConfig) error {
 		return nil
 	}
 
-	for i, a := range artifacts {
-		filename := fmt.Sprintf("%s-%d.%s", a.GetObjectKind().GroupVersionKind().Kind, i, "yaml")
-		if err := generateOutput(filename, a); err != nil {
-			return err
+	profileRootdir := filepath.Join(cfg.Directory, profile.Name)
+	artifactsRootDir := filepath.Join(profileRootdir, "artifacts")
+
+	for _, artifact := range artifacts {
+		artifactDir := filepath.Join(artifactsRootDir, artifact.Name)
+		if err = os.MkdirAll(artifactDir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory")
+		}
+		for _, obj := range artifact.Objects {
+			filename := filepath.Join(artifactDir, fmt.Sprintf("%s.%s", obj.GetObjectKind().GroupVersionKind().Kind, "yaml"))
+			if err := generateOutput(filename, obj); err != nil {
+				return err
+			}
 		}
 	}
 
-	return generateOutput("profile.yaml", &subscription)
+	return generateOutput(filepath.Join(profileRootdir, "profile.yaml"), &subscription)
 }
 
 // CreatePullRequest creates a pull request from the current changes.

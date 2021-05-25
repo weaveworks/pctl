@@ -108,6 +108,10 @@ func install(c *cli.Context) error {
 	catalogName, profileName := parts[0], parts[1]
 
 	fmt.Printf("generating subscription for profile %s/%s:\n\n", catalogName, profileName)
+	version := "latest"
+	if len(parts) == 3 {
+		version = parts[2]
+	}
 	cfg := catalog.InstallConfig{
 		Branch:        branch,
 		CatalogName:   catalogName,
@@ -117,9 +121,7 @@ func install(c *cli.Context) error {
 		ProfileName:   profileName,
 		SubName:       subName,
 		Directory:     dir,
-	}
-	if len(parts) == 3 {
-		cfg.Version = parts[2]
+		Version:       version,
 	}
 	return catalog.Install(cfg)
 }
