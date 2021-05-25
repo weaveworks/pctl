@@ -234,7 +234,9 @@ var _ = Describe("PCTL", func() {
 			var files []string
 			profilesDir := filepath.Join(temp, "weaveworks-nginx")
 			err = filepath.Walk(profilesDir, func(path string, info os.FileInfo, err error) error {
-				files = append(files, strings.TrimPrefix(path, profilesDir+"/"))
+				if !info.IsDir() {
+					files = append(files, strings.TrimPrefix(path, profilesDir+"/"))
+				}
 				return nil
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -242,12 +244,12 @@ var _ = Describe("PCTL", func() {
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
 				"profile.yaml",
-				"GitRepository-0.yaml",
-				"GitRepository-1.yaml",
-				"HelmRelease-2.yaml",
-				"HelmRelease-4.yaml",
-				"HelmRepository-5.yaml",
-				"Kustomization-3.yaml",
+				"artifacts/nested-profile/nginx-server/GitRepository.yaml",
+				"artifacts/nested-profile/nginx-server/HelmRelease.yaml",
+				"artifacts/nginx-deployment/GitRepository.yaml",
+				"artifacts/nginx-deployment/Kustomization.yaml",
+				"artifacts/dokuwiki/HelmRelease.yaml",
+				"artifacts/dokuwiki/HelmRepository.yaml",
 			))
 
 			filename := filepath.Join(temp, "weaveworks-nginx", "profile.yaml")
@@ -271,7 +273,7 @@ status: {}
 
 			By("the artifacts being deployable")
 
-			cmd = exec.Command("kubectl", "apply", "-f", profilesDir)
+			cmd = exec.Command("kubectl", "apply", "-R", "-f", profilesDir)
 			cmd.Dir = temp
 			session, err = cmd.CombinedOutput()
 			if err != nil {
