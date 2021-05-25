@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	"github.com/weaveworks/pctl/pkg/git"
@@ -19,7 +18,7 @@ import (
 // InstallConfig defines parameters for the installation call.
 type InstallConfig struct {
 	CatalogClient CatalogClient
-	Branch        string
+	ProfileBranch string
 	CatalogName   string
 	ConfigMap     string
 	Namespace     string
@@ -30,9 +29,6 @@ type InstallConfig struct {
 	URL           string
 	Path          string
 }
-
-// domainRegex is used to verify branch
-var domainRegex = regexp.MustCompile(`[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*`)
 
 //MakeArtifacts returns artifacts for a subscription
 type MakeArtifacts func(sub profilesv1.ProfileSubscription) ([]profile.Artifact, error)
@@ -113,15 +109,9 @@ func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileSubscriptionSpec, erro
 		if cfg.Path == "" {
 			return profilesv1.ProfileSubscriptionSpec{}, errors.New("path must be provided with url")
 		}
-		// The regex matches characters. It will not match characters which aren't allowed
-		// that will result in multiple matched groups. If the whole thing isn't a match
-		// that's determined by the fact that there are multiple groups. There should be only one.
-		if m := domainRegex.FindAllStringSubmatch(cfg.Branch, -1); len(m) > 1 {
-			return profilesv1.ProfileSubscriptionSpec{}, errors.New("branch must match RFC 1123 subdomain format")
-		}
 		return profilesv1.ProfileSubscriptionSpec{
 			ProfileURL: cfg.URL,
-			Branch:     cfg.Branch,
+			Branch:     cfg.ProfileBranch,
 			Path:       cfg.Path,
 		}, nil
 	}

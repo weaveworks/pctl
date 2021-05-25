@@ -52,7 +52,7 @@ var _ = Describe("Install", func() {
 		fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
 		cfg = catalog.InstallConfig{
-			Branch:        "main",
+			ProfileBranch: "main",
 			CatalogName:   "nginx",
 			CatalogClient: fakeCatalogClient,
 			Namespace:     "default",
@@ -175,7 +175,7 @@ status: {}
 		When("a url is provided with branch and path", func() {
 			It("generates a spec with url and branch and path", func() {
 				cfg = catalog.InstallConfig{
-					Branch:        "main",
+					ProfileBranch: "main",
 					CatalogName:   "nginx",
 					CatalogClient: fakeCatalogClient,
 					Namespace:     "default",
@@ -252,7 +252,7 @@ status: {}
 			})
 		})
 		When("a branch is provided which isn't domain compatible", func() {
-			It("will return an error", func() {
+			It("will not care because the name is sanitised", func() {
 				cfg = catalog.InstallConfig{
 					CatalogName:   "nginx",
 					CatalogClient: fakeCatalogClient,
@@ -261,11 +261,11 @@ status: {}
 					SubName:       "mysub",
 					URL:           "https://github.com/weaveworks/profiles-examples",
 					Directory:     tempDir,
-					Branch:        "not_domain_compatible",
+					ProfileBranch: "not_domain_compatible",
 					Path:          "path",
 				}
 				err := catalog.Install(cfg)
-				Expect(err).To(MatchError("branch must match RFC 1123 subdomain format"))
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

@@ -157,10 +157,10 @@ var _ = Describe("Profile", func() {
 			Expect(artifacts).To(HaveLen(4))
 
 			By("generating the nested profile artifact", func() {
-				nestedProfileArifact := artifacts[0]
-				Expect(nestedProfileArifact.Name).To(Equal(filepath.Join(profileName2, chartName1)))
+				nestedProfileArtifact := artifacts[0]
+				Expect(nestedProfileArtifact.Name).To(Equal(filepath.Join(profileName2, chartName1)))
 
-				objects := nestedProfileArifact.Objects
+				objects := nestedProfileArtifact.Objects
 				Expect(objects).To(HaveLen(2))
 
 				gitRefName := fmt.Sprintf("%s-%s-%s", subscriptionName, "repo-name-nested", branch)
@@ -302,6 +302,52 @@ var _ = Describe("Profile", func() {
 						Optional: true,
 					},
 				}))
+			})
+		})
+
+		When("the branch name for a git repository is not domain compatible", func() {
+			It("will sanitise it", func() {
+				pSub = profilesv1.ProfileSubscription{
+					TypeMeta: profileTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      subscriptionName,
+						Namespace: namespace,
+					},
+					Spec: profilesv1.ProfileSubscriptionSpec{
+						ProfileURL: profileURL,
+						Branch:     "not_domain_compatible",
+					},
+				}
+				artifacts, err := profile.MakeArtifacts(pSub)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(artifacts).To(HaveLen(4))
+
+				By("generating the path based helm release artifact", func() {
+					pathBasedHelmArtifact := artifacts[1]
+					Expect(pathBasedHelmArtifact.Name).To(Equal(chartName2))
+
+					objects := pathBasedHelmArtifact.Objects
+					Expect(objects).To(HaveLen(2))
+
+					gitRefName := fmt.Sprintf("%s-%s-%s", subscriptionName, "repo-name", "not-domain-compatible")
+					gitRepo := objects[1].(*sourcev1.GitRepository)
+					Expect(gitRepo.Name).To(Equal(gitRefName))
+					Expect(gitRepo.Spec.URL).To(Equal("https://github.com/org/repo-name"))
+					Expect(gitRepo.Spec.Reference.Branch).To(Equal("not_domain_compatible"))
+
+					helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, chartName2)
+					helmRelease := objects[0].(*helmv2.HelmRelease)
+					Expect(helmRelease.Name).To(Equal(helmReleaseName))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal(chartPath2))
+					Expect(helmRelease.Spec.Chart.Spec.SourceRef).To(Equal(
+						helmv2.CrossNamespaceObjectReference{
+							Kind:      gitRepoKind,
+							Name:      gitRefName,
+							Namespace: namespace,
+						},
+					))
+				})
 			})
 		})
 

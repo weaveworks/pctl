@@ -32,7 +32,7 @@ func installCmd() *cli.Command {
 				Usage:       "The namespace to use for generating resources.",
 			},
 			&cli.StringFlag{
-				Name:        "branch",
+				Name:        "profile-branch",
 				Value:       "main",
 				DefaultText: "main",
 				Usage:       "The branch to use on the repository in which the profile is.",
@@ -48,17 +48,24 @@ func installCmd() *cli.Command {
 				Usage: "If given, install will create a PR for the modifications it outputs.",
 			},
 			&cli.StringFlag{
-				Name:        "remote",
+				Name:        "pr-remote",
 				Value:       "origin",
 				DefaultText: "origin",
 				Usage:       "The remote to push the branch to.",
 			},
 			&cli.StringFlag{
-				Name:        "base",
+				Name:        "pr-base",
 				Value:       "main",
 				DefaultText: "main",
 				Usage:       "The base branch to open a PR against.",
 			},
+			&cli.StringFlag{
+				Name:        "pr-branch",
+				Value:       "main",
+				DefaultText: "main",
+				Usage:       "The branch to create the PR from.",
+			},
+
 			&cli.StringFlag{
 				Name:        "out",
 				DefaultText: "current",
@@ -66,17 +73,17 @@ func installCmd() *cli.Command {
 				Usage:       "Optional location to create the profile installation folder in.",
 			},
 			&cli.StringFlag{
-				Name:  "repo",
+				Name:  "pr-repo",
 				Value: "",
 				Usage: "The repository to open a pr against. Format is: org/repo-name.",
 			},
 			&cli.StringFlag{
-				Name:  "url",
+				Name:  "profile-url",
 				Value: "",
 				Usage: "Optional value defining the URL of the profile.",
 			},
 			&cli.StringFlag{
-				Name:  "path",
+				Name:  "profile-path",
 				Value: "",
 				Usage: "Value defining the path to a profile when url is provided.",
 			},
@@ -109,7 +116,7 @@ func install(c *cli.Context) error {
 	)
 
 	// only set up the catalog if a url is not provided
-	url := c.String("url")
+	url := c.String("profile-url")
 	if url == "" {
 		profilePath, catalogClient, err = parseArgs(c)
 		if err != nil {
@@ -127,16 +134,16 @@ func install(c *cli.Context) error {
 		catalogName, profileName = parts[0], parts[1]
 	}
 
-	branch := c.String("branch")
+	branch := c.String("profile-branch")
 	subName := c.String("subscription-name")
 	namespace := c.String("namespace")
 	configValues := c.String("config-secret")
 	dir := c.String("out")
-	path := c.String("path")
+	path := c.String("profile-path")
 
 	fmt.Printf("generating subscription for profile %s/%s:\n\n", catalogName, profileName)
 	cfg := catalog.InstallConfig{
-		Branch:        branch,
+		ProfileBranch: branch,
 		CatalogName:   catalogName,
 		CatalogClient: catalogClient,
 		ConfigMap:     configValues,
@@ -153,10 +160,10 @@ func install(c *cli.Context) error {
 
 // createPullRequest runs the pull request creation part of the `install` command.
 func createPullRequest(c *cli.Context) error {
-	branch := c.String("branch")
-	repo := c.String("repo")
-	base := c.String("base")
-	remote := c.String("remote")
+	branch := c.String("pr-branch")
+	repo := c.String("pr-repo")
+	base := c.String("pr-base")
+	remote := c.String("pr-remote")
 	directory := c.String("out")
 	if repo == "" {
 		return errors.New("repo must be defined if create-pr is true")

@@ -355,7 +355,7 @@ status: {}
 				//subName := "pctl-profile"
 				branch := "branch-and-url"
 				path := "branch-nginx"
-				cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--url", "https://github.com/weaveworks/profiles-examples", "--branch", branch, "--path", path)
+				cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--profile-url", "https://github.com/weaveworks/profiles-examples", "--profile-branch", branch, "--profile-path", path)
 				cmd.Dir = temp
 				session, err := cmd.CombinedOutput()
 				if err != nil {
@@ -428,11 +428,11 @@ status: {}
 				cmd = exec.Command(binaryPath,
 					"install",
 					"--create-pr",
-					"--branch",
+					"--pr-branch",
 					branch,
 					"--out",
 					repoLocation,
-					"--repo",
+					"--pr-repo",
 					"weaveworks/pctl-test-repo",
 					"nginx-catalog/weaveworks-nginx")
 				session, err := cmd.CombinedOutput()
@@ -450,7 +450,7 @@ status: {}
 				cmd := exec.Command(binaryPath,
 					"install",
 					"--create-pr",
-					"--branch",
+					"--pr-branch",
 					branch,
 					"nginx-catalog/weaveworks-nginx/v0.1.0")
 				cmd.Dir = temp
@@ -471,9 +471,9 @@ status: {}
 				cmd := exec.Command(binaryPath,
 					"install",
 					"--create-pr",
-					"--branch",
+					"--pr-branch",
 					branch,
-					"--repo",
+					"--pr-repo",
 					"doesnt/matter",
 					"nginx-catalog/weaveworks-nginx/v0.1.0")
 				cmd.Dir = temp
