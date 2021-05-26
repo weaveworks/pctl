@@ -145,7 +145,7 @@ var _ = Describe("PCTL", func() {
 	Context("list", func() {
 		var (
 			namespace        = "default"
-			subscriptionName = "my-sub"
+			subscriptionName = "long-name-to-ensure-padding"
 			ctx              = context.TODO()
 			pSub             profilesv1.ProfileSubscription
 		)
@@ -163,10 +163,10 @@ var _ = Describe("PCTL", func() {
 				},
 				Spec: profilesv1.ProfileSubscriptionSpec{
 					ProfileURL: profileURL,
-					Version:    "weaveworks-nginx/v0.1.0",
+					Version:    "multi-version-weaveworks-nginx/v0.1.0",
 					ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
 						Catalog: "foo",
-						Profile: "bar",
+						Profile: "multi-version-weaveworks-nginx",
 						Version: "v0.1.0",
 					},
 				},
@@ -185,9 +185,10 @@ var _ = Describe("PCTL", func() {
 				Expect(err).ToNot(HaveOccurred())
 				return strings.Split(string(session), "\n")
 			}
+
 			Eventually(listCmd).Should(ContainElements(
-				"NAMESPACE	NAME  	SOURCE         ",
-				"default  \tmy-sub\tfoo/bar/v0.1.0\t",
+				"NAMESPACE\tNAME                       \tSOURCE                                   \tAVAILABLE UPDATES ",
+				"default  \tlong-name-to-ensure-padding\tfoo/multi-version-weaveworks-nginx/v0.1.0\tv0.1.1           \t",
 			))
 		})
 	})
