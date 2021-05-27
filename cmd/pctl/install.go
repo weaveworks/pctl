@@ -16,7 +16,7 @@ import (
 func installCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "install",
-		Usage: "generate a profile subscription for a profile in a catalog",
+		Usage: "generate a profile subscription",
 		UsageText: "To install from a profile catalog entry: pctl --catalog-url <URL> install --subscription-name pctl-profile --namespace default --profile-branch main --config-secret configmap-name <CATALOG>/<PROFILE>[/<VERSION>]\n   " +
 			"To install directly from a profile repository: pctl install --subscription-name pctl-profile --namespace default --profile-branch development --profile-url https://github.com/weaveworks/profiles-examples --profile-path bitnami-nginx",
 		Flags: []cli.Flag{
