@@ -23,8 +23,10 @@ var _ = Describe("List", func() {
 		}
 		sub1       = "sub1"
 		sub2       = "sub2"
+		sub3       = "sub3"
 		namespace1 = "namespace1"
 		namespace2 = "namespace2"
+		namespace3 = "namespace3"
 		profile    = "foo"
 		catalog    = "bar"
 		version    = "v0.1.0"
@@ -61,8 +63,21 @@ var _ = Describe("List", func() {
 				Branch:     "main",
 			},
 		}
+		pSub3 := &profilesv1.ProfileSubscription{
+			TypeMeta: profileTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      sub3,
+				Namespace: namespace3,
+			},
+			Spec: profilesv1.ProfileSubscriptionSpec{
+				ProfileURL: "https://github.com/org/repo-name",
+				Branch:     "main",
+				Path:       "path",
+			},
+		}
 		Expect(fakeClient.Create(context.TODO(), pSub1)).To(Succeed())
 		Expect(fakeClient.Create(context.TODO(), pSub2)).To(Succeed())
+		Expect(fakeClient.Create(context.TODO(), pSub3)).To(Succeed())
 
 		sm = subscription.NewManager(fakeClient)
 	})
@@ -77,6 +92,9 @@ var _ = Describe("List", func() {
 				Version:   version,
 				Profile:   profile,
 				Catalog:   catalog,
+				Branch:    "-",
+				Path:      "-",
+				URL:       "https://github.com/org/repo-name",
 			},
 			subscription.SubscriptionSummary{
 				Name:      sub2,
@@ -84,6 +102,19 @@ var _ = Describe("List", func() {
 				Version:   "-",
 				Profile:   "-",
 				Catalog:   "-",
+				Branch:    "main",
+				Path:      "-",
+				URL:       "https://github.com/org/repo-name",
+			},
+			subscription.SubscriptionSummary{
+				Name:      sub3,
+				Namespace: namespace3,
+				Version:   "-",
+				Profile:   "-",
+				Catalog:   "-",
+				Branch:    "main",
+				Path:      "path",
+				URL:       "https://github.com/org/repo-name",
 			},
 		))
 	})

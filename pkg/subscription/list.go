@@ -13,6 +13,9 @@ type SubscriptionSummary struct {
 	Version   string
 	Profile   string
 	Catalog   string
+	Branch    string
+	Path      string
+	URL       string
 }
 
 // List returns a list of subscriptions
@@ -27,10 +30,22 @@ func (sm *Manager) List() ([]SubscriptionSummary, error) {
 		version := "-"
 		profile := "-"
 		catalog := "-"
+		branch := "-"
+		path := "-"
+		url := "-"
 		if sub.Spec.ProfileCatalogDescription != nil {
 			version = sub.Spec.ProfileCatalogDescription.Version
 			profile = sub.Spec.ProfileCatalogDescription.Profile
 			catalog = sub.Spec.ProfileCatalogDescription.Catalog
+		}
+		if sub.Spec.Path != "" {
+			path = sub.Spec.Path
+		}
+		if sub.Spec.Branch != "" {
+			branch = sub.Spec.Branch
+		}
+		if sub.Spec.ProfileURL != "" {
+			url = sub.Spec.ProfileURL
 		}
 		descriptions = append(descriptions, SubscriptionSummary{
 			Name:      sub.Name,
@@ -38,6 +53,9 @@ func (sm *Manager) List() ([]SubscriptionSummary, error) {
 			Version:   version,
 			Profile:   profile,
 			Catalog:   catalog,
+			Branch:    branch,
+			Path:      path,
+			URL:       url,
 		})
 	}
 	return descriptions, nil

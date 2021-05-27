@@ -186,8 +186,8 @@ var _ = Describe("PCTL", func() {
 				return strings.Split(string(session), "\n")
 			}
 			Eventually(listCmd).Should(ContainElements(
-				"NAMESPACE	NAME  	PROFILE	VERSION	CATALOG ",
-				"default  \tmy-sub\tbar    \tv0.1.0 \tfoo    \t",
+				"NAMESPACE	NAME  	SOURCE         ",
+				"default  \tmy-sub\tfoo/bar/v0.1.0\t",
 			))
 		})
 	})
@@ -349,6 +349,76 @@ status: {}
 			Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("nginx:1.14.2"))
 		})
 
+		When("a url is provided with a branch and path", func() {
+			It("will fetch information from that branch with path", func() {
+				namespace := uuid.New().String()
+				//subName := "pctl-profile"
+				branch := "branch-and-url"
+				path := "branch-nginx"
+				cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--profile-url", "https://github.com/weaveworks/profiles-examples", "--profile-branch", branch, "--profile-path", path)
+				cmd.Dir = temp
+				session, err := cmd.CombinedOutput()
+				if err != nil {
+					fmt.Println("Output from failing command: ", string(session))
+				}
+				Expect(err).ToNot(HaveOccurred())
+
+				var files []string
+				err = filepath.Walk(temp, func(path string, info os.FileInfo, err error) error {
+					files = append(files, path)
+					return nil
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				By("creating the artifacts")
+				profilesDirProfile := filepath.Join(temp, "profile.yaml")
+				profilesArtifacts := filepath.Join(temp, "artifacts")
+				profilesArtifactsDeployment := filepath.Join(temp, "artifacts", "nginx-deployment")
+				profilesArtifactsDeploymentGitRepo := filepath.Join(temp, "artifacts", "nginx-deployment", "GitRepository.yaml")
+				profilesArtifactsDeploymentKustomization := filepath.Join(temp, "artifacts", "nginx-deployment", "Kustomization.yaml")
+				Expect(files).To(ContainElements(
+					temp,
+					profilesDirProfile,
+					profilesArtifacts,
+					profilesArtifactsDeployment,
+					profilesArtifactsDeploymentKustomization,
+					profilesArtifactsDeploymentGitRepo,
+				))
+				filename := filepath.Join(temp, "profile.yaml")
+				content, err := ioutil.ReadFile(filename)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
+kind: ProfileSubscription
+metadata:
+  creationTimestamp: null
+  name: pctl-profile
+  namespace: %s
+spec:
+  branch: branch-and-url
+  path: branch-nginx
+  profileURL: https://github.com/weaveworks/profiles-examples
+status: {}
+`, namespace)))
+			})
+		})
+
+		When("url and catalog entry install format are both defined", func() {
+			It("will throw a meaningful error", func() {
+				namespace := uuid.New().String()
+				//subName := "pctl-profile"
+				branch := "branch-and-url"
+				path := "branch-nginx"
+				cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--profile-url", "https://github.com/weaveworks/profiles-examples", "--profile-branch", branch, "--profile-path", path, "catalog/profile/v0.0.1")
+				cmd.Dir = temp
+				session, err := cmd.CombinedOutput()
+				if err != nil {
+					fmt.Println("Output from failing command: ", string(session))
+				}
+				Expect(err).To(HaveOccurred())
+				Expect(string(session)).To(ContainSubstring("it looks like you provided a url with a catalog entry; please choose either format: url/branch/path or <CATALOG>/<PROFILE>[/<VERSION>]"))
+			})
+		})
+
 		When("a catalog version is provided, but it's an invalid/missing version", func() {
 			It("provide an error saying the profile with these specifics can't be found", func() {
 				cmd := exec.Command(binaryPath, "install", "nginx-catalog/weaveworks-nginx/v999.9.9")
@@ -375,11 +445,11 @@ status: {}
 				cmd = exec.Command(binaryPath,
 					"install",
 					"--create-pr",
-					"--branch",
+					"--pr-branch",
 					branch,
 					"--out",
 					repoLocation,
-					"--repo",
+					"--pr-repo",
 					"weaveworks/pctl-test-repo",
 					"nginx-catalog/weaveworks-nginx")
 				session, err := cmd.CombinedOutput()
@@ -397,7 +467,7 @@ status: {}
 				cmd := exec.Command(binaryPath,
 					"install",
 					"--create-pr",
-					"--branch",
+					"--pr-branch",
 					branch,
 					"nginx-catalog/weaveworks-nginx/v0.1.0")
 				cmd.Dir = temp
@@ -418,9 +488,9 @@ status: {}
 				cmd := exec.Command(binaryPath,
 					"install",
 					"--create-pr",
-					"--branch",
+					"--pr-branch",
 					branch,
-					"--repo",
+					"--pr-repo",
 					"doesnt/matter",
 					"nginx-catalog/weaveworks-nginx/v0.1.0")
 				cmd.Dir = temp

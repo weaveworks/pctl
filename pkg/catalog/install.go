@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,7 +18,7 @@ import (
 // InstallConfig defines parameters for the installation call.
 type InstallConfig struct {
 	CatalogClient CatalogClient
-	Branch        string
+	ProfileBranch string
 	CatalogName   string
 	ConfigMap     string
 	Namespace     string
@@ -25,6 +26,8 @@ type InstallConfig struct {
 	SubName       string
 	Version       string
 	Directory     string
+	URL           string
+	Path          string
 }
 
 //MakeArtifacts returns artifacts for a subscription
@@ -35,11 +38,10 @@ var makeArtifacts = profile.MakeArtifacts
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile subscription
 // and its artifacts
 func Install(cfg InstallConfig) error {
-	profile, err := Show(cfg.CatalogClient, cfg.CatalogName, cfg.ProfileName, cfg.Version)
+	pSpec, err := getProfileSpec(cfg)
 	if err != nil {
-		return fmt.Errorf("failed to get profile %q in catalog %q: %w", cfg.ProfileName, cfg.CatalogName, err)
+		return err
 	}
-
 	subscription := profilesv1.ProfileSubscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ProfileSubscription",
@@ -49,15 +51,7 @@ func Install(cfg InstallConfig) error {
 			Name:      cfg.SubName,
 			Namespace: cfg.Namespace,
 		},
-		Spec: profilesv1.ProfileSubscriptionSpec{
-			ProfileURL: profile.URL,
-			Version:    filepath.Join(profile.Name, profile.Version),
-			ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
-				Catalog: cfg.CatalogName,
-				Version: profile.Version,
-				Profile: profile.Name,
-			},
-		},
+		Spec: pSpec,
 	}
 	if cfg.ConfigMap != "" {
 		subscription.Spec.ValuesFrom = []helmv2.ValuesReference{
@@ -68,7 +62,6 @@ func Install(cfg InstallConfig) error {
 			},
 		}
 	}
-
 	artifacts, err := makeArtifacts(subscription)
 	if err != nil {
 		return fmt.Errorf("failed to generate artifacts: %w", err)
@@ -91,7 +84,7 @@ func Install(cfg InstallConfig) error {
 		return nil
 	}
 
-	profileRootdir := filepath.Join(cfg.Directory, profile.Name)
+	profileRootdir := filepath.Join(cfg.Directory, cfg.ProfileName)
 	artifactsRootDir := filepath.Join(profileRootdir, "artifacts")
 
 	for _, artifact := range artifacts {
@@ -108,6 +101,34 @@ func Install(cfg InstallConfig) error {
 	}
 
 	return generateOutput(filepath.Join(profileRootdir, "profile.yaml"), &subscription)
+}
+
+// getProfileSpec generates a spec based on configured properties.
+func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileSubscriptionSpec, error) {
+	if cfg.URL != "" {
+		if cfg.Path == "" {
+			return profilesv1.ProfileSubscriptionSpec{}, errors.New("path must be provided with url")
+		}
+		return profilesv1.ProfileSubscriptionSpec{
+			ProfileURL: cfg.URL,
+			Branch:     cfg.ProfileBranch,
+			Path:       cfg.Path,
+		}, nil
+	}
+	p, err := Show(cfg.CatalogClient, cfg.CatalogName, cfg.ProfileName, cfg.Version)
+	if err != nil {
+		return profilesv1.ProfileSubscriptionSpec{}, fmt.Errorf("failed to get profile %q in catalog %q: %w", cfg.ProfileName, cfg.CatalogName, err)
+	}
+
+	return profilesv1.ProfileSubscriptionSpec{
+		ProfileURL: p.URL,
+		Version:    filepath.Join(p.Name, p.Version),
+		ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
+			Catalog: cfg.CatalogName,
+			Version: p.Version,
+			Profile: p.Name,
+		},
+	}, nil
 }
 
 // CreatePullRequest creates a pull request from the current changes.

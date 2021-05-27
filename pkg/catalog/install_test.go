@@ -52,7 +52,7 @@ var _ = Describe("Install", func() {
 		fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
 		cfg = catalog.InstallConfig{
-			Branch:        "main",
+			ProfileBranch: "main",
 			CatalogName:   "nginx",
 			CatalogClient: fakeCatalogClient,
 			Namespace:     "default",
@@ -169,6 +169,103 @@ status: {}
 			It("errors", func() {
 				err := catalog.Install(cfg)
 				Expect(err).To(MatchError(ContainSubstring("failed to create directory")))
+			})
+		})
+
+		When("a url is provided with branch and path", func() {
+			It("generates a spec with url and branch and path", func() {
+				cfg = catalog.InstallConfig{
+					ProfileBranch: "main",
+					CatalogName:   "nginx",
+					CatalogClient: fakeCatalogClient,
+					Namespace:     "default",
+					ProfileName:   "nginx-1",
+					SubName:       "mysub",
+					URL:           "https://github.com/weaveworks/profiles-examples",
+					Directory:     tempDir,
+					Path:          "branch-nginx",
+				}
+				err := catalog.Install(cfg)
+				Expect(err).NotTo(HaveOccurred())
+
+				var files []string
+				profileDir := filepath.Join(tempDir, "nginx-1")
+				err = filepath.Walk(profileDir, func(path string, info os.FileInfo, err error) error {
+					files = append(files, path)
+					return nil
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				profileFile := filepath.Join(profileDir, "profile.yaml")
+				artifactsDir := filepath.Join(profileDir, "artifacts")
+				artifactsFooDir := filepath.Join(profileDir, "artifacts", "foo")
+				artifactFile := filepath.Join(profileDir, "artifacts", "foo", "kustomize.yaml")
+				Expect(files).To(ConsistOf(artifactsDir, artifactsFooDir, profileDir, profileFile, artifactFile))
+
+				content, err := ioutil.ReadFile(profileFile)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
+kind: ProfileSubscription
+metadata:
+  creationTimestamp: null
+  name: mysub
+  namespace: default
+spec:
+  branch: main
+  path: branch-nginx
+  profileURL: https://github.com/weaveworks/profiles-examples
+status: {}
+`))
+
+				content, err = ioutil.ReadFile(artifactFile)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(content)).To(Equal(`apiVersion: api
+kind: kustomize
+metadata:
+  creationTimestamp: null
+  name: foo
+  namespace: default
+spec:
+  interval: 0s
+  prune: true
+  sourceRef:
+    kind: ""
+    name: ""
+status: {}
+`))
+			})
+		})
+
+		When("a url is provided without path", func() {
+			It("returns a sensible error that path is required with a url", func() {
+				cfg = catalog.InstallConfig{
+					CatalogName:   "nginx",
+					CatalogClient: fakeCatalogClient,
+					Namespace:     "default",
+					ProfileName:   "nginx-1",
+					SubName:       "mysub",
+					URL:           "https://github.com/weaveworks/profiles-examples",
+					Directory:     tempDir,
+				}
+				err := catalog.Install(cfg)
+				Expect(err).To(MatchError("path must be provided with url"))
+			})
+		})
+		When("a branch is provided which isn't domain compatible", func() {
+			It("will not care because the name is sanitised", func() {
+				cfg = catalog.InstallConfig{
+					CatalogName:   "nginx",
+					CatalogClient: fakeCatalogClient,
+					Namespace:     "default",
+					ProfileName:   "nginx-1",
+					SubName:       "mysub",
+					URL:           "https://github.com/weaveworks/profiles-examples",
+					Directory:     tempDir,
+					ProfileBranch: "not_domain_compatible",
+					Path:          "path",
+				}
+				err := catalog.Install(cfg)
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})
