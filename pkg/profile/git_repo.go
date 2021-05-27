@@ -39,5 +39,6 @@ func (p *Profile) makeGitRepoName() string {
 		parts := strings.Split(p.subscription.Spec.Version, "/")
 		return join(p.subscription.Name, repoName, parts[1])
 	}
-	return join(p.subscription.Name, repoName, p.subscription.Spec.Branch)
+	branch := SanitiseBranchName(p.subscription.Spec.Branch)
+	return join(p.subscription.Name, repoName, branch)
 }
