@@ -11,6 +11,7 @@ and run: mdtoc -inplace README.md
   - [Search](#search)
   - [Show](#show)
   - [Install](#install)
+    - [Architecture](#architecture)
   - [List](#list)
   - [Prepare](#prepare)
     - [Pre-Flight check](#pre-flight-check)
@@ -93,6 +94,16 @@ directory contains all of the resources required for deploying the profile. Each
 This can be applied directly to the cluster `kubectl apply -R -f weaveworks-nginx/` or by comitting it to your
 flux repository. If you are using a flux repository the `--create-pr` flags provides an automated way for creating a PR
 against your flux repository. See `pctl install --help` for more details.
+
+#### Architecture
+The below diagram illustrates how pctl install works:
+
+<!--
+To update this diagram go to https://miro.com/app/board/o9J_lI2seIg=/
+edit, export, save as image (size small) and commit. Easy.
+-->
+![](/docs/assets/pctl_install.png)
+
 
 
 ### List
