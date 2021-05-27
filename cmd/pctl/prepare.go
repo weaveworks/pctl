@@ -15,7 +15,7 @@ const (
 func prepareCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "prepare",
-		Usage:     "prepare an environment with everything profiles need to work",
+		Usage:     "prepares the cluster for profiles by deploying the profile controllers and custom resource definitions",
 		UsageText: "pctl prepare",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{

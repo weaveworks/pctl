@@ -13,9 +13,10 @@ import (
 
 func searchCmd() *cli.Command {
 	return &cli.Command{
-		Name:      "search",
-		Usage:     "search for a profile",
-		UsageText: "pctl [--kubeconfig=<kubeconfig-path>] search [--output table|json] <QUERY>",
+		Name:  "search",
+		Usage: "search for a profile",
+		UsageText: "pctl search [--output table|json] <QUERY>\n\n" +
+			"   example: pctl search nginx",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "output",
