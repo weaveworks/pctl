@@ -40,7 +40,7 @@ func listCmd() *cli.Command {
 			f = formatter.NewTableFormatter()
 			getter := listDataFunc(data)
 
-			if c.String("format") == "json" {
+			if c.String("output") == "json" {
 				f = formatter.NewJSONFormatter()
 				getter = func() interface{} { return data }
 			}
