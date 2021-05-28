@@ -15,8 +15,8 @@ import (
 func listCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "list",
-		Usage:     "list profile subscriptions",
-		UsageText: "pctl --kubeconfig=<kubeconfig-path> list",
+		Usage:     "list installed profiles",
+		UsageText: "pctl list",
 		Action: func(c *cli.Context) error {
 			cl, err := buildK8sClient(c.String("kubeconfig"))
 			if err != nil {

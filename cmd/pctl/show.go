@@ -15,9 +15,10 @@ import (
 
 func showCmd() *cli.Command {
 	return &cli.Command{
-		Name:      "show",
-		Usage:     "display information about a profile",
-		UsageText: "pctl [--kubeconfig=<kubeconfig-path>] show <CATALOG>/<PROFILE>[/<VERSION>]",
+		Name:  "show",
+		Usage: "display information about a profile",
+		UsageText: "pctl [--kubeconfig=<kubeconfig-path>] show <CATALOG>/<PROFILE>[/<VERSION>]\n\n" +
+			"   example: pctl show catalog/weaveworks-nginx/v0.1.0",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "output",
