@@ -2,9 +2,7 @@ package catalog
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/hashicorp/go-version"
 	"github.com/weaveworks/pctl/pkg/subscription"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -28,27 +26,12 @@ func List(k8sClient runtimeclient.Client, catalogClient CatalogClient) ([]Profil
 	profileData := make([]ProfileData, 0)
 	for _, p := range profiles {
 		var versions []string
-		related, err := Search(catalogClient, p.Profile)
+		related, err := GetAvailableUpdates(catalogClient, p.Catalog, p.Profile, p.Version)
 		if err != nil {
 			return nil, fmt.Errorf("failed to search for profile %s for updates: %w", p.Profile, err)
 		}
-		pv, err := version.NewVersion(strings.TrimPrefix(p.Version, "v"))
-		if err != nil {
-			return nil, fmt.Errorf("failed to format profile %s with version %s into version: %w", p.Profile, p.Version, err)
-		}
 		for _, r := range related {
-			// Search uses Contains, which will match too many things. We want an exact match.
-			// TODO: Maybe delegate this to the profile catalog?
-			if r.Name != p.Profile {
-				continue
-			}
-			rv, err := version.NewVersion(strings.TrimPrefix(r.Version, "v"))
-			if err != nil {
-				return nil, fmt.Errorf("failed to format profile %s with version %s into version: %w", r.Name, r.Version, err)
-			}
-			if rv.GreaterThan(pv) {
-				versions = append(versions, "v"+rv.String())
-			}
+			versions = append(versions, r.Version)
 		}
 		profileData = append(profileData, ProfileData{
 			Profile:                 p,

@@ -67,17 +67,6 @@ var _ = Describe("List", func() {
 		httpBody := []byte(`[
   {
     "name": "weaveworks-nginx",
-    "description": "This installs nginx.",
-    "version": "v0.1.0",
-    "catalog": "nginx-catalog",
-    "url": "https://github.com/weaveworks/profiles-examples",
-    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
-    "prerequisites": [
-      "Kubernetes 1.18+"
-    ]
-  },
-  {
-    "name": "weaveworks-nginx",
     "description": "This installs the next version nginx.",
     "version": "v0.1.1",
     "catalog": "nginx-catalog",
@@ -121,20 +110,7 @@ var _ = Describe("List", func() {
 	})
 	When("there are no updates for a profile", func() {
 		It("returns the profile without any version updates", func() {
-			httpBody := []byte(`[
-  {
-    "name": "weaveworks-nginx",
-    "description": "This installs nginx.",
-    "version": "v0.1.0",
-    "catalog": "nginx-catalog",
-    "url": "https://github.com/weaveworks/profiles-examples",
-    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
-    "prerequisites": [
-      "Kubernetes 1.18+"
-    ]
-  }
-]
-`)
+			httpBody := []byte(`[]`)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 			out, err := catalog.List(fakeRuntimeClient, fakeCatalogClient)
 			Expect(err).NotTo(HaveOccurred())
@@ -157,75 +133,12 @@ var _ = Describe("List", func() {
 		})
 	})
 
-	When("the profile version is invalid", func() {
-		It("returns a sane error", func() {
-			httpBody := []byte(`[
-  {
-    "name": "weaveworks-nginx",
-    "description": "This installs nginx.",
-    "version": "invalid",
-    "catalog": "nginx-catalog",
-    "url": "https://github.com/weaveworks/profiles-examples",
-    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
-    "prerequisites": [
-      "Kubernetes 1.18+"
-    ]
-  }
-]
-`)
-			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
-			_, err := catalog.List(fakeRuntimeClient, fakeCatalogClient)
-			Expect(err).To(MatchError("failed to format profile weaveworks-nginx with version invalid into version: Malformed version: invalid"))
-		})
-	})
-
-	When("the new version is invalid", func() {
-		It("returns a sane error", func() {
-			httpBody := []byte(`[
-  {
-    "name": "weaveworks-nginx",
-    "description": "This installs nginx.",
-    "version": "invalid",
-    "catalog": "nginx-catalog",
-    "url": "https://github.com/weaveworks/profiles-examples",
-    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
-    "prerequisites": [
-      "Kubernetes 1.18+"
-    ]
-  }
-]
-`)
-			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
-			scheme := runtime.NewScheme()
-			Expect(profilesv1.AddToScheme(scheme)).To(Succeed())
-			fakeRuntimeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
-			pSub1 := &profilesv1.ProfileSubscription{
-				TypeMeta: profileTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "invalid-version",
-					Namespace: "default",
-				},
-				Spec: profilesv1.ProfileSubscriptionSpec{
-					ProfileURL: "https://github.com/org/repo-name",
-					Version:    "weaveworks-nginx/v0.1.0",
-					ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
-						Profile: profile,
-						Catalog: cat,
-						Version: "invalid",
-					},
-				},
-			}
-			Expect(fakeRuntimeClient.Create(context.TODO(), pSub1)).To(Succeed())
-			_, err := catalog.List(fakeRuntimeClient, fakeCatalogClient)
-			Expect(err).To(MatchError("failed to format profile weaveworks-nginx with version invalid into version: Malformed version: invalid"))
-		})
-	})
-
-	When("search fails to query the catalog", func() {
+	When("get greater than fails to query the catalog", func() {
 		It("returns a sane error", func() {
 			fakeCatalogClient.DoRequestReturns(nil, 400, nil)
 			out, err := catalog.List(fakeRuntimeClient, fakeCatalogClient)
-			Expect(err).To(MatchError("failed to search for profile weaveworks-nginx for updates: failed to fetch profile from catalog, status code 400"))
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("failed to search for profile weaveworks-nginx for updates: failed to fetch available updates for profile, status code 400"))
 			Expect(out).To(BeNil())
 		})
 	})
@@ -275,18 +188,7 @@ var _ = Describe("List", func() {
 			}
 			Expect(fakeRuntimeClient.Create(context.TODO(), pSub2)).To(Succeed())
 			Expect(fakeRuntimeClient.Create(context.TODO(), pSub3)).To(Succeed())
-			httpBody := []byte(`[
-  {
-    "name": "weaveworks-nginx",
-    "description": "This installs nginx.",
-    "version": "v0.1.0",
-    "catalog": "nginx-catalog",
-    "url": "https://github.com/weaveworks/profiles-examples",
-    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
-    "prerequisites": [
-      "Kubernetes 1.18+"
-    ]
-  },
+			return1 := []byte(`[
   {
     "name": "weaveworks-nginx",
     "description": "This installs the next version nginx.",
@@ -297,29 +199,12 @@ var _ = Describe("List", func() {
     "prerequisites": [
       "Kubernetes 1.18+"
     ]
-  },
-  {
-    "name": "weaveworks-nginx-2",
-    "description": "This installs nginx.",
-    "version": "v0.1.0",
-    "catalog": "nginx-catalog",
-    "url": "https://github.com/weaveworks/profiles-examples",
-    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
-    "prerequisites": [
-      "Kubernetes 1.18+"
-    ]
-  },
-  {
-    "name": "weaveworks-nginx-3",
-    "description": "This installs nginx.",
-    "version": "v0.1.0",
-    "catalog": "nginx-catalog",
-    "url": "https://github.com/weaveworks/profiles-examples",
-    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
-    "prerequisites": [
-      "Kubernetes 1.18+"
-    ]
-  },
+  }
+]
+`)
+
+			return2 := []byte("[]")
+			return3 := []byte(`[
   {
     "name": "weaveworks-nginx-3",
     "description": "This installs nginx.",
@@ -333,7 +218,9 @@ var _ = Describe("List", func() {
   }
 ]
 `)
-			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
+			fakeCatalogClient.DoRequestReturnsOnCall(0, return1, 200, nil)
+			fakeCatalogClient.DoRequestReturnsOnCall(1, return2, 200, nil)
+			fakeCatalogClient.DoRequestReturnsOnCall(2, return3, 200, nil)
 			out, err := catalog.List(fakeRuntimeClient, fakeCatalogClient)
 			Expect(err).NotTo(HaveOccurred())
 			expected := []catalog.ProfileData{
