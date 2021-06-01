@@ -25,9 +25,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-const (
-	pctlTestRepositoryName = "git@github.com:weaveworks/pctl-test-repo.git"
-)
+var pctlTestRepositoryName = "git@github.com:weaveworks/pctl-test-repo.git"
 
 var _ = Describe("PCTL", func() {
 	Context("search", func() {
@@ -432,7 +430,7 @@ status: {}
 		When("create-pr is enabled", func() {
 			It("creates a pull request to the remote branch", func() {
 				if os.Getenv("GIT_TOKEN") == "" {
-					Skip("SKIP, this test needs GIT_TOKEN to work.")
+					Skip("SKIP, this test needs GIT_TOKEN to work. You really should be running this test!")
 				}
 				repoLocation := filepath.Join(temp, "repo")
 				// clone

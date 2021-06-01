@@ -15,7 +15,7 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
-var _ = Describe("Git", func() {
+var _ = Describe("Repo", func() {
 	var (
 		fakeHTTPClient  *fakes.FakeHTTPClient
 		repoURL, branch string
