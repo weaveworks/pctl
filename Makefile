@@ -52,6 +52,6 @@ endif
 .PHONY: update-modules
 	go get \
 		$(shell doki mod latest \
-			github.com/weaveworks/profiles@v0.0.1-test-branch \
+			github.com/weaveworks/profiles \
 		)
 	go mod tidy
