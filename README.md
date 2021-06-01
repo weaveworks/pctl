@@ -19,6 +19,7 @@ and run: mdtoc -inplace README.md
 - [Development](#development)
 - [Release process](#release-process)
   - [Tests](#tests)
+    - [Configuring Integration Tests](#configuring-integration-tests)
 <!-- /toc -->
 
 ## Usage
@@ -197,5 +198,14 @@ _Note_ that `<version>` must be in the following format: `v0.0.1`.
    Note: if you have a `local-env` running and have created profile catalog sources in it, this will influence your tests.)_
 1. Run `make unit` for unit tests
 1. Run `make test` to run all tests
+
+#### Configuring Integration Tests
+
+There are two configurable values in the integration tests as the time of this writing.
+
+1. `PCTL_TEST_REPOSITORY_URL` -- configures the remote test repository for the `create-pr` test. This needs to be a
+repository the user has push access to and access to create a pull request in GitHub.
+1. `GIT_TOKEN` -- it is used by `create-pr` test to creating a pull request on GitHub. Without this token the test
+doesn't run.
 
 See `make help` for all development commands.
