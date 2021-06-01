@@ -126,7 +126,7 @@ var _ = Describe("List", func() {
 						Version:   "v0.1.0",
 						URL:       "https://github.com/org/repo-name",
 					},
-					AvailableVersionUpdates: nil,
+					AvailableVersionUpdates: []string{"-"},
 				},
 			}
 			Expect(out).To(Equal(expected))
@@ -138,7 +138,7 @@ var _ = Describe("List", func() {
 			fakeCatalogClient.DoRequestReturns(nil, 400, nil)
 			out, err := catalog.List(fakeRuntimeClient, fakeCatalogClient)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("failed to search for profile weaveworks-nginx for updates: failed to fetch available updates for profile, status code 400"))
+			Expect(err.Error()).To(Equal("failed to get available updates: failed to fetch available updates for profile, status code 400"))
 			Expect(out).To(BeNil())
 		})
 	})
@@ -248,7 +248,7 @@ var _ = Describe("List", func() {
 						Version:   "v0.1.0",
 						URL:       "https://github.com/org/repo-name",
 					},
-					AvailableVersionUpdates: nil,
+					AvailableVersionUpdates: []string{"-"},
 				},
 				{
 					Profile: subscription.SubscriptionSummary{

@@ -24,6 +24,11 @@ func GetAvailableUpdates(catalogClient CatalogClient, catalogName, profileName, 
 	}
 
 	if statusCode != http.StatusOK {
+		if statusCode == http.StatusNotFound {
+			// 404 right now is valid in case there are no updated versions
+			// this must be re-visited after https://github.com/weaveworks/profiles/issues/143
+			return nil, nil
+		}
 		return nil, fmt.Errorf("failed to fetch available updates for profile, status code %d", statusCode)
 	}
 	var profiles []profilesv1.ProfileDescription

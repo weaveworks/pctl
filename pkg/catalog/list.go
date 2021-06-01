@@ -3,8 +3,9 @@ package catalog
 import (
 	"fmt"
 
-	"github.com/weaveworks/pctl/pkg/subscription"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/weaveworks/pctl/pkg/subscription"
 )
 
 // ProfileData data containing profile and available version update for format printing.
@@ -26,12 +27,18 @@ func List(k8sClient runtimeclient.Client, catalogClient CatalogClient) ([]Profil
 	profileData := make([]ProfileData, 0)
 	for _, p := range profiles {
 		var versions []string
-		related, err := GetAvailableUpdates(catalogClient, p.Catalog, p.Profile, p.Version)
-		if err != nil {
-			return nil, fmt.Errorf("failed to search for profile %s for updates: %w", p.Profile, err)
+		// skip for profiles which don't have a catalog entry. i.e.: profiles installed via branch, url, path.
+		if p.Catalog != "-" {
+			related, err := GetAvailableUpdates(catalogClient, p.Catalog, p.Profile, p.Version)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get available updates: %w", err)
+			}
+			for _, r := range related {
+				versions = append(versions, r.Version)
+			}
 		}
-		for _, r := range related {
-			versions = append(versions, r.Version)
+		if len(versions) == 0 {
+			versions = append(versions, "-")
 		}
 		profileData = append(profileData, ProfileData{
 			Profile:                 p,

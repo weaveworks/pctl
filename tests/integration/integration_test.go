@@ -35,6 +35,8 @@ var _ = Describe("PCTL", func() {
 			Expect(err).ToNot(HaveOccurred())
 			expected := "CATALOG/PROFILE               	VERSION	DESCRIPTION                     \n" +
 				"nginx-catalog/weaveworks-nginx	v0.1.0 	This installs nginx.           \t\n" +
+				"nginx-catalog/weaveworks-nginx	v0.1.1 	This installs nginx.           \t\n" +
+				"nginx-catalog/bitnami-nginx   	v0.1.0 	This installs nginx.           \t\n" +
 				"nginx-catalog/some-other-nginx	       	This installs some other nginx.\t\n\n"
 			Expect(string(session)).To(ContainSubstring(expected))
 		})
@@ -46,6 +48,28 @@ var _ = Describe("PCTL", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(session)).To(ContainSubstring(`{
     "name": "weaveworks-nginx",
+    "description": "This installs nginx.",
+    "version": "v0.1.0",
+    "catalog": "nginx-catalog",
+    "url": "https://github.com/weaveworks/profiles-examples",
+    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
+    "prerequisites": [
+      "Kubernetes 1.18+"
+    ]
+  },
+  {
+    "name": "weaveworks-nginx",
+    "description": "This installs nginx.",
+    "version": "v0.1.1",
+    "catalog": "nginx-catalog",
+    "url": "https://github.com/weaveworks/profiles-examples",
+    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
+    "prerequisites": [
+      "Kubernetes 1.18+"
+    ]
+  },
+  {
+    "name": "bitnami-nginx",
     "description": "This installs nginx.",
     "version": "v0.1.0",
     "catalog": "nginx-catalog",
@@ -161,10 +185,10 @@ var _ = Describe("PCTL", func() {
 				},
 				Spec: profilesv1.ProfileSubscriptionSpec{
 					ProfileURL: profileURL,
-					Version:    "multi-version-weaveworks-nginx/v0.1.0",
+					Version:    "weaveworks-nginx/v0.1.0",
 					ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
-						Catalog: "foo",
-						Profile: "multi-version-weaveworks-nginx",
+						Catalog: "nginx-catalog",
+						Profile: "weaveworks-nginx",
 						Version: "v0.1.0",
 					},
 				},
@@ -185,10 +209,26 @@ var _ = Describe("PCTL", func() {
 			}
 
 			Eventually(listCmd).Should(ContainElements(
-				"NAMESPACE\tNAME                       \tSOURCE                                   \tAVAILABLE UPDATES ",
-				"default  \tlong-name-to-ensure-padding\tfoo/multi-version-weaveworks-nginx/v0.1.0\tv0.1.1           \t",
+				"NAMESPACE\tNAME                       \tSOURCE                               \tAVAILABLE UPDATES ",
+				"default  \tlong-name-to-ensure-padding\tnginx-catalog/weaveworks-nginx/v0.1.0\tv0.1.1           \t",
 			))
 		})
+
+		//When("there are no available updates", func() {
+		//	It("returns the subscriptions", func() {
+		//		listCmd := func() []string {
+		//			cmd := exec.Command(binaryPath, "list")
+		//			session, err := cmd.CombinedOutput()
+		//			Expect(err).ToNot(HaveOccurred())
+		//			return strings.Split(string(session), "\n")
+		//		}
+		//
+		//		Eventually(listCmd).Should(ContainElements(
+		//			"NAMESPACE\tNAME                       \tSOURCE                                   \tAVAILABLE UPDATES ",
+		//			"default  \tlong-name-to-ensure-padding\tfoo/multi-version-weaveworks-nginx/v0.1.0\tv0.1.1           \t",
+		//		))
+		//	})
+		//})
 	})
 
 	Context("install", func() {
