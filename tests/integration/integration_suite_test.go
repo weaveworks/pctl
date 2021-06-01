@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -32,6 +33,11 @@ var _ = BeforeSuite(func() {
 	var err error
 	binaryPath, err = gexec.Build("github.com/weaveworks/pctl/cmd/pctl")
 	Expect(err).NotTo(HaveOccurred())
+
+	// overwrite the default test repository location if set
+	if v := os.Getenv("PCTL_TEST_REPOSITORY_URL"); v != "" {
+		pctlTestRepositoryName = v
+	}
 
 	scheme := runtime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
