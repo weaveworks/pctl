@@ -65,6 +65,7 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd/go.mod h1:64YHyfSL2R96J44Nlwm39UHepQbyR5q10x7iYa1ks2E=
+github.com/Masterminds/semver/v3 v3.1.0/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.0.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
@@ -203,7 +204,7 @@ github.com/fluxcd/pkg/apis/meta v0.9.0 h1:rxW69p+VmJCKXXkaRYnovRBFlKjd+MJQfm2RrB
 github.com/fluxcd/pkg/apis/meta v0.9.0/go.mod h1:yHuY8kyGHYz22I0jQzqMMGCcHViuzC/WPdo9Gisk8Po=
 github.com/fluxcd/pkg/runtime v0.11.0 h1:FPsiu1k5NQGl2tsaXH5WgSmrOMg7o44jdOP0rW/TI1Y=
 github.com/fluxcd/pkg/runtime v0.11.0/go.mod h1:ZjAwug6DBLXwo9UdP1/tTPyuWpK9kZ0BEJbctbuEB1o=
-github.com/fluxcd/source-controller/api v0.12.2/go.mod h1:+EPyhxC7Y+hUnq7EwAkkLtfbwCxJxF5yfmiyzDk43KY=
+github.com/fluxcd/pkg/version v0.0.1/go.mod h1:WAF4FEEA9xyhngF8TDxg3UPu5fA1qhEYV8Pmi2Il01Q=
 github.com/fluxcd/source-controller/api v0.13.1 h1:KzWAECWZBfVROCd7pXojPTd+s/YKu0RFsdTTDi1Djy4=
 github.com/fluxcd/source-controller/api v0.13.1/go.mod h1:+EPyhxC7Y+hUnq7EwAkkLtfbwCxJxF5yfmiyzDk43KY=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
@@ -585,7 +586,6 @@ github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7J
 github.com/onsi/gomega v1.8.1/go.mod h1:Ho0h+IUsWyvy1OpqCwxlQ/21gkhVunqlU8fDGcoTdcA=
 github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1ybHNo=
 github.com/onsi/gomega v1.10.2/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1ybHNo=
-github.com/onsi/gomega v1.12.0/go.mod h1:lRk9szgn8TxENtWd0Tp4c3wjlRfMTMH27I+3Je41yGY=
 github.com/onsi/gomega v1.13.0 h1:7lLHu94wT9Ij0o6EWWclhu0aOh32VxhkwEJvzuWPeak=
 github.com/onsi/gomega v1.13.0/go.mod h1:lRk9szgn8TxENtWd0Tp4c3wjlRfMTMH27I+3Je41yGY=
 github.com/op/go-logging v0.0.0-20160315200505-970db520ece7/go.mod h1:HzydrMdWErDVzsI23lYNej1Htcns9BCg93Dk0bBINWk=
@@ -729,8 +729,8 @@ github.com/urfave/cli v1.22.1/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtX
 github.com/urfave/cli/v2 v2.3.0 h1:qph92Y649prgesehzOrQjdWyxFOp/QVM+6imKHad91M=
 github.com/urfave/cli/v2 v2.3.0/go.mod h1:LJmUH05zAU44vOAcrfzZQKsZbVcdbOG8rtL3/XcUArI=
 github.com/vektah/gqlparser v1.1.2/go.mod h1:1ycwN7Ij5njmMkPPAOaRFY4rET2Enx7IkVv3vaXspKw=
-github.com/weaveworks/profiles v0.0.3 h1:+ZBIspFNF7D6GMR1sY3Hn0zofW08i/NNI987PwYFg6E=
-github.com/weaveworks/profiles v0.0.3/go.mod h1:p41WtfZJ4FR/3+zJatGt/kkIOAJqNI47K6gIDtA3Hfo=
+github.com/weaveworks/profiles v0.0.4 h1:PdsEsh0XydT/Z8XhTzFW0n2M7xAqKCANpGNQoPZ6jDw=
+github.com/weaveworks/profiles v0.0.4/go.mod h1:pEopuod/rMbxIbWzcH8TbKbiBTd7HTx+CZp8w0QQlkM=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca h1:1CFlNzQhALwjS9mBAUkycX616GzgsuYUOCHA5+HSlXI=
 github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca/go.mod h1:ce1O1j6UtZfjr22oyGxGLbauSBp2YVXpARAosm7dHBg=
