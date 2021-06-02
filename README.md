@@ -111,10 +111,23 @@ edit, export, save as image (size small) and commit. Easy.
 pctl can be used to list the profile installed in a cluster, example:
 ```
 pctl list
-NAMESPACE       NAME            PROFILE                 VERSION CATALOG
-default         pctl-profile    weaveworks-nginx        v0.1.0  nginx-catalog
+NAMESPACE       NAME            SOURCE                                  AVAILABLE UPDATES
+default         pctl-profile    nginx-catalog/weaveworks-nginx/v0.1.0   v0.1.1
 ```
 
+It also includes profiles installed through a direct link and a branch:
+
+```
+pctl list
+NAMESPACE       NAME            SOURCE                                                                          AVAILABLE UPDATES
+default         pctl-profile    nginx-catalog/weaveworks-nginx/v0.1.0                                           -
+default         update-profile  https://github.com/weaveworks/profiles-examples:branch-and-url:bitnami-nginx    -
+```
+
+The source, in case of a branch install, is put together as follows: `url:branch:profile-name`.
+
+Available updates can be viewed in case of profiles which have been installed through a catalog.
+If that catalog contains an earlier version, `AVAILABLE UPDATES` section will list them.
 
 ### Prepare
 

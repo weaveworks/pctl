@@ -7,12 +7,13 @@ import (
 	"path/filepath"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
-	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/profile"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
+
+	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/pctl/pkg/profile"
 )
 
 // InstallConfig defines parameters for the installation call.
