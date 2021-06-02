@@ -68,23 +68,6 @@ func Install(cfg InstallConfig) error {
 		return fmt.Errorf("failed to generate artifacts: %w", err)
 	}
 
-	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
-	generateOutput := func(filename string, o runtime.Object) error {
-		f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
-		if err != nil {
-			return err
-		}
-		defer func(f *os.File) {
-			if err := f.Close(); err != nil {
-				fmt.Printf("Failed to properly close file %s\n", f.Name())
-			}
-		}(f)
-		if err := e.Encode(o, f); err != nil {
-			return err
-		}
-		return nil
-	}
-
 	profileRootdir := filepath.Join(cfg.Directory, cfg.ProfileName)
 	artifactsRootDir := filepath.Join(profileRootdir, "artifacts")
 
@@ -130,6 +113,24 @@ func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileSubscriptionSpec, erro
 			Profile: p.Name,
 		},
 	}, nil
+}
+
+func generateOutput(filename string, o runtime.Object) error {
+	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer func(f *os.File) {
+		if err := f.Close(); err != nil {
+			fmt.Printf("Failed to properly close file %s\n", f.Name())
+		}
+	}(f)
+	if err := e.Encode(o, f); err != nil {
+		return err
+	}
+	return nil
+
 }
 
 // CreatePullRequest creates a pull request from the current changes.
