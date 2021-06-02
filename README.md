@@ -17,6 +17,10 @@ and run: mdtoc -inplace README.md
     - [Pre-Flight check](#pre-flight-check)
   - [Catalog service options](#catalog-service-options)
 - [Development](#development)
+  - [Working with profiles](#working-with-profiles)
+    - [Using local pin](#using-local-pin)
+    - [Using dev tag pin](#using-dev-tag-pin)
+    - [Using doki and the Makefile targets](#using-doki-and-the-makefile-targets)
 - [Release process](#release-process)
   - [Tests](#tests)
     - [Configuring Integration Tests](#configuring-integration-tests)
@@ -217,7 +221,7 @@ v0.0.4-keep_in_sync
 	go mod tidy
 ```
 
-`github.com/weaveworks/profiles \` => `github.com/weaveworks/profiles@dev-tag \
+`github.com/weaveworks/profiles \` => `github.com/weaveworks/profiles@dev-tag \`
 - run `make update-modules` which should also synchronise other dependencies
 - Write the code and push pctl and create a PR
 - This will run a new Action called `Check pinned version`. It will check for version pins in the Makefile
