@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -111,6 +112,9 @@ var _ = Describe("Install", func() {
 			profileFile := filepath.Join(profileDir, "profile.yaml")
 			artifactFile := filepath.Join(profileDir, "artifacts", "foo", "kustomize.yaml")
 			Expect(files).To(ConsistOf(profileFile, artifactFile))
+
+			Expect(hasCorrectFilePerms(profileFile)).To(BeTrue())
+			Expect(hasCorrectFilePerms(artifactFile)).To(BeTrue())
 
 			content, err := ioutil.ReadFile(profileFile)
 			Expect(err).NotTo(HaveOccurred())
@@ -311,3 +315,9 @@ status: {}
 		})
 	})
 })
+
+func hasCorrectFilePerms(file string) bool {
+	info, err := os.Stat(file)
+	Expect(err).NotTo(HaveOccurred())
+	return strconv.FormatUint(uint64(info.Mode().Perm()), 8) == strconv.FormatInt(0644, 8)
+}
