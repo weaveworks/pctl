@@ -30,6 +30,8 @@ type Git interface {
 	HasChanges() (bool, error)
 	// Push will push to a remote.
 	Push() error
+	// Clone will take a repo location and clone it into a given folder.
+	Clone(repo, branch, location string) error
 }
 
 // CLIGitConfig defines configuration options for CLIGit.
@@ -56,6 +58,23 @@ func NewCLIGit(cfg CLIGitConfig, r runner.Runner) *CLIGit {
 
 // Make sure CLIGit implements all the required methods.
 var _ Git = &CLIGit{}
+
+// Clone will take a repo location and clone it into a given folder.
+func (g *CLIGit) Clone(repo, branch, location string) error {
+	args := []string{
+		"clone",
+		"--branch",
+		branch,
+		"--depth",
+		"1",
+		repo,
+		location,
+	}
+	if err := g.runGitCmd(args...); err != nil {
+		return fmt.Errorf("failed to run clone: %w", err)
+	}
+	return nil
+}
 
 // Commit all changes.
 func (g *CLIGit) Commit() error {

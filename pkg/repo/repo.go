@@ -1,27 +1,32 @@
 package repo
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"net/http"
+	"io/ioutil"
+	"math/rand"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
+	"github.com/weaveworks/pctl/pkg/git"
 )
 
-// HTTPClient defines an interface for HTTP get requests.
-//go:generate counterfeiter -o fakes/fake_http_client.go . HTTPClient
-type HTTPClient interface {
-	Get(string) (*http.Response, error)
-}
+const charset = "abcdefghijklmnopqrstuvwxyz" +
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-var httpClient HTTPClient = http.DefaultClient
+// seededRand provides a naive random number for a random prefix for the clone folder.
+var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 // GetProfileDefinition returns a definition based on a url and a branch.
-func GetProfileDefinition(repoURL, branch, path string) (profilesv1.ProfileDefinition, error) {
+func GetProfileDefinition(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
 	if _, err := url.Parse(repoURL); err != nil {
 		return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to parse repo URL %q: %w", repoURL, err)
 	}
@@ -30,26 +35,41 @@ func GetProfileDefinition(repoURL, branch, path string) (profilesv1.ProfileDefin
 		return profilesv1.ProfileDefinition{}, errors.New("unsupported git provider, only github.com is currently supported")
 	}
 
-	profileURL := strings.Replace(repoURL, "github.com", "raw.githubusercontent.com", 1)
-	profileURL = fmt.Sprintf("%s/%s/%s/profile.yaml", profileURL, branch, path)
-
-	resp, err := httpClient.Get(profileURL)
+	// Add postfix so potential nested profiles don't clone into the same folder.
+	px := postfix(6)
+	tmp, err := ioutil.TempDir("", "get_profile_definition_clone_"+px)
 	if err != nil {
-		return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to fetch profile: %w", err)
+		return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to create temp folder for cloning repository: %w", err)
 	}
 	defer func() {
-		_ = resp.Body.Close()
+		if err := os.RemoveAll(tmp); err != nil {
+			fmt.Println("failed to remove temp folder, please clean by hand: ", tmp)
+		}
 	}()
 
-	if resp.StatusCode != http.StatusOK {
-		return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to fetch profile: status code %d", resp.StatusCode)
+	if err := gitClient.Clone(repoURL, branch, tmp); err != nil {
+		return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to clone the repo: %w", err)
+	}
+
+	content, err := ioutil.ReadFile(filepath.Join(tmp, path, "profile.yaml"))
+	if err != nil {
+		return profilesv1.ProfileDefinition{}, fmt.Errorf("could not find file at cloned location: %w", err)
 	}
 
 	profile := profilesv1.ProfileDefinition{}
-	err = yaml.NewYAMLOrJSONDecoder(resp.Body, 4096).Decode(&profile)
+	err = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(content), 4096).Decode(&profile)
 	if err != nil {
 		return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to parse profile: %w", err)
 	}
 
 	return profile, nil
+}
+
+// postfix generates a `length` long random string.
+func postfix(length int) string {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(b)
 }
