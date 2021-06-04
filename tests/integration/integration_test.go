@@ -26,6 +26,7 @@ import (
 )
 
 var pctlTestRepositoryName = "git@github.com:weaveworks/pctl-test-repo.git"
+var pctlPrivateProfilesRepositoryName = "git@github.com:weaveworks/private-profiles-example.git"
 
 var _ = Describe("PCTL", func() {
 	Context("search", func() {
@@ -459,6 +460,59 @@ spec:
   branch: branch-and-url
   path: branch-nginx
   profileURL: https://github.com/weaveworks/profiles-examples
+status: {}
+`, namespace)))
+			})
+		})
+
+		When("a url is provided to a private repository", func() {
+			It("will fetch information without a problem", func() {
+				namespace := uuid.New().String()
+				//subName := "pctl-profile"
+				branch := "main"
+				path := "branch-nginx"
+				cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--profile-url", pctlPrivateProfilesRepositoryName, "--profile-branch", branch, "--profile-path", path)
+				cmd.Dir = temp
+				session, err := cmd.CombinedOutput()
+				if err != nil {
+					fmt.Println("Output from failing command: ", string(session))
+				}
+				Expect(err).ToNot(HaveOccurred())
+
+				var files []string
+				err = filepath.Walk(temp, func(path string, info os.FileInfo, err error) error {
+					files = append(files, path)
+					return nil
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				By("creating the artifacts")
+				profilesDirProfile := filepath.Join(temp, "profile.yaml")
+				profilesArtifacts := filepath.Join(temp, "artifacts")
+				profilesArtifactsDeployment := filepath.Join(temp, "artifacts", "nginx-deployment")
+				profilesArtifactsDeploymentGitRepo := filepath.Join(temp, "artifacts", "nginx-deployment", "GitRepository.yaml")
+				profilesArtifactsDeploymentKustomization := filepath.Join(temp, "artifacts", "nginx-deployment", "Kustomization.yaml")
+				Expect(files).To(ContainElements(
+					temp,
+					profilesDirProfile,
+					profilesArtifacts,
+					profilesArtifactsDeployment,
+					profilesArtifactsDeploymentKustomization,
+					profilesArtifactsDeploymentGitRepo,
+				))
+				filename := filepath.Join(temp, "profile.yaml")
+				content, err := ioutil.ReadFile(filename)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
+kind: ProfileSubscription
+metadata:
+  creationTimestamp: null
+  name: pctl-profile
+  namespace: %s
+spec:
+  branch: main
+  path: branch-nginx
+  profileURL: git@github.com:weaveworks/private-profiles-example.git
 status: {}
 `, namespace)))
 			})
