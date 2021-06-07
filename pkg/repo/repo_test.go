@@ -10,9 +10,10 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
 	"github.com/weaveworks/pctl/pkg/repo"
 	"github.com/weaveworks/pctl/pkg/repo/fakes"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 var _ = Describe("Repo", func() {
@@ -31,7 +32,7 @@ var _ = Describe("Repo", func() {
 
 	It("returns the profile definition", func() {
 		httpBody := bytes.NewBufferString(`
-apiVersion: profiles.fluxcd.io/v1alpha1
+apiVersion: packages.weave.works.io/v1alpha1
 kind: Profile
 metadata:
   name: nginx
@@ -55,7 +56,7 @@ spec:
 			},
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Profile",
-				APIVersion: "profiles.fluxcd.io/v1alpha1",
+				APIVersion: "packages.weave.works.io/v1alpha1",
 			},
 			Spec: profilesv1.ProfileDefinitionSpec{
 				Description: "foo",
