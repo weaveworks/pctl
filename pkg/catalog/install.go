@@ -9,6 +9,7 @@ import (
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
+	"github.com/google/uuid"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -79,12 +80,11 @@ func Install(cfg InstallConfig) error {
 		gitRepoNamespace = split[0]
 		gitRepoName = split[1]
 	}
-	artifacts, err := makeArtifacts(subscription, cfg.GitClient, cfg.Directory, gitRepoNamespace, gitRepoName)
+	profileRootdir := filepath.Join(cfg.Directory, cfg.ProfileName)
+	artifacts, err := makeArtifacts(subscription, cfg.GitClient, profileRootdir, gitRepoNamespace, gitRepoName)
 	if err != nil {
 		return fmt.Errorf("failed to generate artifacts: %w", err)
 	}
-
-	profileRootdir := filepath.Join(cfg.Directory, cfg.ProfileName)
 	artifactsRootDir := filepath.Join(profileRootdir, "artifacts")
 
 	for _, artifact := range artifacts {
@@ -96,27 +96,45 @@ func Install(cfg InstallConfig) error {
 			if obj.GetObjectKind().GroupVersionKind().Kind == sourcev1.GitRepositoryKind {
 				// clone and copy
 				if g, ok := obj.(*sourcev1.GitRepository); ok {
-					tmp, err := ioutil.TempDir("", "sparse_clone_git_repo_"+artifact.Name)
+					// TODO: Extract this into a function and defer clean the tmp folder.
+					u := uuid.NewString()[:6]
+					tmp, err := ioutil.TempDir("", "sparse_clone_git_repo_"+u)
 					if err != nil {
-						return err
+						return fmt.Errorf("failed to create temp folder for artifact %s: %w", artifact.Name, err)
 					}
 					// artifactsRootDir + artifact.Name + g.Spec.Reference.Tag // helmRelease and the Kustomize -- both who consume a GitRepository object.
-					if err := cfg.GitClient.SparseClone(subscription.Spec.ProfileURL, subscription.Spec.Branch, tmp, subscription.Spec.Path); err != nil {
+					if g.Spec.Reference == nil {
+						return fmt.Errorf("git ref is empty for gitRepositroy resource")
+					}
+					ref := g.Spec.Reference.Branch
+					if ref == "" {
+						ref = g.Spec.Reference.Tag
+					}
+					split := strings.Split(ref, ":")
+					if len(split) != 3 {
+						return fmt.Errorf("ref should be of format <profile-name>:<path>:<branch>. was: %s", ref)
+					}
+					profilePath := split[0]
+					path := split[1]
+					branch := split[2]
+					// I need the subscription path to be in the gitrepository resource...
+					if err := cfg.GitClient.SparseClone(g.Spec.URL, branch, tmp, profilePath); err != nil {
 						return fmt.Errorf("failed to sparse clone folder with url: %s; branch: %s; path: %s; with error: %w",
-							subscription.Spec.ProfileURL,
-							subscription.Spec.Branch,
-							subscription.Spec.Path,
+							g.Spec.URL,
+							branch,
+							profilePath,
 							err)
 					}
-
-					// nginx
-					dir := g.Spec.Reference.Tag
 					// nginx/chart/...
-					if strings.Contains(dir, string(os.PathSeparator)) {
-						dir = filepath.Dir(dir)
+					if strings.Contains(path, string(os.PathSeparator)) {
+						path = filepath.Dir(path)
 					}
-					if err := os.Rename(filepath.Join(tmp, subscription.Spec.Path, dir), filepath.Join(artifactDir, dir)); err != nil {
+					fullPath := filepath.Join(tmp, profilePath, path)
+					if err := os.Rename(fullPath, filepath.Join(artifactDir, path)); err != nil {
 						return fmt.Errorf("failed to move folder: %w", err)
+					}
+					if err := os.RemoveAll(tmp); err != nil {
+						fmt.Println("Failed to remove tmp folder: ", tmp)
 					}
 					continue
 				}

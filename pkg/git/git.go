@@ -105,7 +105,7 @@ func (g *CLIGit) Commit() error {
 func (g *CLIGit) SparseClone(repo, branch, location, path string) error {
 	// in case the profile data is in root, we have a single profile / repository.
 	// clone everything.
-	if path == "." {
+	if path == "." || path == "" {
 		return g.Clone(repo, branch, location)
 	}
 	// otherwise, we do a sparse checkout to optimize for a single folder.

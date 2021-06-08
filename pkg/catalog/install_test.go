@@ -67,7 +67,7 @@ var _ = Describe("Install", func() {
 			GitRepository: gitRepoNamespace + "/" + gitRepoName,
 			GitClient:     fakeGit,
 		}
-		fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription, gitClient git.Git, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
+		fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription, gitClient git.Git, rootDir, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
 			return []profile.Artifact{
 				{
 					Objects: []runtime.Object{
@@ -159,7 +159,7 @@ status: {}
 
 		When("getting the artifacts fails", func() {
 			BeforeEach(func() {
-				fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription, gitClient git.Git, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
+				fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription, gitClient git.Git, rootDir, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
 					return nil, fmt.Errorf("foo")
 				}
 			})

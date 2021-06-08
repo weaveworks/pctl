@@ -12,6 +12,7 @@ import (
 type Profile struct {
 	definition             profilesv1.ProfileDefinition
 	subscription           profilesv1.ProfileSubscription
+	nestedName             string
 	rootDir                string
 	gitRepositoryName      string
 	gitRepositoryNamespace string

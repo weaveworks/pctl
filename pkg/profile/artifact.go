@@ -50,7 +50,9 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 		if err := artifact.Validate(); err != nil {
 			return nil, fmt.Errorf("validation failed for artifact %s: %w", artifact.Name, err)
 		}
-
+		if p.nestedName != "" {
+			artifact.Name = filepath.Join(p.nestedName, artifact.Name)
+		}
 		a := Artifact{Name: artifact.Name}
 
 		switch artifact.Kind {
@@ -72,6 +74,7 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			nestedProfile.Spec.Path = artifact.Profile.Path
 
 			nestedSub := newProfile(nestedProfileDef, *nestedProfile, p.rootDir, p.gitRepositoryNamespace, p.gitRepositoryName)
+			nestedSub.nestedName = artifact.Name
 			profileRepoName := nestedSub.profileRepo()
 			if containsKey(profileRepos, profileRepoName) {
 				return nil, fmt.Errorf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", artifact.Profile.URL, artifact.Profile.Branch)
@@ -81,12 +84,11 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			if err != nil {
 				return nil, fmt.Errorf("failed to generate resources for nested profile %q: %w", artifact.Name, err)
 			}
-			for i := range nestedArtifacts {
-				nestedArtifacts[i].Name = filepath.Join(artifact.Name, nestedArtifacts[i].Name)
-			}
 			artifacts = append(artifacts, nestedArtifacts...)
+			p.nestedName = ""
 		case profilesv1.HelmChartKind:
 			var o runtime.Object
+			//fmt.Println("profileRepos: ", profileRepos)
 			helmRelease := p.makeHelmRelease(artifact, profileRepoPath)
 			if artifact.Path != "" {
 				helmRelease.Spec.Chart.Spec.Chart = filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Path)
@@ -98,6 +100,7 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			a.Objects = append(a.Objects, helmRelease, o)
 			artifacts = append(artifacts, a)
 		case profilesv1.KustomizeKind:
+			fmt.Println("artifacts: ", artifact)
 			path := filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Path)
 			a.Objects = append(a.Objects, p.makeKustomization(artifact, path))
 			a.Objects = append(a.Objects, p.makeGitRepository(artifact.Path))
