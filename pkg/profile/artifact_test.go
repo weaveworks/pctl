@@ -13,8 +13,9 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/weaveworks/pctl/pkg/profile"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
+	"github.com/weaveworks/pctl/pkg/profile"
 )
 
 const (
@@ -86,7 +87,7 @@ var _ = Describe("Profile", func() {
 			},
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Profile",
-				APIVersion: "profiles.fluxcd.io/profilesv1",
+				APIVersion: "packages.weave.works.io/profilesv1",
 			},
 			Spec: profilesv1.ProfileDefinitionSpec{
 				Description: "foo",
@@ -106,7 +107,7 @@ var _ = Describe("Profile", func() {
 			},
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Profile",
-				APIVersion: "profiles.fluxcd.io/profilesv1",
+				APIVersion: "packages.weave.works/profilesv1",
 			},
 			Spec: profilesv1.ProfileDefinitionSpec{
 				Description: "foo",
@@ -396,7 +397,7 @@ var _ = Describe("Profile", func() {
 						},
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "Profile",
-							APIVersion: "profiles.fluxcd.io/profilesv1",
+							APIVersion: "packages.weave.works/profilesv1",
 						},
 						Spec: profilesv1.ProfileDefinitionSpec{
 							Description: "foo",
@@ -430,7 +431,7 @@ var _ = Describe("Profile", func() {
 						},
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "Profile",
-							APIVersion: "profiles.fluxcd.io/profilesv1",
+							APIVersion: "packages.weave.works/profilesv1",
 						},
 						Spec: profilesv1.ProfileDefinitionSpec{
 							Description: "foo",
@@ -463,7 +464,7 @@ var _ = Describe("Profile", func() {
 						},
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "Profile",
-							APIVersion: "profiles.fluxcd.io/profilesv1",
+							APIVersion: "packages.weave.works/profilesv1",
 						},
 						Spec: profilesv1.ProfileDefinitionSpec{
 							Description: "foo",
@@ -504,7 +505,7 @@ var _ = Describe("Profile", func() {
 						},
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "Profile",
-							APIVersion: "profiles.fluxcd.io/profilesv1",
+							APIVersion: "packages.weave.works/profilesv1",
 						},
 						Spec: profilesv1.ProfileDefinitionSpec{
 							Description: "foo",
