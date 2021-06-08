@@ -30,7 +30,7 @@ var _ = Describe("Repo", func() {
 
 	It("returns the profile definition", func() {
 		profileYaml := []byte(`
-apiVersion: profiles.fluxcd.io/v1alpha1
+apiVersion: packages.weave.works.io/v1alpha1
 kind: Profile
 metadata:
   name: nginx
@@ -60,7 +60,7 @@ spec:
 			},
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Profile",
-				APIVersion: "profiles.fluxcd.io/v1alpha1",
+				APIVersion: "packages.weave.works.io/v1alpha1",
 			},
 			Spec: profilesv1.ProfileDefinitionSpec{
 				Description: "foo",
