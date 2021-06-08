@@ -20,7 +20,7 @@ type Artifact struct {
 
 // MakeArtifacts generates artifacts without owners for manual applying to
 // a personal cluster.
-func MakeArtifacts(sub profilesv1.ProfileSubscription, gitClient git.Git) ([]Artifact, error) {
+func MakeArtifacts(sub profilesv1.ProfileSubscription, gitClient git.Git, rootDir, gitRepoNamespace, gitRepoName string) ([]Artifact, error) {
 	version := sub.Spec.Version
 	path := strings.Split(sub.Spec.Version, "/")[0]
 	if sub.Spec.Version == "" {
@@ -31,7 +31,7 @@ func MakeArtifacts(sub profilesv1.ProfileSubscription, gitClient git.Git) ([]Art
 	if err != nil {
 		return nil, fmt.Errorf("failed to get profile definition: %w", err)
 	}
-	p := newProfile(def, sub)
+	p := newProfile(def, sub, rootDir, gitRepoNamespace, gitRepoName)
 	return p.makeArtifacts([]string{p.profileRepo()}, gitClient)
 }
 
@@ -71,7 +71,7 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			nestedProfile.Spec.Version = artifact.Profile.Version
 			nestedProfile.Spec.Path = artifact.Profile.Path
 
-			nestedSub := newProfile(nestedProfileDef, *nestedProfile)
+			nestedSub := newProfile(nestedProfileDef, *nestedProfile, p.rootDir, p.gitRepositoryNamespace, p.gitRepositoryName)
 			profileRepoName := nestedSub.profileRepo()
 			if containsKey(profileRepos, profileRepoName) {
 				return nil, fmt.Errorf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", artifact.Profile.URL, artifact.Profile.Branch)
@@ -86,17 +86,21 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			}
 			artifacts = append(artifacts, nestedArtifacts...)
 		case profilesv1.HelmChartKind:
-			a.Objects = append(a.Objects, p.makeHelmRelease(artifact, profileRepoPath))
+			var o runtime.Object
+			helmRelease := p.makeHelmRelease(artifact, profileRepoPath)
 			if artifact.Path != "" {
-				a.Objects = append(a.Objects, p.makeGitRepository())
+				helmRelease.Spec.Chart.Spec.Chart = filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Path)
+				o = p.makeGitRepository(artifact.Path)
 			}
 			if artifact.Chart != nil {
-				a.Objects = append(a.Objects, p.makeHelmRepository(artifact.Chart.URL, artifact.Chart.Name))
+				o = p.makeHelmRepository(artifact.Chart.URL, artifact.Chart.Name)
 			}
+			a.Objects = append(a.Objects, helmRelease, o)
 			artifacts = append(artifacts, a)
 		case profilesv1.KustomizeKind:
-			a.Objects = append(a.Objects, p.makeKustomization(artifact, profileRepoPath))
-			a.Objects = append(a.Objects, p.makeGitRepository())
+			path := filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Path)
+			a.Objects = append(a.Objects, p.makeKustomization(artifact, path))
+			a.Objects = append(a.Objects, p.makeGitRepository(artifact.Path))
 			artifacts = append(artifacts, a)
 		default:
 			return nil, fmt.Errorf("artifact kind %q not recognized", artifact.Kind)

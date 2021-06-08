@@ -64,8 +64,8 @@ func (p *Profile) makeGitChartSpec(path string) helmv2.HelmChartTemplateSpec {
 		Chart: path,
 		SourceRef: helmv2.CrossNamespaceObjectReference{
 			Kind:      sourcev1.GitRepositoryKind,
-			Name:      p.makeGitRepoName(),
-			Namespace: p.subscription.ObjectMeta.Namespace,
+			Name:      p.gitRepositoryName,
+			Namespace: p.gitRepositoryNamespace,
 		},
 	}
 }

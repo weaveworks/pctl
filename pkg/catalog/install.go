@@ -1,12 +1,14 @@
 package catalog
 
 import (
-	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
+	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,6 +21,7 @@ import (
 // InstallConfig defines parameters for the installation call.
 type InstallConfig struct {
 	CatalogClient CatalogClient
+	GitClient     git.Git
 	ProfileBranch string
 	CatalogName   string
 	ConfigMap     string
@@ -29,16 +32,17 @@ type InstallConfig struct {
 	Directory     string
 	URL           string
 	Path          string
+	GitRepository string
 }
 
-//MakeArtifacts returns artifacts for a subscription
-type MakeArtifacts func(sub profilesv1.ProfileSubscription, gitClient git.Git) ([]profile.Artifact, error)
+// MakeArtifacts returns artifacts for a subscription
+type MakeArtifacts func(sub profilesv1.ProfileSubscription, gitClient git.Git, repoRoot, gitRepoNamespace, gitRepoName string) ([]profile.Artifact, error)
 
 var makeArtifacts = profile.MakeArtifacts
 
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile subscription
 // and its artifacts
-func Install(cfg InstallConfig, gitClient git.Git) error {
+func Install(cfg InstallConfig) error {
 	pSpec, err := getProfileSpec(cfg)
 	if err != nil {
 		return err
@@ -63,7 +67,19 @@ func Install(cfg InstallConfig, gitClient git.Git) error {
 			},
 		}
 	}
-	artifacts, err := makeArtifacts(subscription, gitClient)
+	var (
+		gitRepoNamespace string
+		gitRepoName      string
+	)
+	if cfg.GitRepository != "" {
+		split := strings.Split(cfg.GitRepository, "/")
+		if len(split) != 2 {
+			return fmt.Errorf("git-repository must in format <namespace>/<name>; was: %s", cfg.GitRepository)
+		}
+		gitRepoNamespace = split[0]
+		gitRepoName = split[1]
+	}
+	artifacts, err := makeArtifacts(subscription, cfg.GitClient, cfg.Directory, gitRepoNamespace, gitRepoName)
 	if err != nil {
 		return fmt.Errorf("failed to generate artifacts: %w", err)
 	}
@@ -77,6 +93,34 @@ func Install(cfg InstallConfig, gitClient git.Git) error {
 			return fmt.Errorf("failed to create directory")
 		}
 		for _, obj := range artifact.Objects {
+			if obj.GetObjectKind().GroupVersionKind().Kind == sourcev1.GitRepositoryKind {
+				// clone and copy
+				if g, ok := obj.(*sourcev1.GitRepository); ok {
+					tmp, err := ioutil.TempDir("", "sparse_clone_git_repo_"+artifact.Name)
+					if err != nil {
+						return err
+					}
+					// artifactsRootDir + artifact.Name + g.Spec.Reference.Tag // helmRelease and the Kustomize -- both who consume a GitRepository object.
+					if err := cfg.GitClient.SparseClone(subscription.Spec.ProfileURL, subscription.Spec.Branch, tmp, subscription.Spec.Path); err != nil {
+						return fmt.Errorf("failed to sparse clone folder with url: %s; branch: %s; path: %s; with error: %w",
+							subscription.Spec.ProfileURL,
+							subscription.Spec.Branch,
+							subscription.Spec.Path,
+							err)
+					}
+
+					// nginx
+					dir := g.Spec.Reference.Tag
+					// nginx/chart/...
+					if strings.Contains(dir, string(os.PathSeparator)) {
+						dir = filepath.Dir(dir)
+					}
+					if err := os.Rename(filepath.Join(tmp, subscription.Spec.Path, dir), filepath.Join(artifactDir, dir)); err != nil {
+						return fmt.Errorf("failed to move folder: %w", err)
+					}
+					continue
+				}
+			}
 			filename := filepath.Join(artifactDir, fmt.Sprintf("%s.%s", obj.GetObjectKind().GroupVersionKind().Kind, "yaml"))
 			if err := generateOutput(filename, obj); err != nil {
 				return err
@@ -90,9 +134,6 @@ func Install(cfg InstallConfig, gitClient git.Git) error {
 // getProfileSpec generates a spec based on configured properties.
 func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileSubscriptionSpec, error) {
 	if cfg.URL != "" {
-		if cfg.Path == "" {
-			return profilesv1.ProfileSubscriptionSpec{}, errors.New("path must be provided with url")
-		}
 		return profilesv1.ProfileSubscriptionSpec{
 			ProfileURL: cfg.URL,
 			Branch:     cfg.ProfileBranch,

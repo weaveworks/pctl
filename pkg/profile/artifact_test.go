@@ -39,6 +39,9 @@ const (
 	profileSubKind       = "ProfileSubscription"
 	profileSubAPIVersion = "weave.works/v1alpha1"
 	profileURL           = "https://github.com/org/repo-name"
+	gitRepoNamespace     = "git-repo-namespace"
+	gitRepoName          = "git-repo-name"
+	rootDir              = "root-dir"
 )
 
 var (
@@ -156,7 +159,7 @@ var _ = Describe("Profile", func() {
 
 	Describe("MakeArtifacts", func() {
 		It("generates the artifacts", func() {
-			artifacts, err := profile.MakeArtifacts(pSub, fakeGitClient)
+			artifacts, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(artifacts).To(HaveLen(4))
 
@@ -167,22 +170,21 @@ var _ = Describe("Profile", func() {
 				objects := nestedProfileArtifact.Objects
 				Expect(objects).To(HaveLen(2))
 
-				gitRefName := fmt.Sprintf("%s-%s-%s", subscriptionName, "repo-name-nested", branch)
 				gitRepo := objects[1].(*sourcev1.GitRepository)
-				Expect(gitRepo.Name).To(Equal(gitRefName))
+				Expect(gitRepo.Name).To(Equal(gitRepoName))
 				Expect(gitRepo.Spec.URL).To(Equal("https://github.com/org/repo-name-nested"))
-				Expect(gitRepo.Spec.Reference.Branch).To(Equal(branch))
+				Expect(gitRepo.Spec.Reference.Tag).To(Equal("chart/artifact/path-one"))
 
 				helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName2, chartName1)
 				helmRelease := objects[0].(*helmv2.HelmRelease)
 
 				Expect(helmRelease.Name).To(Equal(helmReleaseName))
-				Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal(chartPath1))
+				Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal("root-dir/artifacts/chartOneArtifactName/chart/artifact/path-one"))
 				Expect(helmRelease.Spec.Chart.Spec.SourceRef).To(Equal(
 					helmv2.CrossNamespaceObjectReference{
 						Kind:      gitRepoKind,
-						Name:      gitRefName,
-						Namespace: namespace,
+						Name:      gitRepoName,
+						Namespace: gitRepoNamespace,
 					},
 				))
 				Expect(helmRelease.GetValues()).To(Equal(map[string]interface{}{
@@ -207,22 +209,21 @@ var _ = Describe("Profile", func() {
 				objects := pathBasedHelmArtifact.Objects
 				Expect(objects).To(HaveLen(2))
 
-				gitRefName := fmt.Sprintf("%s-%s-%s", subscriptionName, "repo-name", branch)
 				gitRepo := objects[1].(*sourcev1.GitRepository)
-				Expect(gitRepo.Name).To(Equal(gitRefName))
+				Expect(gitRepo.Name).To(Equal(gitRepoName))
 				Expect(gitRepo.Spec.URL).To(Equal("https://github.com/org/repo-name"))
-				Expect(gitRepo.Spec.Reference.Branch).To(Equal(branch))
+				Expect(gitRepo.Spec.Reference.Tag).To(Equal("chart/artifact/path-two"))
 
 				helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, chartName2)
 				helmRelease := objects[0].(*helmv2.HelmRelease)
 				Expect(helmRelease.Name).To(Equal(helmReleaseName))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal(chartPath2))
+				Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal("root-dir/artifacts/chartTwoArtifactName/chart/artifact/path-two"))
 				Expect(helmRelease.Spec.Chart.Spec.SourceRef).To(Equal(
 					helmv2.CrossNamespaceObjectReference{
 						Kind:      gitRepoKind,
-						Name:      gitRefName,
-						Namespace: namespace,
+						Name:      gitRepoName,
+						Namespace: gitRepoNamespace,
 					},
 				))
 				Expect(helmRelease.GetValues()).To(Equal(map[string]interface{}{
@@ -247,24 +248,23 @@ var _ = Describe("Profile", func() {
 				objects := kustomizeArtifact.Objects
 				Expect(objects).To(HaveLen(2))
 
-				gitRefName := fmt.Sprintf("%s-%s-%s", subscriptionName, "repo-name", branch)
 				gitRepo := objects[1].(*sourcev1.GitRepository)
-				Expect(gitRepo.Name).To(Equal(gitRefName))
+				Expect(gitRepo.Name).To(Equal(gitRepoName))
 				Expect(gitRepo.Spec.URL).To(Equal("https://github.com/org/repo-name"))
-				Expect(gitRepo.Spec.Reference.Branch).To(Equal(branch))
+				Expect(gitRepo.Spec.Reference.Tag).To(Equal("kustomize/artifact/path-one"))
 
 				kustomizeName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, kustomizeName1)
 				kustomize := objects[0].(*kustomizev1.Kustomization)
 				Expect(kustomize.Name).To(Equal(kustomizeName))
-				Expect(kustomize.Spec.Path).To(Equal(kustomizePath1))
+				Expect(kustomize.Spec.Path).To(Equal("root-dir/artifacts/kustomizeOneArtifactName/kustomize/artifact/path-one"))
 				Expect(kustomize.Spec.TargetNamespace).To(Equal(namespace))
 				Expect(kustomize.Spec.Prune).To(BeTrue())
 				Expect(kustomize.Spec.Interval).To(Equal(metav1.Duration{Duration: time.Minute * 5}))
 				Expect(kustomize.Spec.SourceRef).To(Equal(
 					kustomizev1.CrossNamespaceSourceReference{
 						Kind:      gitRepoKind,
-						Name:      gitRefName,
-						Namespace: namespace,
+						Name:      gitRepoName,
+						Namespace: gitRepoNamespace,
 					},
 				))
 			})
@@ -322,7 +322,7 @@ var _ = Describe("Profile", func() {
 						Branch:     "not_domain_compatible",
 					},
 				}
-				artifacts, err := profile.MakeArtifacts(pSub, fakeGitClient)
+				artifacts, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(artifacts).To(HaveLen(4))
 
@@ -333,22 +333,21 @@ var _ = Describe("Profile", func() {
 					objects := pathBasedHelmArtifact.Objects
 					Expect(objects).To(HaveLen(2))
 
-					gitRefName := fmt.Sprintf("%s-%s-%s", subscriptionName, "repo-name", "not-domain-compatible")
 					gitRepo := objects[1].(*sourcev1.GitRepository)
-					Expect(gitRepo.Name).To(Equal(gitRefName))
+					Expect(gitRepo.Name).To(Equal(gitRepoName))
 					Expect(gitRepo.Spec.URL).To(Equal("https://github.com/org/repo-name"))
-					Expect(gitRepo.Spec.Reference.Branch).To(Equal("not_domain_compatible"))
+					Expect(gitRepo.Spec.Reference.Tag).To(Equal("chart/artifact/path-two"))
 
 					helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, chartName2)
 					helmRelease := objects[0].(*helmv2.HelmRelease)
 					Expect(helmRelease.Name).To(Equal(helmReleaseName))
 					Expect(err).NotTo(HaveOccurred())
-					Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal(chartPath2))
+					Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal("root-dir/artifacts/chartTwoArtifactName/chart/artifact/path-two"))
 					Expect(helmRelease.Spec.Chart.Spec.SourceRef).To(Equal(
 						helmv2.CrossNamespaceObjectReference{
 							Kind:      gitRepoKind,
-							Name:      gitRefName,
-							Namespace: namespace,
+							Name:      gitRepoName,
+							Namespace: gitRepoNamespace,
 						},
 					))
 				})
@@ -366,7 +365,7 @@ var _ = Describe("Profile", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := profile.MakeArtifacts(pSub, fakeGitClient)
+				_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
 				Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("failed to get profile definition %s on branch %s: foo", pNestedDefURL, branch))))
 			})
 		})
@@ -377,7 +376,7 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub, fakeGitClient)
+					_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
 					Expect(err).To(MatchError(ContainSubstring("artifact kind \"SomeUnknownKind\" not recognized")))
 				})
 			})
@@ -388,7 +387,7 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub, fakeGitClient)
+					_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
 					Expect(err).To(MatchError(ContainSubstring("failed to generate resources for nested profile \"profileName2\":")))
 				})
 			})
@@ -421,7 +420,7 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub, fakeGitClient)
+					_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
 					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: chart, path")))
 				})
 			})
@@ -454,7 +453,7 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub, fakeGitClient)
+					_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
 					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: path, profile")))
 				})
 			})
@@ -491,7 +490,7 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub, fakeGitClient)
+					_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
 					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: chart, profile")))
 				})
 			})
@@ -547,7 +546,7 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub, fakeGitClient)
+					_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
 					Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", profileURL, branch))))
 				})
 			})

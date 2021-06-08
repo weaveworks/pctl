@@ -84,9 +84,15 @@ func installCmd() *cli.Command {
 				Usage: "Optional value defining the URL of the profile.",
 			},
 			&cli.StringFlag{
-				Name:  "profile-path",
+				Name:        "profile-path",
+				Value:       ".",
+				DefaultText: "<root>",
+				Usage:       "Value defining the path to a profile when url is provided.",
+			},
+			&cli.StringFlag{
+				Name:  "git-repository",
 				Value: "",
-				Usage: "Value defining the path to a profile when url is provided.",
+				Usage: "The namespace and name of the GitRepository object governing the flux repo.",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -145,24 +151,27 @@ func install(c *cli.Context) error {
 	configValues := c.String("config-secret")
 	dir := c.String("out")
 	path := c.String("profile-path")
+	gitRepository := c.String("git-repository")
 
 	fmt.Printf("generating subscription for profile %s/%s:\n\n", catalogName, profileName)
-	cfg := catalog.InstallConfig{
-		ProfileBranch: branch,
-		CatalogName:   catalogName,
-		CatalogClient: catalogClient,
-		ConfigMap:     configValues,
-		Namespace:     namespace,
-		ProfileName:   profileName,
-		SubName:       subName,
-		Directory:     dir,
-		URL:           url,
-		Version:       version,
-		Path:          path,
-	}
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{}, r)
-	return catalog.Install(cfg, g)
+	cfg := catalog.InstallConfig{
+		CatalogClient: catalogClient,
+		CatalogName:   catalogName,
+		ConfigMap:     configValues,
+		Directory:     dir,
+		GitClient:     g,
+		GitRepository: gitRepository,
+		Namespace:     namespace,
+		Path:          path,
+		ProfileBranch: branch,
+		ProfileName:   profileName,
+		SubName:       subName,
+		URL:           url,
+		Version:       version,
+	}
+	return catalog.Install(cfg)
 }
 
 // createPullRequest runs the pull request creation part of the `install` command.

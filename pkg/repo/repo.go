@@ -38,7 +38,7 @@ func GetProfileDefinition(repoURL, branch, path string, gitClient git.Git) (prof
 		}
 	}()
 
-	if err := gitClient.Clone(repoURL, branch, tmp); err != nil {
+	if err := gitClient.SparseClone(repoURL, branch, tmp, path); err != nil {
 		return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to clone the repo: %w", err)
 	}
 
