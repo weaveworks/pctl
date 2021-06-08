@@ -172,7 +172,7 @@ func createPullRequest(c *cli.Context) error {
 		return errors.New("repo must be defined if create-pr is true")
 	}
 	if branch == "" {
-		branch = c.String("subscription-name") + "-" + uuid.NewString()[0:6]
+		branch = c.String("subscription-name") + "-" + uuid.NewString()[:6]
 	}
 	fmt.Printf("Creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
 	r := &runner.CLIRunner{}
