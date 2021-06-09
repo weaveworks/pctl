@@ -26,7 +26,7 @@ import (
 )
 
 var pctlTestRepositoryName = "git@github.com:weaveworks/pctl-test-repo.git"
-var pctlPrivateProfilesRepositoryName = "git@github.com:weaveworks/private-profiles-example.git"
+var pctlPrivateProfilesRepositoryName = "git@github.com:weaveworks/profiles-examples-private.git"
 
 var _ = Describe("PCTL", func() {
 	Context("search", func() {
@@ -512,7 +512,7 @@ metadata:
 spec:
   branch: main
   path: branch-nginx
-  profileURL: git@github.com:weaveworks/private-profiles-example.git
+  profileURL: git@github.com:weaveworks/profiles-examples-private.git
 status: {}
 `, namespace)))
 			})
