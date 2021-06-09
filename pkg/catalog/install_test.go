@@ -46,6 +46,7 @@ var _ = Describe("Install", func() {
 	"name": "nginx-1",
 	"description": "nginx 1",
 	"version": "v0.0.1",
+	"tag": "nginx-1/v0.0.1",
 	"catalog": "weaveworks (https://github.com/weaveworks/profiles)",
 	"url": "https://github.com/weaveworks/nginx-profile",
 	"prerequisites": ["Kubernetes 1.18+"],
@@ -127,12 +128,13 @@ metadata:
   name: mysub
   namespace: default
 spec:
+  path: nginx-1
   profile_catalog_description:
     catalog: nginx
     profile: nginx-1
     version: v0.0.1
   profileURL: https://github.com/weaveworks/nginx-profile
-  version: nginx-1/v0.0.1
+  tag: nginx-1/v0.0.1
 status: {}
 `))
 

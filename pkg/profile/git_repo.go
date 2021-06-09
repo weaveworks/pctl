@@ -11,9 +11,9 @@ func (p *Profile) makeGitRepository() *sourcev1.GitRepository {
 	ref := &sourcev1.GitRepositoryRef{
 		Branch: p.subscription.Spec.Branch,
 	}
-	if p.subscription.Spec.Version != "" {
+	if p.subscription.Spec.Tag != "" {
 		ref = &sourcev1.GitRepositoryRef{
-			Tag: p.subscription.Spec.Version,
+			Tag: p.subscription.Spec.Tag,
 		}
 	}
 	return &sourcev1.GitRepository{
@@ -35,9 +35,13 @@ func (p *Profile) makeGitRepository() *sourcev1.GitRepository {
 func (p *Profile) makeGitRepoName() string {
 	repoParts := strings.Split(p.subscription.Spec.ProfileURL, "/")
 	repoName := repoParts[len(repoParts)-1]
-	if p.subscription.Spec.Version != "" {
-		parts := strings.Split(p.subscription.Spec.Version, "/")
-		return join(p.subscription.Name, repoName, parts[1])
+	if p.subscription.Spec.Tag != "" {
+		parts := strings.Split(p.subscription.Spec.Tag, "/")
+		tagName := p.subscription.Spec.Tag
+		if len(parts) > 1 {
+			tagName = parts[1]
+		}
+		return join(p.subscription.Name, repoName, tagName)
 	}
 	branch := SanitiseBranchName(p.subscription.Spec.Branch)
 	return join(p.subscription.Name, repoName, branch)

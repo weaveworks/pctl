@@ -44,7 +44,7 @@ var _ = Describe("List", func() {
 			},
 			Spec: profilesv1.ProfileSubscriptionSpec{
 				ProfileURL: "https://github.com/org/repo-name",
-				Version:    "foo/v0.1.0",
+				Tag:        "foo/v0.1.0",
 				ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
 					Profile: profile,
 					Catalog: catalog,

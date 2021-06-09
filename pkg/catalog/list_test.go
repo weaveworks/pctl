@@ -52,7 +52,7 @@ var _ = Describe("List", func() {
 			},
 			Spec: profilesv1.ProfileSubscriptionSpec{
 				ProfileURL: "https://github.com/org/repo-name",
-				Version:    "weaveworks-nginx/v0.1.0",
+				Tag:        "weaveworks-nginx/v0.1.0",
 				ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
 					Profile: profile,
 					Catalog: cat,
@@ -162,7 +162,7 @@ var _ = Describe("List", func() {
 				},
 				Spec: profilesv1.ProfileSubscriptionSpec{
 					ProfileURL: "https://github.com/org/repo-name",
-					Version:    "weaveworks-nginx-2/v0.1.0",
+					Tag:        "weaveworks-nginx-2/v0.1.0",
 					ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
 						Profile: profile2,
 						Catalog: cat,
@@ -178,7 +178,7 @@ var _ = Describe("List", func() {
 				},
 				Spec: profilesv1.ProfileSubscriptionSpec{
 					ProfileURL: "https://github.com/org/repo-name",
-					Version:    "weaveworks-nginx-3/v0.1.0",
+					Tag:        "weaveworks-nginx-3/v0.1.0",
 					ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
 						Profile: profile3,
 						Catalog: cat,
