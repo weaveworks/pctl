@@ -160,7 +160,9 @@ func install(c *cli.Context) error {
 		Version:       version,
 		Path:          path,
 	}
-	return catalog.Install(cfg)
+	r := &runner.CLIRunner{}
+	g := git.NewCLIGit(git.CLIGitConfig{}, r)
+	return catalog.Install(cfg, g)
 }
 
 // createPullRequest runs the pull request creation part of the `install` command.

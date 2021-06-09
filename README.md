@@ -11,6 +11,8 @@ and run: mdtoc -inplace README.md
   - [Search](#search)
   - [Show](#show)
   - [Install](#install)
+    - [Install via Catalog](#install-via-catalog)
+    - [Install via URL](#install-via-url)
     - [Architecture](#architecture)
   - [List](#list)
   - [Prepare](#prepare)
@@ -52,6 +54,8 @@ Prerequisites   Kubernetes 1.18+
 
 ### Install
 
+#### Install via Catalog
+
 pctl can be used to install a profile, example:
 
 ```
@@ -91,10 +95,49 @@ The `profile.yaml` is the top-level Profile installation object. It describes th
 directory contains all of the resources required for deploying the profile. Each of the artifacts corresponds to a
 [Flux 2 resource](https://fluxcd.io/docs/components/).
 
-
 This can be applied directly to the cluster `kubectl apply -R -f weaveworks-nginx/` or by comitting it to your
 flux repository. If you are using a flux repository the `--create-pr` flags provides an automated way for creating a PR
 against your flux repository. See `pctl install --help` for more details.
+
+#### Install via URL
+
+It's also possible to install from a specific location given a url, branch and a path. For example, consider the following
+profiles folder structure:
+
+```
+tree
+.
+├── README.md
+├── bitnami-nginx
+│   ├── README.md
+│   ├── nginx
+│   │   └── chart
+│   │       ├── Chart.lock
+│   │       ├── ...
+│   │       └── values.yaml
+│   └── profile.yaml
+└── weaveworks-nginx
+    ├── README.md
+    ├── nginx
+    │   └── deployment
+    │       └── deployment.yaml
+    └── profile.yaml
+```
+
+Given a development branch called `devel` to install the `bitnami-nginx` profile from this repository, call `install`
+with the following parameters:
+
+```
+pctl install --subscription-name pctl-profile \
+             --namespace default \
+             --profile-branch devel \
+             --profile-url https://github.com/<usr>/<repo> \
+             --profile-path bitnami-nginx \
+             --out install
+```
+
+It's the user's responsibility to make sure that the local `git` setup has access to the url provided with `profile-url`.
+It can be any form of url as long as `git clone` understands it.
 
 #### Architecture
 The below diagram illustrates how pctl install works:

@@ -8,6 +8,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
+	"github.com/weaveworks/pctl/pkg/git"
 )
 
 //Artifact contains the name and objects belonging to a profile artifact
@@ -18,19 +20,19 @@ type Artifact struct {
 
 // MakeArtifacts generates artifacts without owners for manual applying to
 // a personal cluster.
-func MakeArtifacts(sub profilesv1.ProfileSubscription) ([]Artifact, error) {
+func MakeArtifacts(sub profilesv1.ProfileSubscription, gitClient git.Git) ([]Artifact, error) {
 	version := sub.Spec.Version
 	path := strings.Split(sub.Spec.Version, "/")[0]
 	if sub.Spec.Version == "" {
 		version = sub.Spec.Branch
 		path = sub.Spec.Path
 	}
-	def, err := getProfileDefinition(sub.Spec.ProfileURL, version, path)
+	def, err := getProfileDefinition(sub.Spec.ProfileURL, version, path, gitClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get profile definition: %w", err)
 	}
 	p := newProfile(def, sub)
-	return p.makeArtifacts([]string{p.profileRepo()})
+	return p.makeArtifacts([]string{p.profileRepo()}, gitClient)
 }
 
 func (p *Profile) profileRepo() string {
@@ -40,7 +42,7 @@ func (p *Profile) profileRepo() string {
 	return p.subscription.Spec.ProfileURL + ":" + p.subscription.Spec.Branch + ":" + p.subscription.Spec.Path
 }
 
-func (p *Profile) makeArtifacts(profileRepos []string) ([]Artifact, error) {
+func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Artifact, error) {
 	var artifacts []Artifact
 	profileRepoPath := GetProfilePathFromSpec(p.subscription.Spec)
 
@@ -59,7 +61,7 @@ func (p *Profile) makeArtifacts(profileRepos []string) ([]Artifact, error) {
 				branchOrTag = artifact.Profile.Version
 				path = strings.Split(artifact.Profile.Version, "/")[0]
 			}
-			nestedProfileDef, err := getProfileDefinition(artifact.Profile.URL, branchOrTag, path)
+			nestedProfileDef, err := getProfileDefinition(artifact.Profile.URL, branchOrTag, path, gitClient)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get profile definition %s on branch %s: %w", artifact.Profile.URL, branchOrTag, err)
 			}
@@ -75,7 +77,7 @@ func (p *Profile) makeArtifacts(profileRepos []string) ([]Artifact, error) {
 				return nil, fmt.Errorf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", artifact.Profile.URL, artifact.Profile.Branch)
 			}
 			profileRepos = append(profileRepos, profileRepoName)
-			nestedArtifacts, err := nestedSub.makeArtifacts(profileRepos)
+			nestedArtifacts, err := nestedSub.makeArtifacts(profileRepos, gitClient)
 			if err != nil {
 				return nil, fmt.Errorf("failed to generate resources for nested profile %q: %w", artifact.Name, err)
 			}

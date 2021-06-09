@@ -15,6 +15,8 @@ import (
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
+	"github.com/weaveworks/pctl/pkg/git"
+	fakegit "github.com/weaveworks/pctl/pkg/git/fakes"
 	"github.com/weaveworks/pctl/pkg/profile"
 )
 
@@ -56,6 +58,7 @@ var _ = Describe("Profile", func() {
 		pDef          profilesv1.ProfileDefinition
 		pNestedDef    profilesv1.ProfileDefinition
 		pNestedDefURL = "https://github.com/org/repo-name-nested"
+		fakeGitClient *fakegit.FakeGit
 	)
 
 	BeforeEach(func() {
@@ -142,8 +145,8 @@ var _ = Describe("Profile", func() {
 				},
 			},
 		}
-
-		p.SetProfileGetter(func(repoURL, branch, path string) (profilesv1.ProfileDefinition, error) {
+		fakeGitClient = &fakegit.FakeGit{}
+		p.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
 			if profileURL == repoURL {
 				return pDef, nil
 			}
@@ -153,7 +156,7 @@ var _ = Describe("Profile", func() {
 
 	Describe("MakeArtifacts", func() {
 		It("generates the artifacts", func() {
-			artifacts, err := profile.MakeArtifacts(pSub)
+			artifacts, err := profile.MakeArtifacts(pSub, fakeGitClient)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(artifacts).To(HaveLen(4))
 
@@ -319,7 +322,7 @@ var _ = Describe("Profile", func() {
 						Branch:     "not_domain_compatible",
 					},
 				}
-				artifacts, err := profile.MakeArtifacts(pSub)
+				artifacts, err := profile.MakeArtifacts(pSub, fakeGitClient)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(artifacts).To(HaveLen(4))
 
@@ -354,7 +357,7 @@ var _ = Describe("Profile", func() {
 
 		When("fetching the nested profile definition fails", func() {
 			BeforeEach(func() {
-				p.SetProfileGetter(func(repoURL, branch, path string) (profilesv1.ProfileDefinition, error) {
+				p.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
 					if repoURL == profileURL {
 						return pDef, nil
 					}
@@ -363,7 +366,7 @@ var _ = Describe("Profile", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := profile.MakeArtifacts(pSub)
+				_, err := profile.MakeArtifacts(pSub, fakeGitClient)
 				Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("failed to get profile definition %s on branch %s: foo", pNestedDefURL, branch))))
 			})
 		})
@@ -374,7 +377,7 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub)
+					_, err := profile.MakeArtifacts(pSub, fakeGitClient)
 					Expect(err).To(MatchError(ContainSubstring("artifact kind \"SomeUnknownKind\" not recognized")))
 				})
 			})
@@ -385,7 +388,7 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub)
+					_, err := profile.MakeArtifacts(pSub, fakeGitClient)
 					Expect(err).To(MatchError(ContainSubstring("failed to generate resources for nested profile \"profileName2\":")))
 				})
 			})
@@ -418,7 +421,7 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub)
+					_, err := profile.MakeArtifacts(pSub, fakeGitClient)
 					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: chart, path")))
 				})
 			})
@@ -451,7 +454,7 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub)
+					_, err := profile.MakeArtifacts(pSub, fakeGitClient)
 					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: path, profile")))
 				})
 			})
@@ -488,7 +491,7 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub)
+					_, err := profile.MakeArtifacts(pSub, fakeGitClient)
 					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: chart, profile")))
 				})
 			})
@@ -532,7 +535,7 @@ var _ = Describe("Profile", func() {
 						},
 					}
 
-					p.SetProfileGetter(func(repoURL, branch, path string) (profilesv1.ProfileDefinition, error) {
+					p.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
 						if repoURL == profileURL {
 							return pDef, nil
 						}
@@ -544,7 +547,7 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub)
+					_, err := profile.MakeArtifacts(pSub, fakeGitClient)
 					Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", profileURL, branch))))
 				})
 			})

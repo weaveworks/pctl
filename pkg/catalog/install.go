@@ -32,13 +32,13 @@ type InstallConfig struct {
 }
 
 //MakeArtifacts returns artifacts for a subscription
-type MakeArtifacts func(sub profilesv1.ProfileSubscription) ([]profile.Artifact, error)
+type MakeArtifacts func(sub profilesv1.ProfileSubscription, gitClient git.Git) ([]profile.Artifact, error)
 
 var makeArtifacts = profile.MakeArtifacts
 
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile subscription
 // and its artifacts
-func Install(cfg InstallConfig) error {
+func Install(cfg InstallConfig, gitClient git.Git) error {
 	pSpec, err := getProfileSpec(cfg)
 	if err != nil {
 		return err
@@ -63,7 +63,7 @@ func Install(cfg InstallConfig) error {
 			},
 		}
 	}
-	artifacts, err := makeArtifacts(subscription)
+	artifacts, err := makeArtifacts(subscription, gitClient)
 	if err != nil {
 		return fmt.Errorf("failed to generate artifacts: %w", err)
 	}
