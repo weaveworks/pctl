@@ -93,7 +93,7 @@ var _ = Describe("Profile", func() {
 			},
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Profile",
-				APIVersion: "profiles.fluxcd.io/profilesv1",
+				APIVersion: "packages.weave.works.io/profilesv1",
 			},
 			Spec: profilesv1.ProfileDefinitionSpec{
 				Description: "foo",
@@ -113,7 +113,7 @@ var _ = Describe("Profile", func() {
 			},
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Profile",
-				APIVersion: "profiles.fluxcd.io/profilesv1",
+				APIVersion: "packages.weave.works/profilesv1",
 			},
 			Spec: profilesv1.ProfileDefinitionSpec{
 				Description: "foo",
@@ -399,7 +399,7 @@ var _ = Describe("Profile", func() {
 						},
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "Profile",
-							APIVersion: "profiles.fluxcd.io/profilesv1",
+							APIVersion: "packages.weave.works/profilesv1",
 						},
 						Spec: profilesv1.ProfileDefinitionSpec{
 							Description: "foo",
@@ -433,7 +433,7 @@ var _ = Describe("Profile", func() {
 						},
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "Profile",
-							APIVersion: "profiles.fluxcd.io/profilesv1",
+							APIVersion: "packages.weave.works/profilesv1",
 						},
 						Spec: profilesv1.ProfileDefinitionSpec{
 							Description: "foo",
@@ -466,7 +466,7 @@ var _ = Describe("Profile", func() {
 						},
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "Profile",
-							APIVersion: "profiles.fluxcd.io/profilesv1",
+							APIVersion: "packages.weave.works/profilesv1",
 						},
 						Spec: profilesv1.ProfileDefinitionSpec{
 							Description: "foo",
@@ -507,7 +507,7 @@ var _ = Describe("Profile", func() {
 						},
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "Profile",
-							APIVersion: "profiles.fluxcd.io/profilesv1",
+							APIVersion: "packages.weave.works/profilesv1",
 						},
 						Spec: profilesv1.ProfileDefinitionSpec{
 							Description: "foo",
