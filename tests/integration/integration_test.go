@@ -475,7 +475,7 @@ status: {}
 				namespace := uuid.New().String()
 				//subName := "pctl-profile"
 				branch := "main"
-				path := "branch-nginx"
+				path := "bitnami-nginx"
 				cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--profile-url", pctlPrivateProfilesRepositoryName, "--profile-branch", branch, "--profile-path", path)
 				cmd.Dir = temp
 				session, err := cmd.CombinedOutput()
@@ -494,9 +494,9 @@ status: {}
 				By("creating the artifacts")
 				profilesDirProfile := filepath.Join(temp, "profile.yaml")
 				profilesArtifacts := filepath.Join(temp, "artifacts")
-				profilesArtifactsDeployment := filepath.Join(temp, "artifacts", "nginx-deployment")
-				profilesArtifactsDeploymentGitRepo := filepath.Join(temp, "artifacts", "nginx-deployment", "GitRepository.yaml")
-				profilesArtifactsDeploymentKustomization := filepath.Join(temp, "artifacts", "nginx-deployment", "Kustomization.yaml")
+				profilesArtifactsDeployment := filepath.Join(temp, "artifacts", "nginx-server")
+				profilesArtifactsDeploymentGitRepo := filepath.Join(temp, "artifacts", "nginx-server", "GitRepository.yaml")
+				profilesArtifactsDeploymentKustomization := filepath.Join(temp, "artifacts", "nginx-server", "HelmRelease.yaml")
 				Expect(files).To(ContainElements(
 					temp,
 					profilesDirProfile,
@@ -516,7 +516,7 @@ metadata:
   namespace: %s
 spec:
   branch: main
-  path: branch-nginx
+  path: bitnami-nginx
   profileURL: git@github.com:weaveworks/profiles-examples-private.git
 status: {}
 `, namespace)))
