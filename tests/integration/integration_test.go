@@ -38,6 +38,7 @@ var _ = Describe("PCTL", func() {
 				"nginx-catalog/weaveworks-nginx	v0.1.0 	This installs nginx.           \t\n" +
 				"nginx-catalog/weaveworks-nginx	v0.1.1 	This installs nginx.           \t\n" +
 				"nginx-catalog/bitnami-nginx   	v0.1.0 	This installs nginx.           \t\n" +
+				"nginx-catalog/nginx           	v1.0.0 	This installs nginx.           \t\n" +
 				"nginx-catalog/some-other-nginx	       	This installs some other nginx.\t\n\n"
 			Expect(string(session)).To(ContainSubstring(expected))
 		})
@@ -78,6 +79,18 @@ var _ = Describe("PCTL", func() {
     "tag": "bitnami-nginx/v0.1.0",
     "catalog": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
+    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
+    "prerequisites": [
+      "Kubernetes 1.18+"
+    ]
+  },
+  {
+    "name": "nginx",
+    "description": "This installs nginx.",
+    "version": "v1.0.0",
+    "tag": "v1.0.0",
+    "catalog": "nginx-catalog",
+    "url": "https://github.com/weaveworks/nginx-profile",
     "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
     "prerequisites": [
       "Kubernetes 1.18+"
@@ -286,6 +299,98 @@ var _ = Describe("PCTL", func() {
 				},
 			}
 			_ = kClient.Delete(context.Background(), &nsp)
+		})
+
+		It("generates valid artifacts to the local directory", func() {
+			subName := "pctl-profile"
+			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "nginx-catalog/nginx/v1.0.0")
+			cmd.Dir = temp
+			session, err := cmd.CombinedOutput()
+			if err != nil {
+				fmt.Println("Output from failing command: ", string(session))
+			}
+			Expect(err).ToNot(HaveOccurred())
+
+			var files []string
+			profilesDir := filepath.Join(temp, "nginx")
+			err = filepath.Walk(profilesDir, func(path string, info os.FileInfo, err error) error {
+				if !info.IsDir() {
+					files = append(files, strings.TrimPrefix(path, profilesDir+"/"))
+				}
+				return nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("creating the artifacts")
+			Expect(files).To(ContainElements(
+				"profile.yaml",
+				"artifacts/nginx-deployment/GitRepository.yaml",
+				"artifacts/nginx-deployment/Kustomization.yaml",
+			))
+
+			filename := filepath.Join(temp, "nginx", "profile.yaml")
+			content, err := ioutil.ReadFile(filename)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
+kind: ProfileSubscription
+metadata:
+  creationTimestamp: null
+  name: pctl-profile
+  namespace: %s
+spec:
+  path: .
+  profile_catalog_description:
+    catalog: nginx-catalog
+    profile: nginx
+    version: v1.0.0
+  profileURL: https://github.com/weaveworks/nginx-profile
+  tag: v1.0.0
+status: {}
+`, namespace)))
+
+			By("the artifacts being deployable")
+
+			cmd = exec.Command("kubectl", "apply", "-R", "-f", profilesDir)
+			cmd.Dir = temp
+			session, err = cmd.CombinedOutput()
+			if err != nil {
+				fmt.Println("Output from failing command: ", string(session))
+			}
+			Expect(err).ToNot(HaveOccurred())
+
+			By("successfully deploying the kustomize resource")
+			kustomizeName := fmt.Sprintf("%s-%s-%s", subName, "nginx", "nginx-deployment")
+			var kustomize *kustomizev1.Kustomization
+			Eventually(func() bool {
+				kustomize = &kustomizev1.Kustomization{}
+				err := kClient.Get(context.Background(), client.ObjectKey{Name: kustomizeName, Namespace: namespace}, kustomize)
+				if err != nil {
+					return false
+				}
+				for _, condition := range kustomize.Status.Conditions {
+					if condition.Type == "Ready" && condition.Status == "True" {
+						return true
+					}
+				}
+				return false
+			}, 2*time.Minute, 5*time.Second).Should(BeTrue())
+
+			kustomizeOpts := []client.ListOption{
+				client.InNamespace(namespace),
+				client.MatchingLabels{"app": "nginx"},
+			}
+			podList := &v1.PodList{}
+			Eventually(func() v1.PodPhase {
+				podList = &v1.PodList{}
+				err := kClient.List(context.Background(), podList, kustomizeOpts...)
+				Expect(err).NotTo(HaveOccurred())
+				if len(podList.Items) == 0 {
+					return v1.PodPhase("no pods found")
+				}
+				return podList.Items[0].Status.Phase
+			}, 2*time.Minute, 5*time.Second).Should(Equal(v1.PodPhase("Running")))
+
+			Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("nginx:1.14.2"))
 		})
 
 		It("generates valid artifacts to the local directory", func() {

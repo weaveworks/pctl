@@ -14,6 +14,7 @@ import (
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
+	"github.com/weaveworks/pctl/tests/integration"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
@@ -47,8 +48,8 @@ var _ = BeforeSuite(func() {
 	kubeconfig := ctrl.GetConfigOrDie()
 	kClient, err = client.New(kubeconfig, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
-	// err = integration.PrepareTestCluster(binaryPath)
-	// Expect(err).NotTo(HaveOccurred())
+	err = integration.PrepareTestCluster(binaryPath)
+	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
