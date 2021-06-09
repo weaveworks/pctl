@@ -153,23 +153,33 @@ func install(c *cli.Context) error {
 	path := c.String("profile-path")
 	gitRepository := c.String("git-repository")
 
-	fmt.Printf("generating subscription for profile %s/%s:\n\n", catalogName, profileName)
+	var name string
+	if url != "" {
+		name = fmt.Sprintf("%s/%s", path, branch)
+	} else {
+		name = fmt.Sprintf("%s/%s", catalogName, profileName)
+	}
+	fmt.Printf("generating subscription for profile %s:\n\n", name)
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{}, r)
 	cfg := catalog.InstallConfig{
-		CatalogClient: catalogClient,
-		CatalogName:   catalogName,
-		ConfigMap:     configValues,
-		Directory:     dir,
-		GitClient:     g,
-		GitRepository: gitRepository,
-		Namespace:     namespace,
-		Path:          path,
-		ProfileBranch: branch,
-		ProfileName:   profileName,
-		SubName:       subName,
-		URL:           url,
-		Version:       version,
+		Clients: catalog.Clients{
+			CatalogClient: catalogClient,
+			GitClient:     g,
+		},
+		ProfileConfig: catalog.ProfileConfig{
+			CatalogName:   catalogName,
+			ConfigMap:     configValues,
+			GitRepository: gitRepository,
+			Namespace:     namespace,
+			Path:          path,
+			ProfileBranch: branch,
+			ProfileName:   profileName,
+			SubName:       subName,
+			URL:           url,
+			Version:       version,
+		},
+		Directory: dir,
 	}
 	return catalog.Install(cfg)
 }

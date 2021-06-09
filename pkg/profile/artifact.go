@@ -88,9 +88,11 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			p.nestedName = ""
 		case profilesv1.HelmChartKind:
 			var o runtime.Object
-			//fmt.Println("profileRepos: ", profileRepos)
 			helmRelease := p.makeHelmRelease(artifact, profileRepoPath)
 			if artifact.Path != "" {
+				if p.gitRepositoryNamespace == "" && p.gitRepositoryName == "" {
+					return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
+				}
 				helmRelease.Spec.Chart.Spec.Chart = filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Path)
 				o = p.makeGitRepository(artifact.Path)
 			}
@@ -100,7 +102,9 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			a.Objects = append(a.Objects, helmRelease, o)
 			artifacts = append(artifacts, a)
 		case profilesv1.KustomizeKind:
-			fmt.Println("artifacts: ", artifact)
+			if p.gitRepositoryNamespace == "" && p.gitRepositoryName == "" {
+				return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
+			}
 			path := filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Path)
 			a.Objects = append(a.Objects, p.makeKustomization(artifact, path))
 			a.Objects = append(a.Objects, p.makeGitRepository(artifact.Path))
@@ -122,6 +126,10 @@ func containsKey(list []string, key string) bool {
 }
 
 func (p *Profile) makeArtifactName(name string) string {
+	// if this is a nested artifact, it's name contains a /
+	if strings.Contains(name, "/") {
+		name = filepath.Base(name)
+	}
 	return join(p.subscription.Name, p.definition.Name, name)
 }
 

@@ -6,7 +6,7 @@ unit: ## Run the unit tests
 	ginkgo -r ./pkg
 
 integration: build test-env ## Run the integration tests
-	ginkgo --focus="install" -r ./tests/...
+	ginkgo -r ./tests/...
 
 test-env: submodule ## Create an environment for tests
 	cd dependencies/profiles && make docker-build-local kind-up docker-push-local

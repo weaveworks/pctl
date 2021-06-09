@@ -19,21 +19,31 @@ import (
 	"github.com/weaveworks/pctl/pkg/profile"
 )
 
-// InstallConfig defines parameters for the installation call.
-type InstallConfig struct {
+// Clients contains a set of clients which are used by install.
+type Clients struct {
 	CatalogClient CatalogClient
 	GitClient     git.Git
-	ProfileBranch string
+}
+
+// ProfileConfig contains configuration for profiles ie. catalogName, profilesName, etc.
+type ProfileConfig struct {
 	CatalogName   string
 	ConfigMap     string
 	Namespace     string
 	ProfileName   string
 	SubName       string
 	Version       string
-	Directory     string
+	ProfileBranch string
 	URL           string
 	Path          string
 	GitRepository string
+}
+
+// InstallConfig defines parameters for the installation call.
+type InstallConfig struct {
+	Clients
+	ProfileConfig
+	Directory string
 }
 
 // MakeArtifacts returns artifacts for a subscription
@@ -94,47 +104,9 @@ func Install(cfg InstallConfig) error {
 		}
 		for _, obj := range artifact.Objects {
 			if obj.GetObjectKind().GroupVersionKind().Kind == sourcev1.GitRepositoryKind {
-				// clone and copy
 				if g, ok := obj.(*sourcev1.GitRepository); ok {
-					// TODO: Extract this into a function and defer clean the tmp folder.
-					u := uuid.NewString()[:6]
-					tmp, err := ioutil.TempDir("", "sparse_clone_git_repo_"+u)
-					if err != nil {
-						return fmt.Errorf("failed to create temp folder for artifact %s: %w", artifact.Name, err)
-					}
-					// artifactsRootDir + artifact.Name + g.Spec.Reference.Tag // helmRelease and the Kustomize -- both who consume a GitRepository object.
-					if g.Spec.Reference == nil {
-						return fmt.Errorf("git ref is empty for gitRepositroy resource")
-					}
-					ref := g.Spec.Reference.Branch
-					if ref == "" {
-						ref = g.Spec.Reference.Tag
-					}
-					split := strings.Split(ref, ":")
-					if len(split) != 3 {
-						return fmt.Errorf("ref should be of format <profile-name>:<path>:<branch>. was: %s", ref)
-					}
-					profilePath := split[0]
-					path := split[1]
-					branch := split[2]
-					// I need the subscription path to be in the gitrepository resource...
-					if err := cfg.GitClient.SparseClone(g.Spec.URL, branch, tmp, profilePath); err != nil {
-						return fmt.Errorf("failed to sparse clone folder with url: %s; branch: %s; path: %s; with error: %w",
-							g.Spec.URL,
-							branch,
-							profilePath,
-							err)
-					}
-					// nginx/chart/...
-					if strings.Contains(path, string(os.PathSeparator)) {
-						path = filepath.Dir(path)
-					}
-					fullPath := filepath.Join(tmp, profilePath, path)
-					if err := os.Rename(fullPath, filepath.Join(artifactDir, path)); err != nil {
-						return fmt.Errorf("failed to move folder: %w", err)
-					}
-					if err := os.RemoveAll(tmp); err != nil {
-						fmt.Println("Failed to remove tmp folder: ", tmp)
+					if err := cloneGitRepositoryObjects(cfg, g, artifactDir); err != nil {
+						return fmt.Errorf("failed to clone repository object: %w", err)
 					}
 					continue
 				}
@@ -147,6 +119,50 @@ func Install(cfg InstallConfig) error {
 	}
 
 	return generateOutput(filepath.Join(profileRootdir, "profile.yaml"), &subscription)
+}
+
+// cloneGitRepositoryObjects takes a GitRepository objects and clones what it points to, then discards the object.
+func cloneGitRepositoryObjects(cfg InstallConfig, g *sourcev1.GitRepository, artifactDir string) error {
+	u := uuid.NewString()[:6]
+	tmp, err := ioutil.TempDir("", "sparse_clone_git_repo_"+u)
+	if err != nil {
+		return fmt.Errorf("failed to create temp folder: %w", err)
+	}
+	defer func() {
+		if err := os.RemoveAll(tmp); err != nil {
+			fmt.Println("Failed to remove tmp folder: ", tmp)
+		}
+	}()
+	if g.Spec.Reference == nil {
+		return fmt.Errorf("git ref is empty for gitRepositroy resource")
+	}
+	ref := g.Spec.Reference.Branch
+	if ref == "" {
+		ref = g.Spec.Reference.Tag
+	}
+	split := strings.Split(ref, ":")
+	if len(split) != 3 {
+		return fmt.Errorf("ref should be of format <profile-name>:<path>:<branch>. was: %s", ref)
+	}
+	profilePath := split[0]
+	path := split[1]
+	branch := split[2]
+	if err := cfg.GitClient.SparseClone(g.Spec.URL, branch, tmp, profilePath); err != nil {
+		return fmt.Errorf("failed to sparse clone folder with url: %s; branch: %s; path: %s; with error: %w",
+			g.Spec.URL,
+			branch,
+			profilePath,
+			err)
+	}
+	// nginx/chart/...
+	if strings.Contains(path, string(os.PathSeparator)) {
+		path = filepath.Dir(path)
+	}
+	fullPath := filepath.Join(tmp, profilePath, path)
+	if err := os.Rename(fullPath, filepath.Join(artifactDir, path)); err != nil {
+		return fmt.Errorf("failed to move folder: %w", err)
+	}
+	return nil
 }
 
 // getProfileSpec generates a spec based on configured properties.

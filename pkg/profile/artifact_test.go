@@ -173,13 +173,13 @@ var _ = Describe("Profile", func() {
 				gitRepo := objects[1].(*sourcev1.GitRepository)
 				Expect(gitRepo.Name).To(Equal(gitRepoName))
 				Expect(gitRepo.Spec.URL).To(Equal("https://github.com/org/repo-name-nested"))
-				Expect(gitRepo.Spec.Reference.Tag).To(Equal("chart/artifact/path-one"))
+				Expect(gitRepo.Spec.Reference.Branch).To(Equal("profileName2:chart/artifact/path-one:main"))
 
 				helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName2, chartName1)
 				helmRelease := objects[0].(*helmv2.HelmRelease)
 
 				Expect(helmRelease.Name).To(Equal(helmReleaseName))
-				Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal("root-dir/artifacts/chartOneArtifactName/chart/artifact/path-one"))
+				Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal("root-dir/artifacts/profileName2/chartOneArtifactName/chart/artifact/path-one"))
 				Expect(helmRelease.Spec.Chart.Spec.SourceRef).To(Equal(
 					helmv2.CrossNamespaceObjectReference{
 						Kind:      gitRepoKind,
@@ -212,7 +212,7 @@ var _ = Describe("Profile", func() {
 				gitRepo := objects[1].(*sourcev1.GitRepository)
 				Expect(gitRepo.Name).To(Equal(gitRepoName))
 				Expect(gitRepo.Spec.URL).To(Equal("https://github.com/org/repo-name"))
-				Expect(gitRepo.Spec.Reference.Tag).To(Equal("chart/artifact/path-two"))
+				Expect(gitRepo.Spec.Reference.Branch).To(Equal("profileName:chart/artifact/path-two:main"))
 
 				helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, chartName2)
 				helmRelease := objects[0].(*helmv2.HelmRelease)
@@ -251,7 +251,7 @@ var _ = Describe("Profile", func() {
 				gitRepo := objects[1].(*sourcev1.GitRepository)
 				Expect(gitRepo.Name).To(Equal(gitRepoName))
 				Expect(gitRepo.Spec.URL).To(Equal("https://github.com/org/repo-name"))
-				Expect(gitRepo.Spec.Reference.Tag).To(Equal("kustomize/artifact/path-one"))
+				Expect(gitRepo.Spec.Reference.Branch).To(Equal("profileName:kustomize/artifact/path-one:main"))
 
 				kustomizeName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, kustomizeName1)
 				kustomize := objects[0].(*kustomizev1.Kustomization)
@@ -336,7 +336,7 @@ var _ = Describe("Profile", func() {
 					gitRepo := objects[1].(*sourcev1.GitRepository)
 					Expect(gitRepo.Name).To(Equal(gitRepoName))
 					Expect(gitRepo.Spec.URL).To(Equal("https://github.com/org/repo-name"))
-					Expect(gitRepo.Spec.Reference.Tag).To(Equal("chart/artifact/path-two"))
+					Expect(gitRepo.Spec.Reference.Branch).To(Equal("profileName:chart/artifact/path-two:not_domain_compatible"))
 
 					helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, chartName2)
 					helmRelease := objects[0].(*helmv2.HelmRelease)
@@ -351,6 +351,25 @@ var _ = Describe("Profile", func() {
 						},
 					))
 				})
+			})
+		})
+
+		When("the git repository name is not defined", func() {
+			It("errors out", func() {
+				pSub = profilesv1.ProfileSubscription{
+					TypeMeta: profileTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      subscriptionName,
+						Namespace: namespace,
+					},
+					Spec: profilesv1.ProfileSubscriptionSpec{
+						ProfileURL: profileURL,
+						Branch:     branch,
+					},
+				}
+				artifacts, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, "", "")
+				Expect(err).To(MatchError("failed to generate resources for nested profile \"profileName2\": in case of local resources, the flux gitrepository object's details must be provided"))
+				Expect(artifacts).To(BeEmpty())
 			})
 		})
 
