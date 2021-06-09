@@ -7,6 +7,7 @@ spec:
     - name: weaveworks-nginx
       description: This installs nginx.
       version: v0.1.0
+      tag: weaveworks-nginx/v0.1.0
       url: https://github.com/weaveworks/profiles-examples
       maintainer: weaveworks (https://github.com/weaveworks/profiles)
       prerequisites:
@@ -14,6 +15,7 @@ spec:
     - name: weaveworks-nginx
       description: This installs nginx.
       version: v0.1.1
+      tag: weaveworks-nginx/v0.1.1
       url: https://github.com/weaveworks/profiles-examples
       maintainer: weaveworks (https://github.com/weaveworks/profiles)
       prerequisites:
@@ -21,6 +23,7 @@ spec:
     - name: bitnami-nginx
       description: This installs nginx.
       version: v0.1.0
+      tag: bitnami-nginx/v0.1.0
       url: https://github.com/weaveworks/profiles-examples
       maintainer: weaveworks (https://github.com/weaveworks/profiles)
       prerequisites:

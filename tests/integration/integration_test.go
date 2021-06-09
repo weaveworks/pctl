@@ -51,6 +51,7 @@ var _ = Describe("PCTL", func() {
     "name": "weaveworks-nginx",
     "description": "This installs nginx.",
     "version": "v0.1.0",
+    "tag": "weaveworks-nginx/v0.1.0",
     "catalog": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
     "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
@@ -62,6 +63,7 @@ var _ = Describe("PCTL", func() {
     "name": "weaveworks-nginx",
     "description": "This installs nginx.",
     "version": "v0.1.1",
+    "tag": "weaveworks-nginx/v0.1.1",
     "catalog": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
     "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
@@ -73,6 +75,7 @@ var _ = Describe("PCTL", func() {
     "name": "bitnami-nginx",
     "description": "This installs nginx.",
     "version": "v0.1.0",
+    "tag": "bitnami-nginx/v0.1.0",
     "catalog": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
     "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
@@ -145,6 +148,7 @@ var _ = Describe("PCTL", func() {
   "name": "weaveworks-nginx",
   "description": "This installs nginx.",
   "version": "v0.1.0",
+  "tag": "weaveworks-nginx/v0.1.0",
   "catalog": "nginx-catalog",
   "url": "https://github.com/weaveworks/profiles-examples",
   "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
@@ -186,7 +190,7 @@ var _ = Describe("PCTL", func() {
 				},
 				Spec: profilesv1.ProfileSubscriptionSpec{
 					ProfileURL: profileURL,
-					Version:    "weaveworks-nginx/v0.1.0",
+					Tag:        "weaveworks-nginx/v0.1.0",
 					ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
 						Catalog: "nginx-catalog",
 						Profile: "weaveworks-nginx",
@@ -229,7 +233,7 @@ var _ = Describe("PCTL", func() {
 					},
 					Spec: profilesv1.ProfileSubscriptionSpec{
 						ProfileURL: profileURL,
-						Version:    "bitnami-nginx/v0.1.0",
+						Tag:        "bitnami-nginx/v0.1.0",
 						ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
 							Catalog: "nginx-catalog",
 							Profile: "bitnami-nginx",
@@ -325,12 +329,13 @@ metadata:
   name: pctl-profile
   namespace: %s
 spec:
+  path: weaveworks-nginx
   profile_catalog_description:
     catalog: nginx-catalog
     profile: weaveworks-nginx
     version: v0.1.0
   profileURL: https://github.com/weaveworks/profiles-examples
-  version: weaveworks-nginx/v0.1.0
+  tag: weaveworks-nginx/v0.1.0
 status: {}
 `, namespace)))
 

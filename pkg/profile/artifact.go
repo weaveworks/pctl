@@ -21,13 +21,12 @@ type Artifact struct {
 // MakeArtifacts generates artifacts without owners for manual applying to
 // a personal cluster.
 func MakeArtifacts(sub profilesv1.ProfileSubscription, gitClient git.Git) ([]Artifact, error) {
-	version := sub.Spec.Version
-	path := strings.Split(sub.Spec.Version, "/")[0]
-	if sub.Spec.Version == "" {
-		version = sub.Spec.Branch
-		path = sub.Spec.Path
+	path := sub.Spec.Path
+	branchOrTag := sub.Spec.Tag
+	if sub.Spec.Tag == "" {
+		branchOrTag = sub.Spec.Branch
 	}
-	def, err := getProfileDefinition(sub.Spec.ProfileURL, version, path, gitClient)
+	def, err := getProfileDefinition(sub.Spec.ProfileURL, branchOrTag, path, gitClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get profile definition: %w", err)
 	}
@@ -36,15 +35,15 @@ func MakeArtifacts(sub profilesv1.ProfileSubscription, gitClient git.Git) ([]Art
 }
 
 func (p *Profile) profileRepo() string {
-	if p.subscription.Spec.Version != "" {
-		return p.subscription.Spec.ProfileURL + ":" + p.subscription.Spec.Version
+	if p.subscription.Spec.Tag != "" {
+		return p.subscription.Spec.ProfileURL + ":" + p.subscription.Spec.Tag
 	}
 	return p.subscription.Spec.ProfileURL + ":" + p.subscription.Spec.Branch + ":" + p.subscription.Spec.Path
 }
 
 func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Artifact, error) {
 	var artifacts []Artifact
-	profileRepoPath := GetProfilePathFromSpec(p.subscription.Spec)
+	profileRepoPath := p.subscription.Spec.Path
 
 	for _, artifact := range p.definition.Spec.Artifacts {
 		if err := artifact.Validate(); err != nil {
@@ -68,8 +67,16 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			nestedProfile := p.subscription.DeepCopyObject().(*profilesv1.ProfileSubscription)
 			nestedProfile.Spec.ProfileURL = artifact.Profile.URL
 			nestedProfile.Spec.Branch = artifact.Profile.Branch
-			nestedProfile.Spec.Version = artifact.Profile.Version
+			nestedProfile.Spec.Tag = artifact.Profile.Version
 			nestedProfile.Spec.Path = artifact.Profile.Path
+			if artifact.Profile.Version != "" {
+				path := "."
+				splitTag := strings.Split(artifact.Profile.Version, "/")
+				if len(splitTag) > 1 {
+					path = splitTag[0]
+				}
+				nestedProfile.Spec.Path = path
+			}
 
 			nestedSub := newProfile(nestedProfileDef, *nestedProfile)
 			profileRepoName := nestedSub.profileRepo()
@@ -116,15 +123,6 @@ func containsKey(list []string, key string) bool {
 
 func (p *Profile) makeArtifactName(name string) string {
 	return join(p.subscription.Name, p.definition.Name, name)
-}
-
-// GetProfilePathFromSpec returns either the path to the profile in the repo. Extracted from the
-// version field or directly from path
-func GetProfilePathFromSpec(spec profilesv1.ProfileSubscriptionSpec) string {
-	if spec.Path != "" {
-		return spec.Path
-	}
-	return strings.Split(spec.Version, "/")[0]
 }
 
 func join(s ...string) string {

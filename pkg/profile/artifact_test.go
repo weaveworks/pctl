@@ -71,6 +71,7 @@ var _ = Describe("Profile", func() {
 			Spec: profilesv1.ProfileSubscriptionSpec{
 				ProfileURL: profileURL,
 				Branch:     branch,
+				Path:       profileName1,
 				Values: &apiextensionsv1.JSON{
 					Raw: []byte(`{"replicaCount": 3,"service":{"port":8081}}`),
 				},
@@ -121,6 +122,7 @@ var _ = Describe("Profile", func() {
 						Profile: &profilesv1.Profile{
 							URL:    pNestedDefURL,
 							Branch: "main",
+							Path:   profileName2,
 						},
 					},
 					{
@@ -177,7 +179,7 @@ var _ = Describe("Profile", func() {
 				helmRelease := objects[0].(*helmv2.HelmRelease)
 
 				Expect(helmRelease.Name).To(Equal(helmReleaseName))
-				Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal(chartPath1))
+				Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal(filepath.Join(profileName2, chartPath1)))
 				Expect(helmRelease.Spec.Chart.Spec.SourceRef).To(Equal(
 					helmv2.CrossNamespaceObjectReference{
 						Kind:      gitRepoKind,
@@ -217,7 +219,7 @@ var _ = Describe("Profile", func() {
 				helmRelease := objects[0].(*helmv2.HelmRelease)
 				Expect(helmRelease.Name).To(Equal(helmReleaseName))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal(chartPath2))
+				Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal(filepath.Join(profileName1, chartPath2)))
 				Expect(helmRelease.Spec.Chart.Spec.SourceRef).To(Equal(
 					helmv2.CrossNamespaceObjectReference{
 						Kind:      gitRepoKind,
@@ -256,7 +258,7 @@ var _ = Describe("Profile", func() {
 				kustomizeName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, kustomizeName1)
 				kustomize := objects[0].(*kustomizev1.Kustomization)
 				Expect(kustomize.Name).To(Equal(kustomizeName))
-				Expect(kustomize.Spec.Path).To(Equal(kustomizePath1))
+				Expect(kustomize.Spec.Path).To(Equal(filepath.Join(profileName1, kustomizePath1)))
 				Expect(kustomize.Spec.TargetNamespace).To(Equal(namespace))
 				Expect(kustomize.Spec.Prune).To(BeTrue())
 				Expect(kustomize.Spec.Interval).To(Equal(metav1.Duration{Duration: time.Minute * 5}))
@@ -548,7 +550,7 @@ var _ = Describe("Profile", func() {
 
 				It("errors", func() {
 					_, err := profile.MakeArtifacts(pSub, fakeGitClient)
-					Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", profileURL, branch))))
+					Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", pNestedDefURL, branch))))
 				})
 			})
 		})

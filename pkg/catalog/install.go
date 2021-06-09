@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
@@ -104,9 +105,17 @@ func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileSubscriptionSpec, erro
 		return profilesv1.ProfileSubscriptionSpec{}, fmt.Errorf("failed to get profile %q in catalog %q: %w", cfg.ProfileName, cfg.CatalogName, err)
 	}
 
+	//tag could be <semver> or <name/semver>
+	path := "."
+	splitTag := strings.Split(p.Tag, "/")
+	if len(splitTag) > 1 {
+		path = splitTag[0]
+	}
+
 	return profilesv1.ProfileSubscriptionSpec{
 		ProfileURL: p.URL,
-		Version:    filepath.Join(p.Name, p.Version),
+		Tag:        p.Tag,
+		Path:       path,
 		ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
 			Catalog: cfg.CatalogName,
 			Version: p.Version,
