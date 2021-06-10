@@ -30,8 +30,8 @@ spec:
         - Kubernetes 1.18+
     - name: nginx
       description: This installs nginx.
-      version: v1.0.0
-      tag: v1.0.0
+      version: v2.0.0
+      tag: v2.0.0
       url: https://github.com/weaveworks/nginx-profile
       maintainer: weaveworks (https://github.com/weaveworks/profiles)
       prerequisites:

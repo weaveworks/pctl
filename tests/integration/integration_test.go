@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -639,12 +640,15 @@ status: {}
 
 	Context("installing from a single-profile repo", func() {
 		var (
-			temp      string
-			namespace string
+			temp          string
+			namespace     string
+			configMapName string
+			subName       string
 		)
 
 		BeforeEach(func() {
 			var err error
+			subName = "pctl-profile"
 			namespace = uuid.New().String()
 			temp, err = ioutil.TempDir("", "pctl_test_install_single_profile_01")
 			Expect(err).ToNot(HaveOccurred())
@@ -654,6 +658,18 @@ status: {}
 				},
 			}
 			Expect(kClient.Create(context.Background(), &nsp)).To(Succeed())
+			configMapName = subName + "-values"
+			configMap := v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapName,
+					Namespace: namespace,
+				},
+				Data: map[string]string{
+					"values.yaml": `service:
+  type: ClusterIP`,
+				},
+			}
+			Expect(kClient.Create(context.Background(), &configMap)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -666,8 +682,7 @@ status: {}
 			_ = kClient.Delete(context.Background(), &nsp)
 		})
 		It("generates valid artifacts to the local directory", func() {
-			subName := "pctl-profile"
-			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "nginx-catalog/nginx/v1.0.0")
+			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--config-secret", "values.yaml", "nginx-catalog/nginx/v2.0.0")
 			cmd.Dir = temp
 			session, err := cmd.CombinedOutput()
 			if err != nil {
@@ -688,8 +703,8 @@ status: {}
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
 				"profile.yaml",
-				"artifacts/nginx-deployment/GitRepository.yaml",
-				"artifacts/nginx-deployment/Kustomization.yaml",
+				"artifacts/bitnami-nginx/HelmRelease.yaml",
+				"artifacts/bitnami-nginx/HelmRepository.yaml",
 			))
 
 			filename := filepath.Join(temp, "nginx", "profile.yaml")
@@ -706,11 +721,15 @@ spec:
   profile_catalog_description:
     catalog: nginx-catalog
     profile: nginx
-    version: v1.0.0
+    version: v2.0.0
   profileURL: https://github.com/weaveworks/nginx-profile
-  tag: v1.0.0
+  tag: v2.0.0
+  valuesFrom:
+  - kind: ConfigMap
+    name: %s
+    valuesKey: values.yaml
 status: {}
-`, namespace)))
+`, namespace, subName+"-values")))
 
 			By("the artifacts being deployable")
 
@@ -723,15 +742,15 @@ status: {}
 			Expect(err).ToNot(HaveOccurred())
 
 			By("successfully deploying the kustomize resource")
-			kustomizeName := fmt.Sprintf("%s-%s-%s", subName, "nginx", "nginx-deployment")
-			var kustomize *kustomizev1.Kustomization
+			helmReleaseName := fmt.Sprintf("%s-%s-%s", subName, "nginx", "bitnami-nginx")
+			var helmRelease *helmv2.HelmRelease
 			Eventually(func() bool {
-				kustomize = &kustomizev1.Kustomization{}
-				err := kClient.Get(context.Background(), client.ObjectKey{Name: kustomizeName, Namespace: namespace}, kustomize)
+				helmRelease = &helmv2.HelmRelease{}
+				err := kClient.Get(context.Background(), client.ObjectKey{Name: helmReleaseName, Namespace: namespace}, helmRelease)
 				if err != nil {
 					return false
 				}
-				for _, condition := range kustomize.Status.Conditions {
+				for _, condition := range helmRelease.Status.Conditions {
 					if condition.Type == "Ready" && condition.Status == "True" {
 						return true
 					}
@@ -739,14 +758,14 @@ status: {}
 				return false
 			}, 2*time.Minute, 5*time.Second).Should(BeTrue())
 
-			kustomizeOpts := []client.ListOption{
+			helmReleaseOpts := []client.ListOption{
 				client.InNamespace(namespace),
-				client.MatchingLabels{"app": "nginx"},
+				client.MatchingLabels{"helm.sh/chart": "nginx-8.9.1"},
 			}
 			podList := &v1.PodList{}
 			Eventually(func() v1.PodPhase {
 				podList = &v1.PodList{}
-				err := kClient.List(context.Background(), podList, kustomizeOpts...)
+				err := kClient.List(context.Background(), podList, helmReleaseOpts...)
 				Expect(err).NotTo(HaveOccurred())
 				if len(podList.Items) == 0 {
 					return v1.PodPhase("no pods found")
@@ -754,7 +773,7 @@ status: {}
 				return podList.Items[0].Status.Phase
 			}, 2*time.Minute, 5*time.Second).Should(Equal(v1.PodPhase("Running")))
 
-			Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("nginx:1.14.2"))
+			Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("docker.io/bitnami/nginx:1.19.10-debian-10-r35"))
 		})
 	})
 
