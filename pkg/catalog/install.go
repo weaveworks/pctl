@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
-	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	"github.com/google/uuid"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -102,15 +101,12 @@ func Install(cfg InstallConfig) error {
 		if err = os.MkdirAll(artifactDir, 0755); err != nil {
 			return fmt.Errorf("failed to create directory")
 		}
-		for _, obj := range artifact.Objects {
-			if obj.GetObjectKind().GroupVersionKind().Kind == sourcev1.GitRepositoryKind {
-				if g, ok := obj.(*sourcev1.GitRepository); ok {
-					if err := cloneGitRepositoryObjects(cfg, g, artifactDir); err != nil {
-						return fmt.Errorf("failed to clone repository object: %w", err)
-					}
-					continue
-				}
+		if artifact.RepoURL != "" {
+			if err := getRepositoryLocalArtifacts(cfg, artifact, artifactDir); err != nil {
+				return fmt.Errorf("failed to get package local artifacts: %w", err)
 			}
+		}
+		for _, obj := range artifact.Objects {
 			filename := filepath.Join(artifactDir, fmt.Sprintf("%s.%s", obj.GetObjectKind().GroupVersionKind().Kind, "yaml"))
 			if err := generateOutput(filename, obj); err != nil {
 				return err
@@ -121,8 +117,8 @@ func Install(cfg InstallConfig) error {
 	return generateOutput(filepath.Join(profileRootdir, "profile.yaml"), &subscription)
 }
 
-// cloneGitRepositoryObjects takes a GitRepository objects and clones what it points to, then discards the object.
-func cloneGitRepositoryObjects(cfg InstallConfig, g *sourcev1.GitRepository, artifactDir string) error {
+// getRepositoryLocalArtifacts clones all repository local artifacts so they can be copied over to the flux repository.
+func getRepositoryLocalArtifacts(cfg InstallConfig, a profile.Artifact, artifactDir string) error {
 	u := uuid.NewString()[:6]
 	tmp, err := ioutil.TempDir("", "sparse_clone_git_repo_"+u)
 	if err != nil {
@@ -133,34 +129,24 @@ func cloneGitRepositoryObjects(cfg InstallConfig, g *sourcev1.GitRepository, art
 			fmt.Println("Failed to remove tmp folder: ", tmp)
 		}
 	}()
-	if g.Spec.Reference == nil {
-		return fmt.Errorf("git ref is empty for gitRepositroy resource")
-	}
-	ref := g.Spec.Reference.Branch
-	if ref == "" {
-		ref = g.Spec.Reference.Tag
-	}
-	split := strings.Split(ref, ":")
-	if len(split) != 3 {
-		return fmt.Errorf("ref should be of format <profile-name>:<path>:<branch>. was: %s", ref)
-	}
-	profilePath := split[0]
-	path := split[1]
-	branch := split[2]
-	if err := cfg.GitClient.SparseClone(g.Spec.URL, branch, tmp, profilePath); err != nil {
+	profilePath := a.SparseFolder
+	branch := a.Branch
+	if err := cfg.GitClient.SparseClone(a.RepoURL, branch, tmp, profilePath); err != nil {
 		return fmt.Errorf("failed to sparse clone folder with url: %s; branch: %s; path: %s; with error: %w",
-			g.Spec.URL,
+			a.RepoURL,
 			branch,
 			profilePath,
 			err)
 	}
-	// nginx/chart/...
-	if strings.Contains(path, string(os.PathSeparator)) {
-		path = filepath.Dir(path)
-	}
-	fullPath := filepath.Join(tmp, profilePath, path)
-	if err := os.Rename(fullPath, filepath.Join(artifactDir, path)); err != nil {
-		return fmt.Errorf("failed to move folder: %w", err)
+	for _, path := range a.PathsToCopy {
+		// nginx/chart/...
+		if strings.Contains(path, string(os.PathSeparator)) {
+			path = filepath.Dir(path)
+		}
+		fullPath := filepath.Join(tmp, profilePath, path)
+		if err := os.Rename(fullPath, filepath.Join(artifactDir, path)); err != nil {
+			return fmt.Errorf("failed to move folder: %w", err)
+		}
 	}
 	return nil
 }

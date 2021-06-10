@@ -38,7 +38,7 @@ var _ = Describe("PCTL", func() {
 				"nginx-catalog/weaveworks-nginx	v0.1.0 	This installs nginx.           \t\n" +
 				"nginx-catalog/weaveworks-nginx	v0.1.1 	This installs nginx.           \t\n" +
 				"nginx-catalog/bitnami-nginx   	v0.1.0 	This installs nginx.           \t\n" +
-				"nginx-catalog/nginx           	v1.0.0 	This installs nginx.           \t\n" +
+				"nginx-catalog/nginx           	v2.0.0 	This installs nginx.           \t\n" +
 				"nginx-catalog/some-other-nginx	       	This installs some other nginx.\t\n\n"
 			Expect(string(session)).To(ContainSubstring(expected))
 		})
@@ -87,8 +87,8 @@ var _ = Describe("PCTL", func() {
   {
     "name": "nginx",
     "description": "This installs nginx.",
-    "version": "v1.0.0",
-    "tag": "v1.0.0",
+    "version": "v2.0.0",
+    "tag": "v2.0.0",
     "catalog": "nginx-catalog",
     "url": "https://github.com/weaveworks/nginx-profile",
     "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",

@@ -170,12 +170,7 @@ var _ = Describe("Profile", func() {
 				Expect(nestedProfileArtifact.Name).To(Equal(filepath.Join(profileName2, chartName1)))
 
 				objects := nestedProfileArtifact.Objects
-				Expect(objects).To(HaveLen(2))
-
-				gitRepo := objects[1].(*sourcev1.GitRepository)
-				Expect(gitRepo.Name).To(Equal(gitRepoName))
-				Expect(gitRepo.Spec.URL).To(Equal("https://github.com/org/repo-name-nested"))
-				Expect(gitRepo.Spec.Reference.Branch).To(Equal("profileName2:chart/artifact/path-one:main"))
+				Expect(objects).To(HaveLen(1))
 
 				helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName2, chartName1)
 				helmRelease := objects[0].(*helmv2.HelmRelease)
@@ -209,12 +204,6 @@ var _ = Describe("Profile", func() {
 				Expect(pathBasedHelmArtifact.Name).To(Equal(chartName2))
 
 				objects := pathBasedHelmArtifact.Objects
-				Expect(objects).To(HaveLen(2))
-
-				gitRepo := objects[1].(*sourcev1.GitRepository)
-				Expect(gitRepo.Name).To(Equal(gitRepoName))
-				Expect(gitRepo.Spec.URL).To(Equal("https://github.com/org/repo-name"))
-				Expect(gitRepo.Spec.Reference.Branch).To(Equal("profileName:chart/artifact/path-two:main"))
 
 				helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, chartName2)
 				helmRelease := objects[0].(*helmv2.HelmRelease)
@@ -248,12 +237,6 @@ var _ = Describe("Profile", func() {
 				Expect(kustomizeArtifact.Name).To(Equal(kustomizeName1))
 
 				objects := kustomizeArtifact.Objects
-				Expect(objects).To(HaveLen(2))
-
-				gitRepo := objects[1].(*sourcev1.GitRepository)
-				Expect(gitRepo.Name).To(Equal(gitRepoName))
-				Expect(gitRepo.Spec.URL).To(Equal("https://github.com/org/repo-name"))
-				Expect(gitRepo.Spec.Reference.Branch).To(Equal("profileName:kustomize/artifact/path-one:main"))
 
 				kustomizeName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, kustomizeName1)
 				kustomize := objects[0].(*kustomizev1.Kustomization)
@@ -333,12 +316,6 @@ var _ = Describe("Profile", func() {
 					Expect(pathBasedHelmArtifact.Name).To(Equal(chartName2))
 
 					objects := pathBasedHelmArtifact.Objects
-					Expect(objects).To(HaveLen(2))
-
-					gitRepo := objects[1].(*sourcev1.GitRepository)
-					Expect(gitRepo.Name).To(Equal(gitRepoName))
-					Expect(gitRepo.Spec.URL).To(Equal("https://github.com/org/repo-name"))
-					Expect(gitRepo.Spec.Reference.Branch).To(Equal("profileName:chart/artifact/path-two:not_domain_compatible"))
 
 					helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, chartName2)
 					helmRelease := objects[0].(*helmv2.HelmRelease)

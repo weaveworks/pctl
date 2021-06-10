@@ -139,11 +139,13 @@ pctl install --subscription-name pctl-profile \
 It's the user's responsibility to make sure that the local `git` setup has access to the url provided with `profile-url`.
 It can be any form of url as long as `git clone` understands it.
 
-#### Cloning private repository resources
+#### Cloning repository resources
 
-pctl clones all repository local resources and puts them into the flux repository. This is done so that the user doesn't
-have to include access credentials for all private repositories including nested profiles. However, for repository local
-resources to work, the user has to provide the location of the GitRepository object that flux manages.
+pctl clones all repository local resources and puts them into the target flux repository. This is done so that the user doesn't
+have to include access credentials for all private repositories, including nested profiles. However, for repository local
+resources to work, the user has to provide the location of the GitRepository object that flux creates when bootstrapping or
+creating a flux repository. This resources is usually under the namespace `flux-system` named `flux-system` and of type
+GitRepository.
 
 Provide the following information when running install: `--git-repository <namespace>/<name>`.
 

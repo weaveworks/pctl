@@ -14,8 +14,12 @@ import (
 
 //Artifact contains the name and objects belonging to a profile artifact
 type Artifact struct {
-	Objects []runtime.Object
-	Name    string
+	Objects      []runtime.Object
+	Name         string
+	RepoURL      string
+	PathsToCopy  []string
+	SparseFolder string
+	Branch       string
 }
 
 // MakeArtifacts generates artifacts without owners for manual applying to
@@ -94,19 +98,26 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			artifacts = append(artifacts, nestedArtifacts...)
 			p.nestedName = ""
 		case profilesv1.HelmChartKind:
-			var o runtime.Object
 			helmRelease := p.makeHelmRelease(artifact, profileRepoPath)
+			a.Objects = append(a.Objects, helmRelease)
 			if artifact.Path != "" {
 				if p.gitRepositoryNamespace == "" && p.gitRepositoryName == "" {
 					return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 				}
 				helmRelease.Spec.Chart.Spec.Chart = filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Path)
-				o = p.makeGitRepository(artifact.Path)
+				branch := p.subscription.Spec.Branch
+				if p.subscription.Spec.Tag != "" {
+					branch = p.subscription.Spec.Tag
+				}
+				a.RepoURL = p.subscription.Spec.ProfileURL
+				a.SparseFolder = p.definition.Name
+				a.Branch = branch
+				a.PathsToCopy = append(a.PathsToCopy, artifact.Path)
 			}
 			if artifact.Chart != nil {
-				o = p.makeHelmRepository(artifact.Chart.URL, artifact.Chart.Name)
+				helmRepository := p.makeHelmRepository(artifact.Chart.URL, artifact.Chart.Name)
+				a.Objects = append(a.Objects, helmRepository)
 			}
-			a.Objects = append(a.Objects, helmRelease, o)
 			artifacts = append(artifacts, a)
 		case profilesv1.KustomizeKind:
 			if p.gitRepositoryNamespace == "" && p.gitRepositoryName == "" {
@@ -114,7 +125,14 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			}
 			path := filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Path)
 			a.Objects = append(a.Objects, p.makeKustomization(artifact, path))
-			a.Objects = append(a.Objects, p.makeGitRepository(artifact.Path))
+			branch := p.subscription.Spec.Branch
+			if p.subscription.Spec.Tag != "" {
+				branch = p.subscription.Spec.Tag
+			}
+			a.RepoURL = p.subscription.Spec.ProfileURL
+			a.SparseFolder = p.definition.Name
+			a.Branch = branch
+			a.PathsToCopy = append(a.PathsToCopy, artifact.Path)
 			artifacts = append(artifacts, a)
 		default:
 			return nil, fmt.Errorf("artifact kind %q not recognized", artifact.Kind)
