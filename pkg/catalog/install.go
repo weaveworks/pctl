@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
@@ -32,13 +33,13 @@ type InstallConfig struct {
 }
 
 //MakeArtifacts returns artifacts for a subscription
-type MakeArtifacts func(sub profilesv1.ProfileSubscription) ([]profile.Artifact, error)
+type MakeArtifacts func(sub profilesv1.ProfileSubscription, gitClient git.Git) ([]profile.Artifact, error)
 
 var makeArtifacts = profile.MakeArtifacts
 
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile subscription
 // and its artifacts
-func Install(cfg InstallConfig) error {
+func Install(cfg InstallConfig, gitClient git.Git) error {
 	pSpec, err := getProfileSpec(cfg)
 	if err != nil {
 		return err
@@ -63,7 +64,7 @@ func Install(cfg InstallConfig) error {
 			},
 		}
 	}
-	artifacts, err := makeArtifacts(subscription)
+	artifacts, err := makeArtifacts(subscription, gitClient)
 	if err != nil {
 		return fmt.Errorf("failed to generate artifacts: %w", err)
 	}
@@ -104,9 +105,17 @@ func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileSubscriptionSpec, erro
 		return profilesv1.ProfileSubscriptionSpec{}, fmt.Errorf("failed to get profile %q in catalog %q: %w", cfg.ProfileName, cfg.CatalogName, err)
 	}
 
+	//tag could be <semver> or <name/semver>
+	path := "."
+	splitTag := strings.Split(p.Tag, "/")
+	if len(splitTag) > 1 {
+		path = splitTag[0]
+	}
+
 	return profilesv1.ProfileSubscriptionSpec{
 		ProfileURL: p.URL,
-		Version:    filepath.Join(p.Name, p.Version),
+		Tag:        p.Tag,
+		Path:       path,
 		ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
 			Catalog: cfg.CatalogName,
 			Version: p.Version,

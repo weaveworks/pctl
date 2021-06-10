@@ -14,11 +14,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
+	"github.com/weaveworks/pctl/pkg/git"
 	gitfakes "github.com/weaveworks/pctl/pkg/git/fakes"
 	"github.com/weaveworks/pctl/pkg/profile"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 var _ = Describe("Install", func() {
@@ -44,6 +46,7 @@ var _ = Describe("Install", func() {
 	"name": "nginx-1",
 	"description": "nginx 1",
 	"version": "v0.0.1",
+	"tag": "nginx-1/v0.0.1",
 	"catalog": "weaveworks (https://github.com/weaveworks/profiles)",
 	"url": "https://github.com/weaveworks/nginx-profile",
 	"prerequisites": ["Kubernetes 1.18+"],
@@ -62,7 +65,7 @@ var _ = Describe("Install", func() {
 			Version:       "v0.0.1",
 			Directory:     tempDir,
 		}
-		fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription) ([]profile.Artifact, error) {
+		fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription, gitClient git.Git) ([]profile.Artifact, error) {
 			return []profile.Artifact{
 				{
 					Objects: []runtime.Object{
@@ -96,7 +99,7 @@ var _ = Describe("Install", func() {
 
 	Describe("install", func() {
 		It("generates the artifacts", func() {
-			err := catalog.Install(cfg)
+			err := catalog.Install(cfg, fakeGit)
 			Expect(err).NotTo(HaveOccurred())
 
 			var files []string
@@ -125,12 +128,13 @@ metadata:
   name: mysub
   namespace: default
 spec:
+  path: nginx-1
   profile_catalog_description:
     catalog: nginx
     profile: nginx-1
     version: v0.0.1
   profileURL: https://github.com/weaveworks/nginx-profile
-  version: nginx-1/v0.0.1
+  tag: nginx-1/v0.0.1
 status: {}
 `))
 
@@ -154,13 +158,13 @@ status: {}
 
 		When("getting the artifacts fails", func() {
 			BeforeEach(func() {
-				fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription) ([]profile.Artifact, error) {
+				fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription, gitClient git.Git) ([]profile.Artifact, error) {
 					return nil, fmt.Errorf("foo")
 				}
 			})
 
 			It("errors", func() {
-				err := catalog.Install(cfg)
+				err := catalog.Install(cfg, fakeGit)
 				Expect(err).To(MatchError("failed to generate artifacts: foo"))
 			})
 		})
@@ -171,7 +175,7 @@ status: {}
 			})
 
 			It("errors", func() {
-				err := catalog.Install(cfg)
+				err := catalog.Install(cfg, fakeGit)
 				Expect(err).To(MatchError(ContainSubstring("failed to create directory")))
 			})
 		})
@@ -189,7 +193,7 @@ status: {}
 					Directory:     tempDir,
 					Path:          "branch-nginx",
 				}
-				err := catalog.Install(cfg)
+				err := catalog.Install(cfg, fakeGit)
 				Expect(err).NotTo(HaveOccurred())
 
 				var files []string
@@ -251,7 +255,7 @@ status: {}
 					URL:           "https://github.com/weaveworks/profiles-examples",
 					Directory:     tempDir,
 				}
-				err := catalog.Install(cfg)
+				err := catalog.Install(cfg, fakeGit)
 				Expect(err).To(MatchError("path must be provided with url"))
 			})
 		})
@@ -268,7 +272,7 @@ status: {}
 					ProfileBranch: "not_domain_compatible",
 					Path:          "path",
 				}
-				err := catalog.Install(cfg)
+				err := catalog.Install(cfg, fakeGit)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
