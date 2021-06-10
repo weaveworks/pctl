@@ -93,6 +93,20 @@ type FakeGit struct {
 	pushReturnsOnCall map[int]struct {
 		result1 error
 	}
+	SparseCloneStub        func(string, string, string, string) error
+	sparseCloneMutex       sync.RWMutex
+	sparseCloneArgsForCall []struct {
+		arg1 string
+		arg2 string
+		arg3 string
+		arg4 string
+	}
+	sparseCloneReturns struct {
+		result1 error
+	}
+	sparseCloneReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -534,6 +548,70 @@ func (fake *FakeGit) PushReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakeGit) SparseClone(arg1 string, arg2 string, arg3 string, arg4 string) error {
+	fake.sparseCloneMutex.Lock()
+	ret, specificReturn := fake.sparseCloneReturnsOnCall[len(fake.sparseCloneArgsForCall)]
+	fake.sparseCloneArgsForCall = append(fake.sparseCloneArgsForCall, struct {
+		arg1 string
+		arg2 string
+		arg3 string
+		arg4 string
+	}{arg1, arg2, arg3, arg4})
+	stub := fake.SparseCloneStub
+	fakeReturns := fake.sparseCloneReturns
+	fake.recordInvocation("SparseClone", []interface{}{arg1, arg2, arg3, arg4})
+	fake.sparseCloneMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeGit) SparseCloneCallCount() int {
+	fake.sparseCloneMutex.RLock()
+	defer fake.sparseCloneMutex.RUnlock()
+	return len(fake.sparseCloneArgsForCall)
+}
+
+func (fake *FakeGit) SparseCloneCalls(stub func(string, string, string, string) error) {
+	fake.sparseCloneMutex.Lock()
+	defer fake.sparseCloneMutex.Unlock()
+	fake.SparseCloneStub = stub
+}
+
+func (fake *FakeGit) SparseCloneArgsForCall(i int) (string, string, string, string) {
+	fake.sparseCloneMutex.RLock()
+	defer fake.sparseCloneMutex.RUnlock()
+	argsForCall := fake.sparseCloneArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+}
+
+func (fake *FakeGit) SparseCloneReturns(result1 error) {
+	fake.sparseCloneMutex.Lock()
+	defer fake.sparseCloneMutex.Unlock()
+	fake.SparseCloneStub = nil
+	fake.sparseCloneReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGit) SparseCloneReturnsOnCall(i int, result1 error) {
+	fake.sparseCloneMutex.Lock()
+	defer fake.sparseCloneMutex.Unlock()
+	fake.SparseCloneStub = nil
+	if fake.sparseCloneReturnsOnCall == nil {
+		fake.sparseCloneReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.sparseCloneReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeGit) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -553,6 +631,8 @@ func (fake *FakeGit) Invocations() map[string][][]interface{} {
 	defer fake.isRepositoryMutex.RUnlock()
 	fake.pushMutex.RLock()
 	defer fake.pushMutex.RUnlock()
+	fake.sparseCloneMutex.RLock()
+	defer fake.sparseCloneMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

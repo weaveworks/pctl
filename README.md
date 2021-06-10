@@ -133,11 +133,36 @@ pctl install --subscription-name pctl-profile \
              --profile-branch devel \
              --profile-url https://github.com/<usr>/<repo> \
              --profile-path bitnami-nginx \
-             --out install
+             --out <location of my flux repository>
 ```
 
 It's the user's responsibility to make sure that the local `git` setup has access to the url provided with `profile-url`.
 It can be any form of url as long as `git clone` understands it.
+
+#### Cloning repository resources
+
+pctl clones all repository local resources and puts them into the target flux repository. This is done so that the user doesn't
+have to include access credentials for all private repositories, including nested profiles. However, for repository local
+resources to work, the user has to provide the location of the GitRepository object that flux creates when bootstrapping or
+creating a flux repository. This resources is usually under the namespace `flux-system` named `flux-system` and of type
+GitRepository.
+
+Provide the following information when running install: `--git-repository <namespace>/<name>`.
+
+This looks as follows if installing via a URL:
+
+```
+pctl install --subscription-name pctl-profile \
+             --namespace [default] \
+             --profile-branch [main] \
+             --profile-url git@github.com:org/private-profile-repo \
+             --profile-path <profile-name> \
+             --git-repository <namespace>/<name> \
+             --out <location of my flux repository>
+```
+
+This will result in all the private resources which aren't available from the outside, downloaded locally and added
+into the flux repository.
 
 #### Architecture
 The below diagram illustrates how pctl install works:

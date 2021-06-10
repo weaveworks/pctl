@@ -41,7 +41,7 @@ spec:
       path: baz`)
 
 		path := "my-profile"
-		fakeGitClient.CloneStub = func(url string, branch string, dir string) error {
+		fakeGitClient.SparseCloneStub = func(url string, branch string, dir string, p string) error {
 			err := os.MkdirAll(filepath.Join(dir, path), 0755)
 			Expect(err).NotTo(HaveOccurred())
 			return ioutil.WriteFile(filepath.Join(dir, path, "profile.yaml"), profileYaml, 0755)
@@ -49,9 +49,9 @@ spec:
 
 		definition, err := repo.GetProfileDefinition(repoURL, branch, "my-profile", fakeGitClient)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(fakeGitClient.CloneCallCount()).To(Equal(1))
+		Expect(fakeGitClient.SparseCloneCallCount()).To(Equal(1))
 		// dir is semi random
-		url, cloneBranch, _ := fakeGitClient.CloneArgsForCall(0)
+		url, cloneBranch, _, _ := fakeGitClient.SparseCloneArgsForCall(0)
 		Expect(url).To(Equal(repoURL))
 		Expect(cloneBranch).To(Equal(branch))
 		Expect(definition).To(Equal(profilesv1.ProfileDefinition{
@@ -76,12 +76,12 @@ spec:
 
 	When("the clone request fails", func() {
 		It("returns an error", func() {
-			fakeGitClient.CloneReturns(errors.New("errord"))
+			fakeGitClient.SparseCloneReturns(errors.New("errord"))
 			_, err := repo.GetProfileDefinition(repoURL, branch, "my-profile", fakeGitClient)
 			Expect(err).To(MatchError("failed to clone the repo: errord"))
-			Expect(fakeGitClient.CloneCallCount()).To(Equal(1))
+			Expect(fakeGitClient.SparseCloneCallCount()).To(Equal(1))
 			// dir is semi random
-			url, cloneBranch, _ := fakeGitClient.CloneArgsForCall(0)
+			url, cloneBranch, _, _ := fakeGitClient.SparseCloneArgsForCall(0)
 			Expect(url).To(Equal(repoURL))
 			Expect(cloneBranch).To(Equal(branch))
 		})
@@ -90,7 +90,7 @@ spec:
 		It("returns an error", func() {
 			profileYaml := []byte("{not valid yaml}")
 			path := "my-profile"
-			fakeGitClient.CloneStub = func(url string, branch string, dir string) error {
+			fakeGitClient.SparseCloneStub = func(url string, branch string, dir string, p string) error {
 				err := os.MkdirAll(filepath.Join(dir, path), 0755)
 				Expect(err).NotTo(HaveOccurred())
 				return ioutil.WriteFile(filepath.Join(dir, path, "profile.yaml"), profileYaml, 0755)
@@ -98,7 +98,7 @@ spec:
 
 			_, err := repo.GetProfileDefinition(repoURL, branch, "my-profile", fakeGitClient)
 			Expect(err).To(MatchError(ContainSubstring("failed to parse profile")))
-			url, cloneBranch, _ := fakeGitClient.CloneArgsForCall(0)
+			url, cloneBranch, _, _ := fakeGitClient.SparseCloneArgsForCall(0)
 			Expect(url).To(Equal(repoURL))
 			Expect(cloneBranch).To(Equal(branch))
 
@@ -108,7 +108,7 @@ spec:
 		It("returns an error", func() {
 			profileYaml := []byte("")
 			path := "my-profile"
-			fakeGitClient.CloneStub = func(url string, branch string, dir string) error {
+			fakeGitClient.SparseCloneStub = func(url string, branch string, dir string, p string) error {
 				err := os.MkdirAll(filepath.Join(dir, path), 0755)
 				Expect(err).NotTo(HaveOccurred())
 				return ioutil.WriteFile(filepath.Join(dir, path, "profile.yaml"), profileYaml, 0755)
@@ -116,7 +116,7 @@ spec:
 
 			_, err := repo.GetProfileDefinition(repoURL, branch, "my-profile", fakeGitClient)
 			Expect(err).To(MatchError(ContainSubstring("failed to parse profile")))
-			url, cloneBranch, _ := fakeGitClient.CloneArgsForCall(0)
+			url, cloneBranch, _, _ := fakeGitClient.SparseCloneArgsForCall(0)
 			Expect(url).To(Equal(repoURL))
 			Expect(cloneBranch).To(Equal(branch))
 

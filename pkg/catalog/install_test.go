@@ -32,6 +32,8 @@ var _ = Describe("Install", func() {
 		httpBody          []byte
 		cfg               catalog.InstallConfig
 		fakeMakeArtifacts catalog.MakeArtifacts
+		gitRepoNamespace  = "git-repo-namespace"
+		gitRepoName       = "git-repo-name"
 	)
 
 	BeforeEach(func() {
@@ -54,18 +56,23 @@ var _ = Describe("Install", func() {
 }
 `)
 		fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
-
 		cfg = catalog.InstallConfig{
-			ProfileBranch: "main",
-			CatalogName:   "nginx",
-			CatalogClient: fakeCatalogClient,
-			Namespace:     "default",
-			ProfileName:   "nginx-1",
-			SubName:       "mysub",
-			Version:       "v0.0.1",
-			Directory:     tempDir,
+			ProfileConfig: catalog.ProfileConfig{
+				CatalogName:   "nginx",
+				GitRepository: gitRepoNamespace + "/" + gitRepoName,
+				Namespace:     "default",
+				ProfileBranch: "main",
+				ProfileName:   "nginx-1",
+				SubName:       "mysub",
+				Version:       "v0.0.1",
+			},
+			Clients: catalog.Clients{
+				CatalogClient: fakeCatalogClient,
+				GitClient:     fakeGit,
+			},
+			Directory: tempDir,
 		}
-		fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription, gitClient git.Git) ([]profile.Artifact, error) {
+		fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription, gitClient git.Git, rootDir, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
 			return []profile.Artifact{
 				{
 					Objects: []runtime.Object{
@@ -99,7 +106,7 @@ var _ = Describe("Install", func() {
 
 	Describe("install", func() {
 		It("generates the artifacts", func() {
-			err := catalog.Install(cfg, fakeGit)
+			err := catalog.Install(cfg)
 			Expect(err).NotTo(HaveOccurred())
 
 			var files []string
@@ -158,13 +165,13 @@ status: {}
 
 		When("getting the artifacts fails", func() {
 			BeforeEach(func() {
-				fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription, gitClient git.Git) ([]profile.Artifact, error) {
+				fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription, gitClient git.Git, rootDir, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
 					return nil, fmt.Errorf("foo")
 				}
 			})
 
 			It("errors", func() {
-				err := catalog.Install(cfg, fakeGit)
+				err := catalog.Install(cfg)
 				Expect(err).To(MatchError("failed to generate artifacts: foo"))
 			})
 		})
@@ -175,7 +182,7 @@ status: {}
 			})
 
 			It("errors", func() {
-				err := catalog.Install(cfg, fakeGit)
+				err := catalog.Install(cfg)
 				Expect(err).To(MatchError(ContainSubstring("failed to create directory")))
 			})
 		})
@@ -183,17 +190,22 @@ status: {}
 		When("a url is provided with branch and path", func() {
 			It("generates a spec with url and branch and path", func() {
 				cfg = catalog.InstallConfig{
-					ProfileBranch: "main",
-					CatalogName:   "nginx",
-					CatalogClient: fakeCatalogClient,
-					Namespace:     "default",
-					ProfileName:   "nginx-1",
-					SubName:       "mysub",
-					URL:           "https://github.com/weaveworks/profiles-examples",
-					Directory:     tempDir,
-					Path:          "branch-nginx",
+					Clients: catalog.Clients{
+						CatalogClient: fakeCatalogClient,
+						GitClient:     fakeGit,
+					},
+					ProfileConfig: catalog.ProfileConfig{
+						CatalogName:   "nginx",
+						Namespace:     "default",
+						Path:          "branch-nginx",
+						ProfileBranch: "main",
+						ProfileName:   "nginx-1",
+						SubName:       "mysub",
+						URL:           "https://github.com/weaveworks/profiles-examples",
+					},
+					Directory: tempDir,
 				}
-				err := catalog.Install(cfg, fakeGit)
+				err := catalog.Install(cfg)
 				Expect(err).NotTo(HaveOccurred())
 
 				var files []string
@@ -244,35 +256,25 @@ status: {}
 			})
 		})
 
-		When("a url is provided without path", func() {
-			It("returns a sensible error that path is required with a url", func() {
-				cfg = catalog.InstallConfig{
-					CatalogName:   "nginx",
-					CatalogClient: fakeCatalogClient,
-					Namespace:     "default",
-					ProfileName:   "nginx-1",
-					SubName:       "mysub",
-					URL:           "https://github.com/weaveworks/profiles-examples",
-					Directory:     tempDir,
-				}
-				err := catalog.Install(cfg, fakeGit)
-				Expect(err).To(MatchError("path must be provided with url"))
-			})
-		})
 		When("a branch is provided which isn't domain compatible", func() {
 			It("will not care because the name is sanitised", func() {
 				cfg = catalog.InstallConfig{
-					CatalogName:   "nginx",
-					CatalogClient: fakeCatalogClient,
-					Namespace:     "default",
-					ProfileName:   "nginx-1",
-					SubName:       "mysub",
-					URL:           "https://github.com/weaveworks/profiles-examples",
-					Directory:     tempDir,
-					ProfileBranch: "not_domain_compatible",
-					Path:          "path",
+					Clients: catalog.Clients{
+						CatalogClient: fakeCatalogClient,
+						GitClient:     fakeGit,
+					},
+					ProfileConfig: catalog.ProfileConfig{
+						CatalogName:   "nginx",
+						Namespace:     "default",
+						Path:          "path",
+						ProfileBranch: "not_domain_compatible",
+						ProfileName:   "nginx-1",
+						SubName:       "mysub",
+						URL:           "https://github.com/weaveworks/profiles-examples",
+					},
+					Directory: tempDir,
 				}
-				err := catalog.Install(cfg, fakeGit)
+				err := catalog.Install(cfg)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
