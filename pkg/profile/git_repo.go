@@ -11,9 +11,9 @@ func (p *Profile) makeGitRepository(path string) *sourcev1.GitRepository {
 	ref := &sourcev1.GitRepositoryRef{
 		Branch: fmt.Sprintf("%s:%s:%s", p.definition.Name, path, p.subscription.Spec.Branch),
 	}
-	if p.subscription.Spec.Version != "" {
+	if p.subscription.Spec.Tag != "" {
 		ref = &sourcev1.GitRepositoryRef{
-			Tag: fmt.Sprintf("%s:%s:%s", p.definition.Name, path, p.subscription.Spec.Version),
+			Tag: fmt.Sprintf("%s:%s:%s", p.definition.Name, path, p.subscription.Spec.Tag),
 		}
 	}
 	return &sourcev1.GitRepository{
