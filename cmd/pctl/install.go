@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/urfave/cli/v2"
 
 	"github.com/weaveworks/pctl/pkg/catalog"
@@ -61,12 +62,9 @@ func installCmd() *cli.Command {
 				Usage:       "The base branch to open a PR against.",
 			},
 			&cli.StringFlag{
-				Name:        "pr-branch",
-				Value:       "main",
-				DefaultText: "main",
-				Usage:       "The branch to create the PR from.",
+				Name:  "pr-branch",
+				Usage: "The branch to create the PR from. Generated if not set.",
 			},
-
 			&cli.StringFlag{
 				Name:        "out",
 				DefaultText: "current",
@@ -174,6 +172,9 @@ func createPullRequest(c *cli.Context) error {
 	directory := c.String("out")
 	if repo == "" {
 		return errors.New("repo must be defined if create-pr is true")
+	}
+	if branch == "" {
+		branch = c.String("subscription-name") + "-" + uuid.NewString()[:6]
 	}
 	fmt.Printf("Creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
 	r := &runner.CLIRunner{}
