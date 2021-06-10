@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
-	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 )
@@ -272,16 +271,6 @@ var _ = Describe("PCTL", func() {
 				},
 			}
 			Expect(kClient.Create(context.Background(), &nsp)).To(Succeed())
-			gitRepo := sourcev1.GitRepository{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "git-repo-name",
-					Namespace: namespace,
-				},
-				Spec: sourcev1.GitRepositorySpec{
-					URL: "https://github.com/weaveworks/fluxrepo",
-				},
-			}
-			Expect(kClient.Create(context.Background(), &gitRepo)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -295,8 +284,11 @@ var _ = Describe("PCTL", func() {
 		})
 
 		It("generates valid artifacts to the local directory", func() {
+			branch := "flux_repo_test_" + uuid.NewString()[:6]
+			profileBranch := "local_clone_test"
 			subName := "pctl-profile"
-			cmd := exec.Command(binaryPath, "install", "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "nginx-catalog/weaveworks-nginx/v0.1.0")
+			// bootstrap the flux repo
+			cmd := exec.Command("flux", "bootstrap", "github", "--owner", "weaveworks", "--repository", "pctl-test-repo", "--branch", branch)
 			cmd.Dir = temp
 			session, err := cmd.CombinedOutput()
 			if err != nil {
@@ -304,8 +296,30 @@ var _ = Describe("PCTL", func() {
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			// check out the branch
+			cmd = exec.Command("git", "clone", pctlTestRepositoryName, "--branch", branch, temp)
+			err = cmd.Run()
+			Expect(err).ToNot(HaveOccurred())
+
+			cmd = exec.Command(
+				binaryPath,
+				"install",
+				"--git-repository",
+				"flux-system/flux-system",
+				"--namespace", namespace,
+				"--profile-branch",
+				profileBranch,
+				"--profile-url", "https://github.com/weaveworks/profiles-examples",
+				"--profile-path", "weaveworks-nginx")
+			cmd.Dir = temp
+			session, err = cmd.CombinedOutput()
+			if err != nil {
+				fmt.Println("Output from failing command: ", string(session))
+			}
+			Expect(err).ToNot(HaveOccurred())
+
 			var files []string
-			profilesDir := filepath.Join(temp, "weaveworks-nginx")
+			profilesDir := filepath.Join(temp)
 			err = filepath.Walk(profilesDir, func(path string, info os.FileInfo, err error) error {
 				if !info.IsDir() {
 					files = append(files, strings.TrimPrefix(path, profilesDir+"/"))
@@ -317,15 +331,11 @@ var _ = Describe("PCTL", func() {
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
 				"profile.yaml",
-				"artifacts/nested-profile/nginx-server/HelmRelease.yaml",
-				"artifacts/nested-profile/nginx-server/nginx/chart/Chart.yaml",
 				"artifacts/nginx-deployment/Kustomization.yaml",
 				"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
-				"artifacts/dokuwiki/HelmRelease.yaml",
-				"artifacts/dokuwiki/HelmRepository.yaml",
 			))
 
-			filename := filepath.Join(temp, "weaveworks-nginx", "profile.yaml")
+			filename := filepath.Join(temp, "profile.yaml")
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
@@ -335,39 +345,30 @@ metadata:
   name: pctl-profile
   namespace: %s
 spec:
-  profile_catalog_description:
-    catalog: nginx-catalog
-    profile: weaveworks-nginx
-    version: v0.1.0
+  branch: local_clone_test
+  path: weaveworks-nginx
   profileURL: https://github.com/weaveworks/profiles-examples
-  version: weaveworks-nginx/v0.1.0
 status: {}
 `, namespace)))
 
 			By("the artifacts being deployable")
-
-			profileFile := filepath.Join(profilesDir, "profile.yaml")
-			nginxDeployment := filepath.Join(profilesDir, "artifacts", "nginx-deployment")
-			dokuwiki := filepath.Join(profilesDir, "artifacts", "dokuwiki")
-			cmd = exec.Command("kubectl", "apply", "-f", profileFile)
-			cmd.Dir = temp
-			session, err = cmd.CombinedOutput()
+			// Generate the resources into the flux repo, and push them up the repo?
+			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "add", ".")
+			output, err := cmd.CombinedOutput()
 			if err != nil {
-				fmt.Println("Output from failing command: ", string(session))
+				fmt.Println("output from failed command: ", string(output))
 			}
 			Expect(err).ToNot(HaveOccurred())
-			cmd = exec.Command("kubectl", "apply", "-R", "-f", nginxDeployment)
-			cmd.Dir = temp
-			session, err = cmd.CombinedOutput()
+			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "commit", "-am", "new content")
+			output, err = cmd.CombinedOutput()
 			if err != nil {
-				fmt.Println("Output from failing command: ", string(session))
+				fmt.Println("output from failed command: ", string(output))
 			}
 			Expect(err).ToNot(HaveOccurred())
-			cmd = exec.Command("kubectl", "apply", "-R", "-f", dokuwiki)
-			cmd.Dir = temp
-			session, err = cmd.CombinedOutput()
+			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "push", "-u", "origin", branch)
+			output, err = cmd.CombinedOutput()
 			if err != nil {
-				fmt.Println("Output from failing command: ", string(session))
+				fmt.Println("output from failed command: ", string(output))
 			}
 			Expect(err).ToNot(HaveOccurred())
 

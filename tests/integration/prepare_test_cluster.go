@@ -51,7 +51,7 @@ func PrepareTestCluster(binaryPath string) error {
 			fmt.Printf("failed to remove temporary folder at location: %s. Please clean manually.", tmp)
 		}
 	}()
-	cmd := exec.Command(binaryPath, "prepare", "--dry-run", "--out", tmp, "--keep")
+	cmd := exec.Command(binaryPath, "prepare", "--version", "v0.0.2", "--dry-run", "--out", tmp, "--keep")
 	output, err := cmd.CombinedOutput()
 	if err != nil || !bytes.Contains(output, []byte("kind: List")) {
 		fmt.Println("Output of prepare was: ", string(output))

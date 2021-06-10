@@ -71,7 +71,7 @@ func installCmd() *cli.Command {
 				Name:        "out",
 				DefaultText: "current",
 				Value:       ".",
-				Usage:       "Optional location to create the profile installation folder in.",
+				Usage:       "Optional location to create the profile installation folder in. This should be relative to the current working directory.",
 			},
 			&cli.StringFlag{
 				Name:  "pr-repo",
