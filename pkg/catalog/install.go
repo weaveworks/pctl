@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 
+	"github.com/otiai10/copy"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/profile"
 )
@@ -46,7 +47,7 @@ type InstallConfig struct {
 }
 
 // MakeArtifacts returns artifacts for a subscription
-type MakeArtifacts func(sub profilesv1.ProfileSubscription, gitClient git.Git, repoRoot, gitRepoNamespace, gitRepoName string) ([]profile.Artifact, error)
+type MakeArtifacts func(sub profilesv1.ProfileInstallation, gitClient git.Git, repoRoot, gitRepoNamespace, gitRepoName string) ([]profile.Artifact, error)
 
 var makeArtifacts = profile.MakeArtifacts
 
@@ -57,9 +58,9 @@ func Install(cfg InstallConfig) error {
 	if err != nil {
 		return err
 	}
-	subscription := profilesv1.ProfileSubscription{
+	subscription := profilesv1.ProfileInstallation{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "ProfileSubscription",
+			Kind:       "ProfileInstallation",
 			APIVersion: "weave.works/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -144,7 +145,7 @@ func getRepositoryLocalArtifacts(cfg InstallConfig, a profile.Artifact, artifact
 			path = filepath.Dir(path)
 		}
 		fullPath := filepath.Join(tmp, profilePath, path)
-		if err := os.Rename(fullPath, filepath.Join(artifactDir, path)); err != nil {
+		if err := copy.Copy(fullPath, filepath.Join(artifactDir, path)); err != nil {
 			return fmt.Errorf("failed to move folder: %w", err)
 		}
 	}
@@ -152,17 +153,19 @@ func getRepositoryLocalArtifacts(cfg InstallConfig, a profile.Artifact, artifact
 }
 
 // getProfileSpec generates a spec based on configured properties.
-func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileSubscriptionSpec, error) {
+func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileInstallationSpec, error) {
 	if cfg.URL != "" {
-		return profilesv1.ProfileSubscriptionSpec{
-			ProfileURL: cfg.URL,
-			Branch:     cfg.ProfileBranch,
-			Path:       cfg.Path,
+		return profilesv1.ProfileInstallationSpec{
+			Source: &profilesv1.Source{
+				URL:    cfg.URL,
+				Branch: cfg.ProfileBranch,
+				Path:   cfg.Path,
+			},
 		}, nil
 	}
 	p, err := Show(cfg.CatalogClient, cfg.CatalogName, cfg.ProfileName, cfg.Version)
 	if err != nil {
-		return profilesv1.ProfileSubscriptionSpec{}, fmt.Errorf("failed to get profile %q in catalog %q: %w", cfg.ProfileName, cfg.CatalogName, err)
+		return profilesv1.ProfileInstallationSpec{}, fmt.Errorf("failed to get profile %q in catalog %q: %w", cfg.ProfileName, cfg.CatalogName, err)
 	}
 
 	//tag could be <semver> or <name/semver>
@@ -172,13 +175,15 @@ func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileSubscriptionSpec, erro
 		path = splitTag[0]
 	}
 
-	return profilesv1.ProfileSubscriptionSpec{
-		ProfileURL: p.URL,
-		Tag:        p.Tag,
-		Path:       path,
-		ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
+	return profilesv1.ProfileInstallationSpec{
+		Source: &profilesv1.Source{
+			URL:  p.URL,
+			Tag:  p.Tag,
+			Path: path,
+		},
+		Catalog: &profilesv1.Catalog{
 			Catalog: cfg.CatalogName,
-			Version: p.Version,
+			Version: profilesv1.GetVersionFromTag(p.Tag),
 			Profile: p.Name,
 		},
 	}, nil

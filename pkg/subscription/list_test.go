@@ -18,7 +18,7 @@ var _ = Describe("List", func() {
 		sm              *subscription.Manager
 		fakeClient      client.Client
 		profileTypeMeta = metav1.TypeMeta{
-			Kind:       "ProfileSubscription",
+			Kind:       "ProfileInstallation",
 			APIVersion: "weave.works/v1alpha1",
 		}
 		sub1       = "sub1"
@@ -36,43 +36,49 @@ var _ = Describe("List", func() {
 		scheme := runtime.NewScheme()
 		Expect(profilesv1.AddToScheme(scheme)).To(Succeed())
 		fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
-		pSub1 := &profilesv1.ProfileSubscription{
+		pSub1 := &profilesv1.ProfileInstallation{
 			TypeMeta: profileTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      sub1,
 				Namespace: namespace1,
 			},
-			Spec: profilesv1.ProfileSubscriptionSpec{
-				ProfileURL: "https://github.com/org/repo-name",
-				Tag:        "foo/v0.1.0",
-				ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
+			Spec: profilesv1.ProfileInstallationSpec{
+				Source: &profilesv1.Source{
+					URL: "https://github.com/org/repo-name",
+					Tag: "foo/v0.1.0",
+				},
+				Catalog: &profilesv1.Catalog{
 					Profile: profile,
 					Catalog: catalog,
 					Version: version,
 				},
 			},
 		}
-		pSub2 := &profilesv1.ProfileSubscription{
+		pSub2 := &profilesv1.ProfileInstallation{
 			TypeMeta: profileTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      sub2,
 				Namespace: namespace2,
 			},
-			Spec: profilesv1.ProfileSubscriptionSpec{
-				ProfileURL: "https://github.com/org/repo-name",
-				Branch:     "main",
+			Spec: profilesv1.ProfileInstallationSpec{
+				Source: &profilesv1.Source{
+					URL:    "https://github.com/org/repo-name",
+					Branch: "main",
+				},
 			},
 		}
-		pSub3 := &profilesv1.ProfileSubscription{
+		pSub3 := &profilesv1.ProfileInstallation{
 			TypeMeta: profileTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      sub3,
 				Namespace: namespace3,
 			},
-			Spec: profilesv1.ProfileSubscriptionSpec{
-				ProfileURL: "https://github.com/org/repo-name",
-				Branch:     "main",
-				Path:       "path",
+			Spec: profilesv1.ProfileInstallationSpec{
+				Source: &profilesv1.Source{
+					URL:    "https://github.com/org/repo-name",
+					Branch: "main",
+					Path:   "path",
+				},
 			},
 		}
 		Expect(fakeClient.Create(context.TODO(), pSub1)).To(Succeed())
@@ -86,7 +92,7 @@ var _ = Describe("List", func() {
 		subs, err := sm.List()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(subs).To(ConsistOf(
-			subscription.SubscriptionSummary{
+			subscription.InstallationSummary{
 				Name:      sub1,
 				Namespace: namespace1,
 				Version:   version,
@@ -96,7 +102,7 @@ var _ = Describe("List", func() {
 				Path:      "-",
 				URL:       "https://github.com/org/repo-name",
 			},
-			subscription.SubscriptionSummary{
+			subscription.InstallationSummary{
 				Name:      sub2,
 				Namespace: namespace2,
 				Version:   "-",
@@ -106,7 +112,7 @@ var _ = Describe("List", func() {
 				Path:      "-",
 				URL:       "https://github.com/org/repo-name",
 			},
-			subscription.SubscriptionSummary{
+			subscription.InstallationSummary{
 				Name:      sub3,
 				Namespace: namespace3,
 				Version:   "-",

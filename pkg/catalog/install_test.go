@@ -72,7 +72,7 @@ var _ = Describe("Install", func() {
 			},
 			Directory: tempDir,
 		}
-		fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription, gitClient git.Git, rootDir, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
+		fakeMakeArtifacts = func(sub profilesv1.ProfileInstallation, gitClient git.Git, rootDir, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
 			return []profile.Artifact{
 				{
 					Objects: []runtime.Object{
@@ -129,19 +129,20 @@ var _ = Describe("Install", func() {
 			content, err := ioutil.ReadFile(profileFile)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
-kind: ProfileSubscription
+kind: ProfileInstallation
 metadata:
   creationTimestamp: null
   name: mysub
   namespace: default
 spec:
-  path: nginx-1
-  profile_catalog_description:
+  catalog:
     catalog: nginx
     profile: nginx-1
     version: v0.0.1
-  profileURL: https://github.com/weaveworks/nginx-profile
-  tag: nginx-1/v0.0.1
+  source:
+    path: nginx-1
+    tag: nginx-1/v0.0.1
+    url: https://github.com/weaveworks/nginx-profile
 status: {}
 `))
 
@@ -165,7 +166,7 @@ status: {}
 
 		When("getting the artifacts fails", func() {
 			BeforeEach(func() {
-				fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription, gitClient git.Git, rootDir, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
+				fakeMakeArtifacts = func(sub profilesv1.ProfileInstallation, gitClient git.Git, rootDir, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
 					return nil, fmt.Errorf("foo")
 				}
 			})
@@ -225,15 +226,16 @@ status: {}
 				content, err := ioutil.ReadFile(profileFile)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
-kind: ProfileSubscription
+kind: ProfileInstallation
 metadata:
   creationTimestamp: null
   name: mysub
   namespace: default
 spec:
-  branch: main
-  path: branch-nginx
-  profileURL: https://github.com/weaveworks/profiles-examples
+  source:
+    branch: main
+    path: branch-nginx
+    url: https://github.com/weaveworks/profiles-examples
 status: {}
 `))
 

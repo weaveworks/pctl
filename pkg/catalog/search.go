@@ -9,7 +9,7 @@ import (
 )
 
 // Search queries the catalog at catalogURL for profiles matching the provided searchName.
-func Search(catalogClient CatalogClient, searchName string) ([]profilesv1.ProfileDescription, error) {
+func Search(catalogClient CatalogClient, searchName string) ([]profilesv1.ProfileCatalogEntry, error) {
 	q := map[string]string{
 		"name": searchName,
 	}
@@ -21,7 +21,7 @@ func Search(catalogClient CatalogClient, searchName string) ([]profilesv1.Profil
 	if statusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch profile from catalog, status code %d", statusCode)
 	}
-	var profiles []profilesv1.ProfileDescription
+	var profiles []profilesv1.ProfileCatalogEntry
 	if err := json.Unmarshal(data, &profiles); err != nil {
 		return nil, fmt.Errorf("failed to parse catalog: %w", err)
 	}

@@ -36,7 +36,7 @@ const (
 	helmChartVersion1    = "8.8.1"
 	kustomizeName1       = "kustomizeOneArtifactName"
 	kustomizePath1       = "kustomize/artifact/path-one"
-	profileSubKind       = "ProfileSubscription"
+	profileSubKind       = "ProfileInstallation"
 	profileSubAPIVersion = "weave.works/v1alpha1"
 	profileURL           = "https://github.com/org/repo-name"
 	gitRepoNamespace     = "git-repo-namespace"
@@ -57,7 +57,7 @@ var (
 var _ = Describe("Profile", func() {
 	var (
 		p             *profile.Profile
-		pSub          profilesv1.ProfileSubscription
+		pSub          profilesv1.ProfileInstallation
 		pDef          profilesv1.ProfileDefinition
 		pNestedDef    profilesv1.ProfileDefinition
 		pNestedDefURL = "https://github.com/org/repo-name-nested"
@@ -65,16 +65,18 @@ var _ = Describe("Profile", func() {
 	)
 
 	BeforeEach(func() {
-		pSub = profilesv1.ProfileSubscription{
+		pSub = profilesv1.ProfileInstallation{
 			TypeMeta: profileTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      subscriptionName,
 				Namespace: namespace,
 			},
-			Spec: profilesv1.ProfileSubscriptionSpec{
-				ProfileURL: profileURL,
-				Branch:     branch,
-				Path:       profileName1,
+			Spec: profilesv1.ProfileInstallationSpec{
+				Source: &profilesv1.Source{
+					URL:    profileURL,
+					Branch: branch,
+					Path:   profileName1,
+				},
 				Values: &apiextensionsv1.JSON{
 					Raw: []byte(`{"replicaCount": 3,"service":{"port":8081}}`),
 				},
@@ -97,12 +99,15 @@ var _ = Describe("Profile", func() {
 				APIVersion: "packages.weave.works.io/profilesv1",
 			},
 			Spec: profilesv1.ProfileDefinitionSpec{
-				Description: "foo",
+				ProfileDescription: profilesv1.ProfileDescription{
+					Description: "foo",
+				},
 				Artifacts: []profilesv1.Artifact{
 					{
 						Name: chartName1,
-						Path: chartPath1,
-						Kind: profilesv1.HelmChartKind,
+						Chart: &profilesv1.Chart{
+							Path: chartPath1,
+						},
 					},
 				},
 			},
@@ -117,26 +122,31 @@ var _ = Describe("Profile", func() {
 				APIVersion: "packages.weave.works/profilesv1",
 			},
 			Spec: profilesv1.ProfileDefinitionSpec{
-				Description: "foo",
+				ProfileDescription: profilesv1.ProfileDescription{
+					Description: "foo",
+				},
 				Artifacts: []profilesv1.Artifact{
 					{
 						Name: profileName2,
-						Kind: profilesv1.ProfileKind,
 						Profile: &profilesv1.Profile{
-							URL:    pNestedDefURL,
-							Branch: "main",
-							Path:   profileName2,
+							Source: &profilesv1.Source{
+								URL:    pNestedDefURL,
+								Branch: "main",
+								Path:   profileName2,
+							},
 						},
 					},
 					{
 						Name: chartName2,
-						Path: chartPath2,
-						Kind: profilesv1.HelmChartKind,
+						Chart: &profilesv1.Chart{
+							Path: chartPath2,
+						},
 					},
 					{
 						Name: kustomizeName1,
-						Path: kustomizePath1,
-						Kind: profilesv1.KustomizeKind,
+						Kustomize: &profilesv1.Kustomize{
+							Path: kustomizePath1,
+						},
 					},
 					{
 						Name: helmChartName1,
@@ -145,7 +155,6 @@ var _ = Describe("Profile", func() {
 							Name:    helmChartChart1,
 							Version: helmChartVersion1,
 						},
-						Kind: profilesv1.HelmChartKind,
 					},
 				},
 			},
@@ -296,15 +305,17 @@ var _ = Describe("Profile", func() {
 
 		When("the branch name for a git repository is not domain compatible", func() {
 			It("will sanitise it", func() {
-				pSub = profilesv1.ProfileSubscription{
+				pSub = profilesv1.ProfileInstallation{
 					TypeMeta: profileTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      subscriptionName,
 						Namespace: namespace,
 					},
-					Spec: profilesv1.ProfileSubscriptionSpec{
-						ProfileURL: profileURL,
-						Branch:     "not_domain_compatible",
+					Spec: profilesv1.ProfileInstallationSpec{
+						Source: &profilesv1.Source{
+							URL:    profileURL,
+							Branch: "not_domain_compatible",
+						},
 					},
 				}
 				artifacts, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
@@ -335,15 +346,17 @@ var _ = Describe("Profile", func() {
 
 		When("the git repository name is not defined", func() {
 			It("errors out", func() {
-				pSub = profilesv1.ProfileSubscription{
+				pSub = profilesv1.ProfileInstallation{
 					TypeMeta: profileTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      subscriptionName,
 						Namespace: namespace,
 					},
-					Spec: profilesv1.ProfileSubscriptionSpec{
-						ProfileURL: profileURL,
-						Branch:     branch,
+					Spec: profilesv1.ProfileInstallationSpec{
+						Source: &profilesv1.Source{
+							URL:    profileURL,
+							Branch: branch,
+						},
 					},
 				}
 				artifacts, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, "", "")
@@ -367,10 +380,10 @@ var _ = Describe("Profile", func() {
 				Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("failed to get profile definition %s on branch %s: foo", pNestedDefURL, branch))))
 			})
 		})
-		When("configured with an invalid artifact", func() {
+		PWhen("configured with an invalid artifact", func() {
 			When("the Kind of artifact is unknown", func() {
 				BeforeEach(func() {
-					pDef.Spec.Artifacts[0].Kind = "SomeUnknownKind"
+					pDef.Spec.Artifacts[0] = profilesv1.Artifact{}
 				})
 
 				It("errors", func() {
@@ -381,7 +394,7 @@ var _ = Describe("Profile", func() {
 
 			When("the nested profile is invalid", func() {
 				BeforeEach(func() {
-					pNestedDef.Spec.Artifacts[0].Kind = "SomeUnknownKind"
+					pNestedDef.Spec.Artifacts[0] = profilesv1.Artifact{}
 				})
 
 				It("errors", func() {
@@ -400,7 +413,9 @@ var _ = Describe("Profile", func() {
 							APIVersion: "packages.weave.works/profilesv1",
 						},
 						Spec: profilesv1.ProfileDefinitionSpec{
-							Description: "foo",
+							ProfileDescription: profilesv1.ProfileDescription{
+								Description: "foo",
+							},
 							Artifacts: []profilesv1.Artifact{
 								{
 									Name: helmChartName1,
@@ -408,9 +423,8 @@ var _ = Describe("Profile", func() {
 										URL:     helmChartURL1,
 										Name:    helmChartChart1,
 										Version: helmChartVersion1,
+										Path:    "https://not.empty",
 									},
-									Path: "https://not.empty",
-									Kind: profilesv1.HelmChartKind,
 								},
 							},
 						},
@@ -434,16 +448,21 @@ var _ = Describe("Profile", func() {
 							APIVersion: "packages.weave.works/profilesv1",
 						},
 						Spec: profilesv1.ProfileDefinitionSpec{
-							Description: "foo",
+							ProfileDescription: profilesv1.ProfileDescription{
+								Description: "foo",
+							},
 							Artifacts: []profilesv1.Artifact{
 								{
 									Name: helmChartName1,
 									Profile: &profilesv1.Profile{
-										URL:    "example.com",
-										Branch: "branch",
+										Source: &profilesv1.Source{
+											URL:    "example.com",
+											Branch: "branch",
+										},
 									},
-									Path: "https://not.empty",
-									Kind: profilesv1.HelmChartKind,
+									Kustomize: &profilesv1.Kustomize{
+										Path: "https://not.empty",
+									},
 								},
 							},
 						},
@@ -467,7 +486,9 @@ var _ = Describe("Profile", func() {
 							APIVersion: "packages.weave.works/profilesv1",
 						},
 						Spec: profilesv1.ProfileDefinitionSpec{
-							Description: "foo",
+							ProfileDescription: profilesv1.ProfileDescription{
+								Description: "foo",
+							},
 							Artifacts: []profilesv1.Artifact{
 								{
 									Name: helmChartName1,
@@ -477,10 +498,11 @@ var _ = Describe("Profile", func() {
 										Version: helmChartVersion1,
 									},
 									Profile: &profilesv1.Profile{
-										URL:    "example.com",
-										Branch: "branch",
+										Source: &profilesv1.Source{
+											URL:    "example.com",
+											Branch: "branch",
+										},
 									},
-									Kind: profilesv1.HelmChartKind,
 								},
 							},
 						},
@@ -508,15 +530,18 @@ var _ = Describe("Profile", func() {
 							APIVersion: "packages.weave.works/profilesv1",
 						},
 						Spec: profilesv1.ProfileDefinitionSpec{
-							Description: "foo",
+							ProfileDescription: profilesv1.ProfileDescription{
+								Description: "foo",
+							},
 							Artifacts: []profilesv1.Artifact{
 								{
 									Name: "recursive",
 									Profile: &profilesv1.Profile{
-										URL:    profileURL,
-										Branch: branch,
+										Source: &profilesv1.Source{
+											URL:    profileURL,
+											Branch: branch,
+										},
 									},
-									Kind: profilesv1.ProfileKind,
 								},
 							},
 						},
@@ -525,10 +550,11 @@ var _ = Describe("Profile", func() {
 						{
 							Name: "recursive",
 							Profile: &profilesv1.Profile{
-								URL:    pNestedDef2URL,
-								Branch: branch,
+								Source: &profilesv1.Source{
+									URL:    pNestedDef2URL,
+									Branch: branch,
+								},
 							},
-							Kind: profilesv1.ProfileKind,
 						},
 					}
 

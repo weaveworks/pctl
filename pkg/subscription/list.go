@@ -6,8 +6,8 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
-// SubscriptionSummary contains a summary of a subscription
-type SubscriptionSummary struct {
+// InstallationSummary contains a summary of a subscription
+type InstallationSummary struct {
 	Name      string
 	Namespace string
 	Version   string
@@ -19,13 +19,13 @@ type SubscriptionSummary struct {
 }
 
 // List returns a list of subscriptions
-func (sm *Manager) List() ([]SubscriptionSummary, error) {
-	var subscriptions profilesv1.ProfileSubscriptionList
+func (sm *Manager) List() ([]InstallationSummary, error) {
+	var subscriptions profilesv1.ProfileInstallationList
 	err := sm.kClient.List(sm.ctx, &subscriptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list profile subscriptions: %w", err)
 	}
-	var descriptions []SubscriptionSummary
+	var descriptions []InstallationSummary
 	for _, sub := range subscriptions.Items {
 		version := "-"
 		profile := "-"
@@ -33,21 +33,23 @@ func (sm *Manager) List() ([]SubscriptionSummary, error) {
 		branch := "-"
 		path := "-"
 		url := "-"
-		if sub.Spec.ProfileCatalogDescription != nil {
-			version = sub.Spec.ProfileCatalogDescription.Version
-			profile = sub.Spec.ProfileCatalogDescription.Profile
-			catalog = sub.Spec.ProfileCatalogDescription.Catalog
+		if sub.Spec.Catalog != nil {
+			version = sub.Spec.Catalog.Version
+			profile = sub.Spec.Catalog.Profile
+			catalog = sub.Spec.Catalog.Catalog
 		}
-		if sub.Spec.Path != "" {
-			path = sub.Spec.Path
+		if sub.Spec.Source != nil {
+			if sub.Spec.Source.Path != "" {
+				path = sub.Spec.Source.Path
+			}
+			if sub.Spec.Source.Branch != "" {
+				branch = sub.Spec.Source.Branch
+			}
+			if sub.Spec.Source.URL != "" {
+				url = sub.Spec.Source.URL
+			}
 		}
-		if sub.Spec.Branch != "" {
-			branch = sub.Spec.Branch
-		}
-		if sub.Spec.ProfileURL != "" {
-			url = sub.Spec.ProfileURL
-		}
-		descriptions = append(descriptions, SubscriptionSummary{
+		descriptions = append(descriptions, InstallationSummary{
 			Name:      sub.Name,
 			Namespace: sub.Namespace,
 			Version:   version,
