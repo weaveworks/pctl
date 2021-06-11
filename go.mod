@@ -13,7 +13,7 @@ require (
 	github.com/onsi/gomega v1.13.0
 	github.com/otiai10/copy v1.6.0
 	github.com/urfave/cli/v2 v2.3.0
-	github.com/weaveworks/profiles v0.0.6
+	github.com/weaveworks/profiles v0.0.7
 	k8s.io/api v0.20.5
 	k8s.io/apiextensions-apiserver v0.20.5
 	k8s.io/apimachinery v0.21.1
