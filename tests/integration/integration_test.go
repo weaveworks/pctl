@@ -723,7 +723,7 @@ spec:
   source:
     path: .
     tag: v2.0.0
-    url: https://github.com/aclevername/nginx-profile
+    url: https://github.com/weaveworks/nginx-profile
   valuesFrom:
   - kind: ConfigMap
     name: %s
