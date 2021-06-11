@@ -362,9 +362,10 @@ metadata:
   name: pctl-profile
   namespace: %s
 spec:
-  branch: local_clone_test
-  path: weaveworks-nginx
-  profileURL: https://github.com/weaveworks/profiles-examples
+  source:
+    branch: local_clone_test
+    path: weaveworks-nginx
+    profileURL: https://github.com/weaveworks/profiles-examples
 status: {}
 `, namespace)))
 
@@ -425,7 +426,7 @@ status: {}
 		})
 
 		When("a url is provided with a branch and path", func() {
-			PIt("will fetch information from that branch with path", func() {
+			It("will fetch information from that branch with path", func() {
 				namespace := uuid.New().String()
 				branch := "main"
 				path := "bitnami-nginx"
@@ -447,20 +448,16 @@ status: {}
 				By("creating the artifacts")
 				profilesDirProfile := filepath.Join(temp, "profile.yaml")
 				profilesArtifacts := filepath.Join(temp, "artifacts")
-				profilesArtifactsDeployment := filepath.Join(temp, "artifacts", "nginx-deployment")
-				profilesArtifactsDeploymentKustomization := filepath.Join(temp, "artifacts", "nginx-deployment", "Kustomization.yaml")
-				profilesArtifactsDeploymentKustomizationNginx := filepath.Join(temp, "artifacts", "nginx-deployment", "nginx")
-				profilesArtifactsDeploymentKustomizationNginxDeployment := filepath.Join(temp, "artifacts", "nginx-deployment", "nginx", "deployment")
-				profilesArtifactsDeploymentKustomizationNginxDeploymentDeploymentYaml := filepath.Join(temp, "artifacts", "nginx-deployment", "nginx", "deployment", "deployment.yaml")
+				profilesArtifactsChartDir := filepath.Join(profilesArtifacts, "nginx-server")
+				profilesArtifactsRelease := filepath.Join(profilesArtifactsChartDir, "HelmRelease.yaml")
+				profilesArtifactsChart := filepath.Join(profilesArtifactsChartDir, "nginx", "chart", "Chart.yaml")
 				Expect(files).To(ContainElements(
 					temp,
 					profilesDirProfile,
 					profilesArtifacts,
-					profilesArtifactsDeployment,
-					profilesArtifactsDeploymentKustomization,
-					profilesArtifactsDeploymentKustomizationNginx,
-					profilesArtifactsDeploymentKustomizationNginxDeployment,
-					profilesArtifactsDeploymentKustomizationNginxDeploymentDeploymentYaml,
+					profilesArtifactsChartDir,
+					profilesArtifactsChart,
+					profilesArtifactsRelease,
 				))
 				filename := filepath.Join(temp, "profile.yaml")
 				content, err := ioutil.ReadFile(filename)
@@ -472,18 +469,18 @@ metadata:
   name: pctl-profile
   namespace: %s
 spec:
-  branch: main
-  path: bitnami-nginx
-  profileURL: https://github.com/weaveworks/profiles-examples
+  source:
+    branch: main
+    path: bitnami-nginx
+    url: https://github.com/weaveworks/profiles-examples
 status: {}
 `, namespace)))
 			})
 		})
 
 		When("a url is provided to a private repository", func() {
-			PIt("will fetch information without a problem", func() {
+			It("will fetch information without a problem", func() {
 				namespace := uuid.New().String()
-				//subName := "pctl-profile"
 				branch := "main"
 				path := "bitnami-nginx"
 				cmd := exec.Command(binaryPath, "install", "--out", temp, "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-url", pctlPrivateProfilesRepositoryName, "--profile-branch", branch, "--profile-path", path)
@@ -527,9 +524,10 @@ metadata:
   name: pctl-profile
   namespace: %s
 spec:
-  branch: main
-  path: bitnami-nginx
-  profileURL: git@github.com:weaveworks/profiles-examples-private.git
+  source:
+    branch: main
+    path: bitnami-nginx
+    url: git@github.com:weaveworks/profiles-examples-private.git
 status: {}
 `, namespace)))
 			})
