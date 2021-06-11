@@ -25,9 +25,8 @@ local-env: submodule ## Create local environment
 	kubectl apply -f dependencies/profiles/examples/profile-catalog-source.yaml
 
 submodule: ## Update git submodules
-	echo "pass"
-	# git submodule init
-	# git submodule update
+	git submodule init
+	git submodule update
 
 ##@ Docs
 

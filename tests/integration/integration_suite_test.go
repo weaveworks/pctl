@@ -16,6 +16,8 @@ import (
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
+	"github.com/weaveworks/pctl/tests/integration"
 )
 
 var (
@@ -49,8 +51,8 @@ var _ = BeforeSuite(func() {
 	kubeconfig := ctrl.GetConfigOrDie()
 	kClient, err = client.New(kubeconfig, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
-	// err = integration.PrepareTestCluster(binaryPath)
-	// Expect(err).NotTo(HaveOccurred())
+	err = integration.PrepareTestCluster(binaryPath)
+	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
