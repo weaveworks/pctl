@@ -49,57 +49,53 @@ var _ = Describe("PCTL", func() {
 				session, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(session)).To(ContainSubstring(`{
-    "name": "weaveworks-nginx",
-    "description": "This installs nginx.",
-    "version": "v0.1.0",
     "tag": "weaveworks-nginx/v0.1.0",
     "catalog": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
+    "name": "weaveworks-nginx",
+    "description": "This installs nginx.",
     "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
     "prerequisites": [
       "Kubernetes 1.18+"
     ]
   },
   {
-    "name": "weaveworks-nginx",
-    "description": "This installs nginx.",
-    "version": "v0.1.1",
     "tag": "weaveworks-nginx/v0.1.1",
     "catalog": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
+    "name": "weaveworks-nginx",
+    "description": "This installs nginx.",
     "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
     "prerequisites": [
       "Kubernetes 1.18+"
     ]
   },
   {
-    "name": "bitnami-nginx",
-    "description": "This installs nginx.",
-    "version": "v0.1.0",
     "tag": "bitnami-nginx/v0.1.0",
     "catalog": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
+    "name": "bitnami-nginx",
+    "description": "This installs nginx.",
     "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
     "prerequisites": [
       "Kubernetes 1.18+"
     ]
   },
   {
-    "name": "nginx",
-    "description": "This installs nginx.",
-    "version": "v2.0.0",
     "tag": "v2.0.0",
     "catalog": "nginx-catalog",
     "url": "https://github.com/weaveworks/nginx-profile",
+    "name": "nginx",
+    "description": "This installs nginx.",
     "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
     "prerequisites": [
       "Kubernetes 1.18+"
     ]
   },
   {
+    "catalog": "nginx-catalog",
     "name": "some-other-nginx",
-    "description": "This installs some other nginx.",
-    "catalog": "nginx-catalog"
+    "description": "This installs some other nginx."
   }`))
 			})
 		})
@@ -158,12 +154,11 @@ var _ = Describe("PCTL", func() {
 				session, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(session)).To(ContainSubstring(`{
-  "name": "weaveworks-nginx",
-  "description": "This installs nginx.",
-  "version": "v0.1.0",
   "tag": "weaveworks-nginx/v0.1.0",
   "catalog": "nginx-catalog",
   "url": "https://github.com/weaveworks/profiles-examples",
+  "name": "weaveworks-nginx",
+  "description": "This installs nginx.",
   "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
   "prerequisites": [
     "Kubernetes 1.18+"
@@ -187,24 +182,26 @@ var _ = Describe("PCTL", func() {
 			namespace        = "default"
 			subscriptionName = "long-name-to-ensure-padding"
 			ctx              = context.TODO()
-			pSub             profilesv1.ProfileSubscription
+			pSub             profilesv1.ProfileInstallation
 		)
 
 		BeforeEach(func() {
 			profileURL := "https://github.com/weaveworks/profiles-examples"
-			pSub = profilesv1.ProfileSubscription{
+			pSub = profilesv1.ProfileInstallation{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       "ProfileSubscription",
+					Kind:       "ProfileInstallation",
 					APIVersion: "profilesubscriptions.weave.works/v1alpha1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      subscriptionName,
 					Namespace: namespace,
 				},
-				Spec: profilesv1.ProfileSubscriptionSpec{
-					ProfileURL: profileURL,
-					Tag:        "weaveworks-nginx/v0.1.0",
-					ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
+				Spec: profilesv1.ProfileInstallationSpec{
+					Source: &profilesv1.Source{
+						URL: profileURL,
+						Tag: "weaveworks-nginx/v0.1.0",
+					},
+					Catalog: &profilesv1.Catalog{
 						Catalog: "nginx-catalog",
 						Profile: "weaveworks-nginx",
 						Version: "v0.1.0",
@@ -235,19 +232,21 @@ var _ = Describe("PCTL", func() {
 		When("there are no available updates", func() {
 			It("returns the subscriptions", func() {
 				profileURL := "https://github.com/weaveworks/profiles-examples"
-				bitnamiSub := profilesv1.ProfileSubscription{
+				bitnamiSub := profilesv1.ProfileInstallation{
 					TypeMeta: metav1.TypeMeta{
-						Kind:       "ProfileSubscription",
+						Kind:       "ProfileInstallation",
 						APIVersion: "profilesubscriptions.weave.works/v1alpha1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "bitnami-profile",
 						Namespace: namespace,
 					},
-					Spec: profilesv1.ProfileSubscriptionSpec{
-						ProfileURL: profileURL,
-						Tag:        "bitnami-nginx/v0.1.0",
-						ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
+					Spec: profilesv1.ProfileInstallationSpec{
+						Source: &profilesv1.Source{
+							URL: profileURL,
+							Tag: "bitnami-nginx/v0.1.0",
+						},
+						Catalog: &profilesv1.Catalog{
 							Catalog: "nginx-catalog",
 							Profile: "bitnami-nginx",
 							Version: "v0.1.0",
@@ -301,7 +300,7 @@ var _ = Describe("PCTL", func() {
 			_ = kClient.Delete(context.Background(), &nsp)
 		})
 
-		It("generates valid artifacts to the local directory", func() {
+		PIt("generates valid artifacts to the local directory", func() {
 			branch := "flux_repo_test_" + uuid.NewString()[:6]
 			profileBranch := "local_clone_test"
 			subName := "pctl-profile"
@@ -357,7 +356,7 @@ var _ = Describe("PCTL", func() {
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
-kind: ProfileSubscription
+kind: ProfileInstallation
 metadata:
   creationTimestamp: null
   name: pctl-profile
@@ -426,10 +425,10 @@ status: {}
 		})
 
 		When("a url is provided with a branch and path", func() {
-			It("will fetch information from that branch with path", func() {
+			PIt("will fetch information from that branch with path", func() {
 				namespace := uuid.New().String()
-				branch := "branch-and-url"
-				path := "branch-nginx"
+				branch := "main"
+				path := "bitnami-nginx"
 				cmd := exec.Command(binaryPath, "install", "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-url", "https://github.com/weaveworks/profiles-examples", "--profile-branch", branch, "--profile-path", path)
 				cmd.Dir = temp
 				session, err := cmd.CombinedOutput()
@@ -467,14 +466,14 @@ status: {}
 				content, err := ioutil.ReadFile(filename)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
-kind: ProfileSubscription
+kind: ProfileInstallation
 metadata:
   creationTimestamp: null
   name: pctl-profile
   namespace: %s
 spec:
-  branch: branch-and-url
-  path: branch-nginx
+  branch: main
+  path: bitnami-nginx
   profileURL: https://github.com/weaveworks/profiles-examples
 status: {}
 `, namespace)))
@@ -482,7 +481,7 @@ status: {}
 		})
 
 		When("a url is provided to a private repository", func() {
-			It("will fetch information without a problem", func() {
+			PIt("will fetch information without a problem", func() {
 				namespace := uuid.New().String()
 				//subName := "pctl-profile"
 				branch := "main"
@@ -522,7 +521,7 @@ status: {}
 				content, err := ioutil.ReadFile(filename)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
-kind: ProfileSubscription
+kind: ProfileInstallation
 metadata:
   creationTimestamp: null
   name: pctl-profile
@@ -711,19 +710,20 @@ status: {}
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
-kind: ProfileSubscription
+kind: ProfileInstallation
 metadata:
   creationTimestamp: null
   name: pctl-profile
   namespace: %s
 spec:
-  path: .
-  profile_catalog_description:
+  catalog:
     catalog: nginx-catalog
     profile: nginx
     version: v2.0.0
-  profileURL: https://github.com/weaveworks/nginx-profile
-  tag: v2.0.0
+  source:
+    path: .
+    tag: v2.0.0
+    url: https://github.com/aclevername/nginx-profile
   valuesFrom:
   - kind: ConfigMap
     name: %s

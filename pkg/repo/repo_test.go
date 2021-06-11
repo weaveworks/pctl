@@ -38,7 +38,8 @@ spec:
   description: foo
   artifacts:
     - name: bar
-      path: baz`)
+      kustomize:
+        path: baz`)
 
 		path := "my-profile"
 		fakeGitClient.SparseCloneStub = func(url string, branch string, dir string, p string) error {
@@ -63,11 +64,15 @@ spec:
 				APIVersion: "packages.weave.works.io/v1alpha1",
 			},
 			Spec: profilesv1.ProfileDefinitionSpec{
-				Description: "foo",
+				ProfileDescription: profilesv1.ProfileDescription{
+					Description: "foo",
+				},
 				Artifacts: []profilesv1.Artifact{
 					{
 						Name: "bar",
-						Path: "baz",
+						Kustomize: &profilesv1.Kustomize{
+							Path: "baz",
+						},
 					},
 				},
 			},

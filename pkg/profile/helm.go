@@ -27,15 +27,15 @@ func (p *Profile) makeHelmRepository(url string, name string) *sourcev1.HelmRepo
 }
 
 func (p *Profile) makeHelmRepoName(name string) string {
-	repoParts := strings.Split(p.subscription.Spec.ProfileURL, "/")
+	repoParts := strings.Split(p.subscription.Spec.Source.URL, "/")
 	repoName := repoParts[len(repoParts)-1]
 	return join(p.subscription.Name, repoName, name)
 }
 
 func (p *Profile) makeHelmRelease(artifact profilesv1.Artifact, repoPath string) *helmv2.HelmRelease {
 	var helmChartSpec helmv2.HelmChartTemplateSpec
-	if artifact.Path != "" {
-		helmChartSpec = p.makeGitChartSpec(path.Join(repoPath, artifact.Path))
+	if artifact.Chart.Path != "" {
+		helmChartSpec = p.makeGitChartSpec(path.Join(repoPath, artifact.Chart.Path))
 	} else if artifact.Chart != nil {
 		helmChartSpec = p.makeHelmChartSpec(artifact.Chart.Name, artifact.Chart.Version)
 	}

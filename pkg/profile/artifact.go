@@ -24,30 +24,30 @@ type Artifact struct {
 
 // MakeArtifacts generates artifacts without owners for manual applying to
 // a personal cluster.
-func MakeArtifacts(sub profilesv1.ProfileSubscription, gitClient git.Git, rootDir, gitRepoNamespace, gitRepoName string) ([]Artifact, error) {
-	path := sub.Spec.Path
-	branchOrTag := sub.Spec.Tag
-	if sub.Spec.Tag == "" {
-		branchOrTag = sub.Spec.Branch
+func MakeArtifacts(installation profilesv1.ProfileInstallation, gitClient git.Git, rootDir, gitRepoNamespace, gitRepoName string) ([]Artifact, error) {
+	path := installation.Spec.Source.Path
+	branchOrTag := installation.Spec.Source.Tag
+	if installation.Spec.Source.Tag == "" {
+		branchOrTag = installation.Spec.Source.Branch
 	}
-	def, err := getProfileDefinition(sub.Spec.ProfileURL, branchOrTag, path, gitClient)
+	def, err := getProfileDefinition(installation.Spec.Source.URL, branchOrTag, path, gitClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get profile definition: %w", err)
 	}
-	p := newProfile(def, sub, rootDir, gitRepoNamespace, gitRepoName)
+	p := newProfile(def, installation, rootDir, gitRepoNamespace, gitRepoName)
 	return p.makeArtifacts([]string{p.profileRepo()}, gitClient)
 }
 
 func (p *Profile) profileRepo() string {
-	if p.subscription.Spec.Tag != "" {
-		return p.subscription.Spec.ProfileURL + ":" + p.subscription.Spec.Tag
+	if p.subscription.Spec.Source.Tag != "" {
+		return p.subscription.Spec.Source.URL + ":" + p.subscription.Spec.Source.Tag
 	}
-	return p.subscription.Spec.ProfileURL + ":" + p.subscription.Spec.Branch + ":" + p.subscription.Spec.Path
+	return p.subscription.Spec.Source.URL + ":" + p.subscription.Spec.Source.Branch + ":" + p.subscription.Spec.Source.Path
 }
 
 func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Artifact, error) {
 	var artifacts []Artifact
-	profileRepoPath := p.subscription.Spec.Path
+	profileRepoPath := p.subscription.Spec.Source.Path
 
 	for _, artifact := range p.definition.Spec.Artifacts {
 		if err := artifact.Validate(); err != nil {
@@ -58,37 +58,36 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 		}
 		a := Artifact{Name: artifact.Name}
 
-		switch artifact.Kind {
-		case profilesv1.ProfileKind:
-			branchOrTag := artifact.Profile.Branch
-			path := artifact.Profile.Path
-			if artifact.Profile.Version != "" {
-				branchOrTag = artifact.Profile.Version
-				path = strings.Split(artifact.Profile.Version, "/")[0]
+		if artifact.Profile != nil {
+			branchOrTag := artifact.Profile.Source.Branch
+			path := artifact.Profile.Source.Path
+			if artifact.Profile.Source.Tag != "" {
+				branchOrTag = artifact.Profile.Source.Tag
+				path = strings.Split(artifact.Profile.Source.Tag, "/")[0]
 			}
-			nestedProfileDef, err := getProfileDefinition(artifact.Profile.URL, branchOrTag, path, gitClient)
+			nestedProfileDef, err := getProfileDefinition(artifact.Profile.Source.URL, branchOrTag, path, gitClient)
 			if err != nil {
-				return nil, fmt.Errorf("failed to get profile definition %s on branch %s: %w", artifact.Profile.URL, branchOrTag, err)
+				return nil, fmt.Errorf("failed to get profile definition %s on branch %s: %w", artifact.Profile.Source.URL, branchOrTag, err)
 			}
-			nestedProfile := p.subscription.DeepCopyObject().(*profilesv1.ProfileSubscription)
-			nestedProfile.Spec.ProfileURL = artifact.Profile.URL
-			nestedProfile.Spec.Branch = artifact.Profile.Branch
-			nestedProfile.Spec.Tag = artifact.Profile.Version
-			nestedProfile.Spec.Path = artifact.Profile.Path
-			if artifact.Profile.Version != "" {
+			nestedProfile := p.subscription.DeepCopyObject().(*profilesv1.ProfileInstallation)
+			nestedProfile.Spec.Source.URL = artifact.Profile.Source.URL
+			nestedProfile.Spec.Source.Branch = artifact.Profile.Source.Branch
+			nestedProfile.Spec.Source.Tag = artifact.Profile.Source.Tag
+			nestedProfile.Spec.Source.Path = artifact.Profile.Source.Path
+			if artifact.Profile.Source.Tag != "" {
 				path := "."
-				splitTag := strings.Split(artifact.Profile.Version, "/")
+				splitTag := strings.Split(artifact.Profile.Source.Tag, "/")
 				if len(splitTag) > 1 {
 					path = splitTag[0]
 				}
-				nestedProfile.Spec.Path = path
+				nestedProfile.Spec.Source.Path = path
 			}
 
 			nestedSub := newProfile(nestedProfileDef, *nestedProfile, p.rootDir, p.gitRepositoryNamespace, p.gitRepositoryName)
 			nestedSub.nestedName = artifact.Name
 			profileRepoName := nestedSub.profileRepo()
 			if containsKey(profileRepos, profileRepoName) {
-				return nil, fmt.Errorf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", artifact.Profile.URL, artifact.Profile.Branch)
+				return nil, fmt.Errorf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", artifact.Profile.Source.URL, artifact.Profile.Source.Branch)
 			}
 			profileRepos = append(profileRepos, profileRepoName)
 			nestedArtifacts, err := nestedSub.makeArtifacts(profileRepos, gitClient)
@@ -97,45 +96,45 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			}
 			artifacts = append(artifacts, nestedArtifacts...)
 			p.nestedName = ""
-		case profilesv1.HelmChartKind:
+		} else if artifact.Chart != nil {
 			helmRelease := p.makeHelmRelease(artifact, profileRepoPath)
 			a.Objects = append(a.Objects, helmRelease)
-			if artifact.Path != "" {
+			if artifact.Chart.Path != "" {
 				if p.gitRepositoryNamespace == "" && p.gitRepositoryName == "" {
 					return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 				}
-				helmRelease.Spec.Chart.Spec.Chart = filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Path)
-				branch := p.subscription.Spec.Branch
-				if p.subscription.Spec.Tag != "" {
-					branch = p.subscription.Spec.Tag
+				helmRelease.Spec.Chart.Spec.Chart = filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Chart.Path)
+				branch := p.subscription.Spec.Source.Branch
+				if p.subscription.Spec.Source.Tag != "" {
+					branch = p.subscription.Spec.Source.Tag
 				}
-				a.RepoURL = p.subscription.Spec.ProfileURL
+				a.RepoURL = p.subscription.Spec.Source.URL
 				a.SparseFolder = p.definition.Name
 				a.Branch = branch
-				a.PathsToCopy = append(a.PathsToCopy, artifact.Path)
+				a.PathsToCopy = append(a.PathsToCopy, artifact.Chart.Path)
 			}
-			if artifact.Chart != nil {
+			if artifact.Chart.URL != "" {
 				helmRepository := p.makeHelmRepository(artifact.Chart.URL, artifact.Chart.Name)
 				a.Objects = append(a.Objects, helmRepository)
 			}
 			artifacts = append(artifacts, a)
-		case profilesv1.KustomizeKind:
+		} else if artifact.Kustomize != nil {
 			if p.gitRepositoryNamespace == "" && p.gitRepositoryName == "" {
 				return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 			}
-			path := filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Path)
+			path := filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Kustomize.Path)
 			a.Objects = append(a.Objects, p.makeKustomization(artifact, path))
-			branch := p.subscription.Spec.Branch
-			if p.subscription.Spec.Tag != "" {
-				branch = p.subscription.Spec.Tag
+			branch := p.subscription.Spec.Source.Branch
+			if p.subscription.Spec.Source.Tag != "" {
+				branch = p.subscription.Spec.Source.Tag
 			}
-			a.RepoURL = p.subscription.Spec.ProfileURL
+			a.RepoURL = p.subscription.Spec.Source.URL
 			a.SparseFolder = p.definition.Name
 			a.Branch = branch
-			a.PathsToCopy = append(a.PathsToCopy, artifact.Path)
+			a.PathsToCopy = append(a.PathsToCopy, artifact.Kustomize.Path)
 			artifacts = append(artifacts, a)
-		default:
-			return nil, fmt.Errorf("artifact kind %q not recognized", artifact.Kind)
+		} else {
+			return nil, fmt.Errorf("artifact kind %v not recognized", artifact)
 		}
 	}
 	return artifacts, nil
