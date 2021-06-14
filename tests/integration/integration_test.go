@@ -37,7 +37,7 @@ var _ = Describe("PCTL", func() {
 			expected := "CATALOG/PROFILE               	VERSION	DESCRIPTION                     \n" +
 				"nginx-catalog/weaveworks-nginx	v0.1.0 	This installs nginx.           \t\n" +
 				"nginx-catalog/weaveworks-nginx	v0.1.1 	This installs nginx.           \t\n" +
-				"nginx-catalog/bitnami-nginx   	v0.1.0 	This installs nginx.           \t\n" +
+				"nginx-catalog/bitnami-nginx   	v0.0.1 	This installs nginx.           \t\n" +
 				"nginx-catalog/nginx           	v2.0.0 	This installs nginx.           \t\n" +
 				"nginx-catalog/some-other-nginx	       	This installs some other nginx.\t\n\n"
 			Expect(string(session)).To(ContainSubstring(expected))
@@ -71,7 +71,7 @@ var _ = Describe("PCTL", func() {
     ]
   },
   {
-    "tag": "bitnami-nginx/v0.1.0",
+    "tag": "bitnami-nginx/v0.0.1",
     "catalog": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
     "name": "bitnami-nginx",
@@ -244,12 +244,12 @@ var _ = Describe("PCTL", func() {
 					Spec: profilesv1.ProfileInstallationSpec{
 						Source: &profilesv1.Source{
 							URL: profileURL,
-							Tag: "bitnami-nginx/v0.1.0",
+							Tag: "bitnami-nginx/v0.0.1",
 						},
 						Catalog: &profilesv1.Catalog{
 							Catalog: "nginx-catalog",
 							Profile: "bitnami-nginx",
-							Version: "v0.1.0",
+							Version: "v0.0.1",
 						},
 					},
 				}
@@ -263,7 +263,7 @@ var _ = Describe("PCTL", func() {
 
 				Eventually(listCmd).Should(ContainElements(
 					"NAMESPACE\tNAME                       \tSOURCE                               \tAVAILABLE UPDATES ",
-					"default  \tbitnami-profile            \tnginx-catalog/bitnami-nginx/v0.1.0   \t-                \t",
+					"default  \tbitnami-profile            \tnginx-catalog/bitnami-nginx/v0.0.1   \t-                \t",
 					"default  \tlong-name-to-ensure-padding\tnginx-catalog/weaveworks-nginx/v0.1.0\tv0.1.1           \t",
 				))
 				Expect(kClient.Delete(ctx, &bitnamiSub)).Should(Succeed())
