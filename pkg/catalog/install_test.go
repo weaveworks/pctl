@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -102,82 +101,18 @@ var _ = Describe("Install", func() {
 		})
 
 		When("getting the artifacts fails", func() {
-			BeforeEach(func() {
-				fakeMakeArtifacts.MakeArtifactsReturns(nil, fmt.Errorf("foo"))
-			})
-
 			It("errors", func() {
+				fakeMakeArtifacts.MakeArtifactsReturns(nil, fmt.Errorf("foo"))
 				err := catalog.Install(cfg)
 				Expect(err).To(MatchError("failed to generate artifacts: foo"))
 			})
 		})
 
-		PWhen("a url is provided with branch and path", func() {
-			It("generates a spec with url and branch and path", func() {
-				cfg = catalog.InstallConfig{
-					Clients: catalog.Clients{
-						CatalogClient:  fakeCatalogClient,
-						ArtifactsMaker: fakeMakeArtifacts,
-					},
-					ProfileConfig: catalog.ProfileConfig{
-						CatalogName:   "nginx",
-						Namespace:     "default",
-						Path:          "branch-nginx",
-						ProfileBranch: "main",
-						ProfileName:   "nginx-1",
-						SubName:       "mysub",
-						URL:           "https://github.com/weaveworks/profiles-examples",
-					},
-				}
+		When("generating output for the artifacts fails", func() {
+			It("errors", func() {
+				fakeMakeArtifacts.GenerateArtifactsOutputReturns(errors.New("nope"))
 				err := catalog.Install(cfg)
-				Expect(err).NotTo(HaveOccurred())
-
-				var files []string
-				profileDir := filepath.Join(tempDir, "nginx-1")
-				err = filepath.Walk(profileDir, func(path string, info os.FileInfo, err error) error {
-					files = append(files, path)
-					return nil
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				profileFile := filepath.Join(profileDir, "profile.yaml")
-				artifactsDir := filepath.Join(profileDir, "artifacts")
-				artifactsFooDir := filepath.Join(profileDir, "artifacts", "foo")
-				artifactFile := filepath.Join(profileDir, "artifacts", "foo", "kustomize.yaml")
-				Expect(files).To(ConsistOf(artifactsDir, artifactsFooDir, profileDir, profileFile, artifactFile))
-
-				content, err := ioutil.ReadFile(profileFile)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
-kind: ProfileInstallation
-metadata:
-  creationTimestamp: null
-  name: mysub
-  namespace: default
-spec:
-  source:
-    branch: main
-    path: branch-nginx
-    url: https://github.com/weaveworks/profiles-examples
-status: {}
-`))
-
-				content, err = ioutil.ReadFile(artifactFile)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(content)).To(Equal(`apiVersion: api
-kind: kustomize
-metadata:
-  creationTimestamp: null
-  name: foo
-  namespace: default
-spec:
-  interval: 0s
-  prune: true
-  sourceRef:
-    kind: ""
-    name: ""
-status: {}
-`))
+				Expect(err).To(MatchError("failed to generate output for artifacts: nope"))
 			})
 		})
 
