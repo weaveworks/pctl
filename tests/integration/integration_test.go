@@ -490,6 +490,7 @@ status: {}
 					fmt.Println("Output from failing command: ", string(session))
 				}
 				Expect(err).ToNot(HaveOccurred())
+				Expect(string(session)).To(ContainSubstring(fmt.Sprintf("generating installation for profile profiles-examples-private. Output directory: %s/profiles-examples-private/", temp)))
 
 				var files []string
 				err = filepath.Walk(temp, func(path string, info os.FileInfo, err error) error {
@@ -687,7 +688,7 @@ status: {}
 				fmt.Println("Output from failing command: ", string(session))
 			}
 			Expect(err).ToNot(HaveOccurred())
-			Expect(string(session)).To(ContainSubstring("generating subscription for profile nginx-catalog/nginx:. Output directory: nginx/"))
+			Expect(string(session)).To(ContainSubstring("generating installation for profile nginx-catalog/nginx. Output directory: nginx/"))
 
 			var files []string
 			profilesDir := filepath.Join(temp, "nginx")

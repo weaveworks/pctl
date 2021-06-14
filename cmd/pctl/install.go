@@ -153,14 +153,17 @@ func install(c *cli.Context) error {
 	path := c.String("profile-path")
 	gitRepository := c.String("git-repository")
 
-	var name string
+	var name, outputDir string
 	if url != "" {
-		name = fmt.Sprintf("%s/%s", path, branch)
+		urlParts := strings.Split(url, "/")
+		name = strings.TrimRight(urlParts[len(urlParts)-1], ".git")
+		outputDir = filepath.Join(dir, name)
 	} else {
 		name = fmt.Sprintf("%s/%s", catalogName, profileName)
+		outputDir = filepath.Join(dir, profileName)
 	}
-	outputDir := filepath.Join(dir, profileName)
-	fmt.Printf("generating subscription for profile %s:. Output directory: %s/\n\n", name, outputDir)
+	fmt.Printf("generating installation for profile %s. Output directory: %s/\n\n", name, outputDir)
+
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{}, r)
 	var (
