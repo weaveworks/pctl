@@ -1,7 +1,6 @@
 package profile
 
 import (
-	"path"
 	"time"
 
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
@@ -21,14 +20,14 @@ func (p *Profile) makeKustomization(artifact profilesv1.Artifact, repoPath strin
 			APIVersion: kustomizev1.GroupVersion.String(),
 		},
 		Spec: kustomizev1.KustomizationSpec{
-			Path:            path.Join(repoPath, artifact.Path),
+			Path:            repoPath,
 			Interval:        metav1.Duration{Duration: time.Minute * 5},
 			Prune:           true,
 			TargetNamespace: p.subscription.ObjectMeta.Namespace,
 			SourceRef: kustomizev1.CrossNamespaceSourceReference{
 				Kind:      sourcev1.GitRepositoryKind,
-				Name:      p.makeGitRepoName(),
-				Namespace: p.subscription.ObjectMeta.Namespace,
+				Name:      p.gitRepositoryName,
+				Namespace: p.gitRepositoryNamespace,
 			},
 		},
 	}

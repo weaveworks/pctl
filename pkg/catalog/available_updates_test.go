@@ -28,12 +28,12 @@ var _ = Describe("GetAvailableUpdates", func() {
     {
       	"name": "nginx-1",
       	"description": "nginx 1",
-     	"version": "v0.0.2"
+     	"tag": "v0.0.2"
     },
     {
       	"name": "nginx-1",
       	"description": "nginx 1",
-	  	"version": "v0.0.3"
+	  	"tag": "v0.0.3"
     }
 ]
 		  `)
@@ -46,15 +46,19 @@ var _ = Describe("GetAvailableUpdates", func() {
 			Expect(path).To(Equal("/profiles/catalog/weaveworks-nginx/v0.0.1/available_updates"))
 			Expect(query).To(BeNil())
 			Expect(resp).To(ConsistOf(
-				profilesv1.ProfileDescription{
-					Name:        "nginx-1",
-					Description: "nginx 1",
-					Version:     "v0.0.2",
+				profilesv1.ProfileCatalogEntry{
+					ProfileDescription: profilesv1.ProfileDescription{
+						Name:        "nginx-1",
+						Description: "nginx 1",
+					},
+					Tag: "v0.0.2",
 				},
-				profilesv1.ProfileDescription{
-					Name:        "nginx-1",
-					Description: "nginx 1",
-					Version:     "v0.0.3",
+				profilesv1.ProfileCatalogEntry{
+					ProfileDescription: profilesv1.ProfileDescription{
+						Name:        "nginx-1",
+						Description: "nginx 1",
+					},
+					Tag: "v0.0.3",
 				},
 			))
 		})

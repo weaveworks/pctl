@@ -47,6 +47,7 @@ jobs:
         run: |
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
           ssh-add - <<< "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}"
+          ssh-add - <<< "${{ secrets.PROFILES_EXAMPLES_PRIVATE_WEAVEWORKS_PCTL_BOT_DEPLOY_KEY }}"
       - name: Test
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock

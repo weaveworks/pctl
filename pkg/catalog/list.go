@@ -6,11 +6,12 @@ import (
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/weaveworks/pctl/pkg/subscription"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 // ProfileData data containing profile and available version update for format printing.
 type ProfileData struct {
-	Profile                 subscription.SubscriptionSummary
+	Profile                 subscription.InstallationSummary
 	AvailableVersionUpdates []string
 }
 
@@ -34,7 +35,7 @@ func List(k8sClient runtimeclient.Client, catalogClient CatalogClient) ([]Profil
 				return nil, fmt.Errorf("failed to get available updates: %w", err)
 			}
 			for _, r := range related {
-				versions = append(versions, r.Version)
+				versions = append(versions, profilesv1.GetVersionFromTag(r.Tag))
 			}
 		}
 		if len(versions) == 0 {

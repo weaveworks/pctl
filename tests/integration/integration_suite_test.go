@@ -14,8 +14,10 @@ import (
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
-	"github.com/weaveworks/pctl/tests/integration"
+	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
+	"github.com/weaveworks/pctl/tests/integration"
 )
 
 var (
@@ -44,6 +46,7 @@ var _ = BeforeSuite(func() {
 	Expect(profilesv1.AddToScheme(scheme)).To(Succeed())
 	Expect(helmv2.AddToScheme(scheme)).To(Succeed())
 	Expect(kustomizev1.AddToScheme(scheme)).To(Succeed())
+	Expect(sourcev1.AddToScheme(scheme)).To(Succeed())
 
 	kubeconfig := ctrl.GetConfigOrDie()
 	kClient, err = client.New(kubeconfig, client.Options{Scheme: scheme})

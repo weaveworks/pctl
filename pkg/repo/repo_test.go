@@ -1,37 +1,36 @@
 package repo_test
 
 import (
-	"bytes"
 	"errors"
 	"io/ioutil"
-	"net/http"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/weaveworks/pctl/pkg/repo"
-	"github.com/weaveworks/pctl/pkg/repo/fakes"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
+	fakegit "github.com/weaveworks/pctl/pkg/git/fakes"
+	"github.com/weaveworks/pctl/pkg/repo"
 )
 
 var _ = Describe("Repo", func() {
 	var (
-		fakeHTTPClient  *fakes.FakeHTTPClient
+		fakeGitClient   *fakegit.FakeGit
 		repoURL, branch string
 	)
 
 	BeforeEach(func() {
-		fakeHTTPClient = new(fakes.FakeHTTPClient)
-		repo.SetHTTPClient(fakeHTTPClient)
-
+		fakeGitClient = &fakegit.FakeGit{}
 		repoURL = "github.com/foo/bar"
 		branch = "main"
 	})
 
 	It("returns the profile definition", func() {
-		httpBody := bytes.NewBufferString(`
-apiVersion: profiles.fluxcd.io/v1alpha1
+		profileYaml := []byte(`
+apiVersion: packages.weave.works.io/v1alpha1
 kind: Profile
 metadata:
   name: nginx
@@ -39,90 +38,93 @@ spec:
   description: foo
   artifacts:
     - name: bar
-      path: baz`)
-		fakeHTTPClient.GetReturns(&http.Response{
-			Body:       ioutil.NopCloser(httpBody),
-			StatusCode: http.StatusOK,
-		}, nil)
+      kustomize:
+        path: baz`)
 
-		definition, err := repo.GetProfileDefinition(repoURL, branch, "my-profile")
+		path := "my-profile"
+		fakeGitClient.SparseCloneStub = func(url string, branch string, dir string, p string) error {
+			err := os.MkdirAll(filepath.Join(dir, path), 0755)
+			Expect(err).NotTo(HaveOccurred())
+			return ioutil.WriteFile(filepath.Join(dir, path, "profile.yaml"), profileYaml, 0755)
+		}
+
+		definition, err := repo.GetProfileDefinition(repoURL, branch, "my-profile", fakeGitClient)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(fakeHTTPClient.GetCallCount()).To(Equal(1))
-		Expect(fakeHTTPClient.GetArgsForCall(0)).To(Equal("raw.githubusercontent.com/foo/bar/main/my-profile/profile.yaml"))
+		Expect(fakeGitClient.SparseCloneCallCount()).To(Equal(1))
+		// dir is semi random
+		url, cloneBranch, _, _ := fakeGitClient.SparseCloneArgsForCall(0)
+		Expect(url).To(Equal(repoURL))
+		Expect(cloneBranch).To(Equal(branch))
 		Expect(definition).To(Equal(profilesv1.ProfileDefinition{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "nginx",
 			},
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Profile",
-				APIVersion: "profiles.fluxcd.io/v1alpha1",
+				APIVersion: "packages.weave.works.io/v1alpha1",
 			},
 			Spec: profilesv1.ProfileDefinitionSpec{
-				Description: "foo",
+				ProfileDescription: profilesv1.ProfileDescription{
+					Description: "foo",
+				},
 				Artifacts: []profilesv1.Artifact{
 					{
 						Name: "bar",
-						Path: "baz",
+						Kustomize: &profilesv1.Kustomize{
+							Path: "baz",
+						},
 					},
 				},
 			},
 		}))
 	})
 
-	When("the get request fails", func() {
+	When("the clone request fails", func() {
 		It("returns an error", func() {
-			fakeHTTPClient.GetReturns(nil, errors.New("errord"))
-			_, err := repo.GetProfileDefinition(repoURL, branch, "my-profile")
-			Expect(err).To(MatchError("failed to fetch profile: errord"))
-			Expect(fakeHTTPClient.GetCallCount()).To(Equal(1))
-			Expect(fakeHTTPClient.GetArgsForCall(0)).To(Equal("raw.githubusercontent.com/foo/bar/main/my-profile/profile.yaml"))
+			fakeGitClient.SparseCloneReturns(errors.New("errord"))
+			_, err := repo.GetProfileDefinition(repoURL, branch, "my-profile", fakeGitClient)
+			Expect(err).To(MatchError("failed to clone the repo: errord"))
+			Expect(fakeGitClient.SparseCloneCallCount()).To(Equal(1))
+			// dir is semi random
+			url, cloneBranch, _, _ := fakeGitClient.SparseCloneArgsForCall(0)
+			Expect(url).To(Equal(repoURL))
+			Expect(cloneBranch).To(Equal(branch))
 		})
 	})
-
-	When("the return code is not 200", func() {
-		It("returns an error", func() {
-			fakeHTTPClient.GetReturns(&http.Response{StatusCode: 404, Body: ioutil.NopCloser(bytes.NewReader(nil))}, nil)
-			_, err := repo.GetProfileDefinition(repoURL, branch, "my-profile")
-			Expect(err).To(MatchError("failed to fetch profile: status code 404"))
-			Expect(fakeHTTPClient.GetCallCount()).To(Equal(1))
-			Expect(fakeHTTPClient.GetArgsForCall(0)).To(Equal("raw.githubusercontent.com/foo/bar/main/my-profile/profile.yaml"))
-
-		})
-	})
-
 	When("the profile.yaml is not valid yaml", func() {
 		It("returns an error", func() {
-			httpBody := bytes.NewBufferString("{not valid yaml")
-			fakeHTTPClient.GetReturns(&http.Response{
-				Body:       ioutil.NopCloser(httpBody),
-				StatusCode: http.StatusOK,
-			}, nil)
+			profileYaml := []byte("{not valid yaml}")
+			path := "my-profile"
+			fakeGitClient.SparseCloneStub = func(url string, branch string, dir string, p string) error {
+				err := os.MkdirAll(filepath.Join(dir, path), 0755)
+				Expect(err).NotTo(HaveOccurred())
+				return ioutil.WriteFile(filepath.Join(dir, path, "profile.yaml"), profileYaml, 0755)
+			}
 
-			_, err := repo.GetProfileDefinition(repoURL, branch, "my-profile")
+			_, err := repo.GetProfileDefinition(repoURL, branch, "my-profile", fakeGitClient)
 			Expect(err).To(MatchError(ContainSubstring("failed to parse profile")))
-			Expect(fakeHTTPClient.GetCallCount()).To(Equal(1))
-			Expect(fakeHTTPClient.GetArgsForCall(0)).To(Equal("raw.githubusercontent.com/foo/bar/main/my-profile/profile.yaml"))
+			url, cloneBranch, _, _ := fakeGitClient.SparseCloneArgsForCall(0)
+			Expect(url).To(Equal(repoURL))
+			Expect(cloneBranch).To(Equal(branch))
 
 		})
 	})
-
-	When("the profile URL is not a URL", func() {
+	When("the profile.yaml empty", func() {
 		It("returns an error", func() {
-			repoURL = "{}\"!@£!@$:!@£!@"
-			_, err := repo.GetProfileDefinition(repoURL, branch, "my-profile")
-			Expect(err).To(MatchError(ContainSubstring("failed to parse repo URL")))
-			Expect(fakeHTTPClient.GetCallCount()).To(Equal(0))
+			profileYaml := []byte("")
+			path := "my-profile"
+			fakeGitClient.SparseCloneStub = func(url string, branch string, dir string, p string) error {
+				err := os.MkdirAll(filepath.Join(dir, path), 0755)
+				Expect(err).NotTo(HaveOccurred())
+				return ioutil.WriteFile(filepath.Join(dir, path, "profile.yaml"), profileYaml, 0755)
+			}
+
+			_, err := repo.GetProfileDefinition(repoURL, branch, "my-profile", fakeGitClient)
+			Expect(err).To(MatchError(ContainSubstring("failed to parse profile")))
+			url, cloneBranch, _, _ := fakeGitClient.SparseCloneArgsForCall(0)
+			Expect(url).To(Equal(repoURL))
+			Expect(cloneBranch).To(Equal(branch))
+
 		})
 	})
-
-	When("the profile URL is not github.com", func() {
-		It("returns an error", func() {
-			repoURL = "gitlab.com/foo/bar"
-			_, err := repo.GetProfileDefinition(repoURL, branch, "my-profile")
-			Expect(err).To(MatchError("unsupported git provider, only github.com is currently supported"))
-			Expect(fakeHTTPClient.GetCallCount()).To(Equal(0))
-		})
-	})
-
-	// TODO test for when the profile.yaml file is empty
 })

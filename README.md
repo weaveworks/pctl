@@ -11,6 +11,9 @@ and run: mdtoc -inplace README.md
   - [Search](#search)
   - [Show](#show)
   - [Install](#install)
+    - [Install via Catalog](#install-via-catalog)
+    - [Install via URL](#install-via-url)
+    - [Cloning repository resources](#cloning-repository-resources)
     - [Architecture](#architecture)
   - [List](#list)
   - [Prepare](#prepare)
@@ -56,6 +59,8 @@ Prerequisites   Kubernetes 1.18+
 
 ### Install
 
+#### Install via Catalog
+
 pctl can be used to install a profile, example:
 
 ```
@@ -95,10 +100,74 @@ The `profile.yaml` is the top-level Profile installation object. It describes th
 directory contains all of the resources required for deploying the profile. Each of the artifacts corresponds to a
 [Flux 2 resource](https://fluxcd.io/docs/components/).
 
-
 This can be applied directly to the cluster `kubectl apply -R -f weaveworks-nginx/` or by comitting it to your
 flux repository. If you are using a flux repository the `--create-pr` flags provides an automated way for creating a PR
 against your flux repository. See `pctl install --help` for more details.
+
+#### Install via URL
+
+It's also possible to install from a specific location given a url, branch and a path. For example, consider the following
+profiles folder structure:
+
+```
+tree
+.
+├── README.md
+├── bitnami-nginx
+│   ├── README.md
+│   ├── nginx
+│   │   └── chart
+│   │       ├── Chart.lock
+│   │       ├── ...
+│   │       └── values.yaml
+│   └── profile.yaml
+└── weaveworks-nginx
+    ├── README.md
+    ├── nginx
+    │   └── deployment
+    │       └── deployment.yaml
+    └── profile.yaml
+```
+
+Given a development branch called `devel` to install the `bitnami-nginx` profile from this repository, call `install`
+with the following parameters:
+
+```
+pctl install --subscription-name pctl-profile \
+             --namespace default \
+             --profile-branch devel \
+             --profile-url https://github.com/<usr>/<repo> \
+             --profile-path bitnami-nginx \
+             --out <location of my flux repository>
+```
+
+It's the user's responsibility to make sure that the local `git` setup has access to the url provided with `profile-url`.
+It can be any form of url as long as `git clone` understands it.
+
+#### Cloning repository resources
+
+pctl clones all repository local resources and puts them into the target flux repository. This is done so that the user doesn't
+have to include access credentials for all private repositories, including nested profiles. However, for repository local
+resources to work, the user has to provide the location of the GitRepository object that flux creates when bootstrapping or
+creating a flux repository. This resources is usually under the namespace `flux-system` named `flux-system` and of type
+GitRepository.
+
+Provide the following information when running install: `--git-repository <namespace>/<name>`.
+
+This looks as follows if installing via a URL:
+
+```
+pctl install --subscription-name pctl-profile \
+             --namespace [default] \
+             --profile-branch [main] \
+             --profile-url git@github.com:org/private-profile-repo \
+             --profile-path <profile-name> \
+             --git-repository <namespace>/<name> \
+             --out <location of my flux repository>
+```
+
+This will result in all the private resources which aren't available from the outside, downloaded locally and added
+into the flux repository.
 
 #### Architecture
 The below diagram illustrates how pctl install works:

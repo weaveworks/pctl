@@ -12,7 +12,7 @@ import (
 
 // GetAvailableUpdates queries the catalog at catalogURL for profiles which have greater versions than the current
 // given one.
-func GetAvailableUpdates(catalogClient CatalogClient, catalogName, profileName, profileVersion string) ([]profilesv1.ProfileDescription, error) {
+func GetAvailableUpdates(catalogClient CatalogClient, catalogName, profileName, profileVersion string) ([]profilesv1.ProfileCatalogEntry, error) {
 	u, err := url.Parse("/profiles")
 	if err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func GetAvailableUpdates(catalogClient CatalogClient, catalogName, profileName, 
 		}
 		return nil, fmt.Errorf("failed to fetch available updates for profile, status code %d", statusCode)
 	}
-	var profiles []profilesv1.ProfileDescription
+	var profiles []profilesv1.ProfileCatalogEntry
 	if err := json.Unmarshal(data, &profiles); err != nil {
 		return nil, fmt.Errorf("failed to parse catalog: %w", err)
 	}

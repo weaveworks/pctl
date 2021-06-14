@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/urfave/cli/v2"
 
 	"github.com/weaveworks/pctl/pkg/catalog"
@@ -61,17 +62,14 @@ func installCmd() *cli.Command {
 				Usage:       "The base branch to open a PR against.",
 			},
 			&cli.StringFlag{
-				Name:        "pr-branch",
-				Value:       "main",
-				DefaultText: "main",
-				Usage:       "The branch to create the PR from.",
+				Name:  "pr-branch",
+				Usage: "The branch to create the PR from. Generated if not set.",
 			},
-
 			&cli.StringFlag{
 				Name:        "out",
 				DefaultText: "current",
 				Value:       ".",
-				Usage:       "Optional location to create the profile installation folder in.",
+				Usage:       "Optional location to create the profile installation folder in. This should be relative to the current working directory.",
 			},
 			&cli.StringFlag{
 				Name:  "pr-repo",
@@ -84,9 +82,15 @@ func installCmd() *cli.Command {
 				Usage: "Optional value defining the URL of the profile.",
 			},
 			&cli.StringFlag{
-				Name:  "profile-path",
+				Name:        "profile-path",
+				Value:       ".",
+				DefaultText: "<root>",
+				Usage:       "Value defining the path to a profile when url is provided.",
+			},
+			&cli.StringFlag{
+				Name:  "git-repository",
 				Value: "",
-				Usage: "Value defining the path to a profile when url is provided.",
+				Usage: "The namespace and name of the GitRepository object governing the flux repo.",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -145,20 +149,35 @@ func install(c *cli.Context) error {
 	configValues := c.String("config-secret")
 	dir := c.String("out")
 	path := c.String("profile-path")
+	gitRepository := c.String("git-repository")
 
-	fmt.Printf("generating subscription for profile %s/%s:\n\n", catalogName, profileName)
+	var name string
+	if url != "" {
+		name = fmt.Sprintf("%s/%s", path, branch)
+	} else {
+		name = fmt.Sprintf("%s/%s", catalogName, profileName)
+	}
+	fmt.Printf("generating subscription for profile %s:\n\n", name)
+	r := &runner.CLIRunner{}
+	g := git.NewCLIGit(git.CLIGitConfig{}, r)
 	cfg := catalog.InstallConfig{
-		ProfileBranch: branch,
-		CatalogName:   catalogName,
-		CatalogClient: catalogClient,
-		ConfigMap:     configValues,
-		Namespace:     namespace,
-		ProfileName:   profileName,
-		SubName:       subName,
-		Directory:     dir,
-		URL:           url,
-		Version:       version,
-		Path:          path,
+		Clients: catalog.Clients{
+			CatalogClient: catalogClient,
+			GitClient:     g,
+		},
+		ProfileConfig: catalog.ProfileConfig{
+			CatalogName:   catalogName,
+			ConfigMap:     configValues,
+			GitRepository: gitRepository,
+			Namespace:     namespace,
+			Path:          path,
+			ProfileBranch: branch,
+			ProfileName:   profileName,
+			SubName:       subName,
+			URL:           url,
+			Version:       version,
+		},
+		Directory: dir,
 	}
 	return catalog.Install(cfg)
 }
@@ -172,6 +191,9 @@ func createPullRequest(c *cli.Context) error {
 	directory := c.String("out")
 	if repo == "" {
 		return errors.New("repo must be defined if create-pr is true")
+	}
+	if branch == "" {
+		branch = c.String("subscription-name") + "-" + uuid.NewString()[:6]
 	}
 	fmt.Printf("Creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
 	r := &runner.CLIRunner{}

@@ -14,11 +14,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
+	"github.com/weaveworks/pctl/pkg/git"
 	gitfakes "github.com/weaveworks/pctl/pkg/git/fakes"
 	"github.com/weaveworks/pctl/pkg/profile"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 var _ = Describe("Install", func() {
@@ -30,6 +32,8 @@ var _ = Describe("Install", func() {
 		httpBody          []byte
 		cfg               catalog.InstallConfig
 		fakeMakeArtifacts catalog.MakeArtifacts
+		gitRepoNamespace  = "git-repo-namespace"
+		gitRepoName       = "git-repo-name"
 	)
 
 	BeforeEach(func() {
@@ -44,6 +48,7 @@ var _ = Describe("Install", func() {
 	"name": "nginx-1",
 	"description": "nginx 1",
 	"version": "v0.0.1",
+	"tag": "nginx-1/v0.0.1",
 	"catalog": "weaveworks (https://github.com/weaveworks/profiles)",
 	"url": "https://github.com/weaveworks/nginx-profile",
 	"prerequisites": ["Kubernetes 1.18+"],
@@ -51,18 +56,23 @@ var _ = Describe("Install", func() {
 }
 `)
 		fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
-
 		cfg = catalog.InstallConfig{
-			ProfileBranch: "main",
-			CatalogName:   "nginx",
-			CatalogClient: fakeCatalogClient,
-			Namespace:     "default",
-			ProfileName:   "nginx-1",
-			SubName:       "mysub",
-			Version:       "v0.0.1",
-			Directory:     tempDir,
+			ProfileConfig: catalog.ProfileConfig{
+				CatalogName:   "nginx",
+				GitRepository: gitRepoNamespace + "/" + gitRepoName,
+				Namespace:     "default",
+				ProfileBranch: "main",
+				ProfileName:   "nginx-1",
+				SubName:       "mysub",
+				Version:       "v0.0.1",
+			},
+			Clients: catalog.Clients{
+				CatalogClient: fakeCatalogClient,
+				GitClient:     fakeGit,
+			},
+			Directory: tempDir,
 		}
-		fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription) ([]profile.Artifact, error) {
+		fakeMakeArtifacts = func(sub profilesv1.ProfileInstallation, gitClient git.Git, rootDir, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
 			return []profile.Artifact{
 				{
 					Objects: []runtime.Object{
@@ -119,18 +129,20 @@ var _ = Describe("Install", func() {
 			content, err := ioutil.ReadFile(profileFile)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
-kind: ProfileSubscription
+kind: ProfileInstallation
 metadata:
   creationTimestamp: null
   name: mysub
   namespace: default
 spec:
-  profile_catalog_description:
+  catalog:
     catalog: nginx
     profile: nginx-1
     version: v0.0.1
-  profileURL: https://github.com/weaveworks/nginx-profile
-  version: nginx-1/v0.0.1
+  source:
+    path: nginx-1
+    tag: nginx-1/v0.0.1
+    url: https://github.com/weaveworks/nginx-profile
 status: {}
 `))
 
@@ -154,7 +166,7 @@ status: {}
 
 		When("getting the artifacts fails", func() {
 			BeforeEach(func() {
-				fakeMakeArtifacts = func(sub profilesv1.ProfileSubscription) ([]profile.Artifact, error) {
+				fakeMakeArtifacts = func(sub profilesv1.ProfileInstallation, gitClient git.Git, rootDir, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
 					return nil, fmt.Errorf("foo")
 				}
 			})
@@ -179,15 +191,20 @@ status: {}
 		When("a url is provided with branch and path", func() {
 			It("generates a spec with url and branch and path", func() {
 				cfg = catalog.InstallConfig{
-					ProfileBranch: "main",
-					CatalogName:   "nginx",
-					CatalogClient: fakeCatalogClient,
-					Namespace:     "default",
-					ProfileName:   "nginx-1",
-					SubName:       "mysub",
-					URL:           "https://github.com/weaveworks/profiles-examples",
-					Directory:     tempDir,
-					Path:          "branch-nginx",
+					Clients: catalog.Clients{
+						CatalogClient: fakeCatalogClient,
+						GitClient:     fakeGit,
+					},
+					ProfileConfig: catalog.ProfileConfig{
+						CatalogName:   "nginx",
+						Namespace:     "default",
+						Path:          "branch-nginx",
+						ProfileBranch: "main",
+						ProfileName:   "nginx-1",
+						SubName:       "mysub",
+						URL:           "https://github.com/weaveworks/profiles-examples",
+					},
+					Directory: tempDir,
 				}
 				err := catalog.Install(cfg)
 				Expect(err).NotTo(HaveOccurred())
@@ -209,15 +226,16 @@ status: {}
 				content, err := ioutil.ReadFile(profileFile)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
-kind: ProfileSubscription
+kind: ProfileInstallation
 metadata:
   creationTimestamp: null
   name: mysub
   namespace: default
 spec:
-  branch: main
-  path: branch-nginx
-  profileURL: https://github.com/weaveworks/profiles-examples
+  source:
+    branch: main
+    path: branch-nginx
+    url: https://github.com/weaveworks/profiles-examples
 status: {}
 `))
 
@@ -240,33 +258,23 @@ status: {}
 			})
 		})
 
-		When("a url is provided without path", func() {
-			It("returns a sensible error that path is required with a url", func() {
-				cfg = catalog.InstallConfig{
-					CatalogName:   "nginx",
-					CatalogClient: fakeCatalogClient,
-					Namespace:     "default",
-					ProfileName:   "nginx-1",
-					SubName:       "mysub",
-					URL:           "https://github.com/weaveworks/profiles-examples",
-					Directory:     tempDir,
-				}
-				err := catalog.Install(cfg)
-				Expect(err).To(MatchError("path must be provided with url"))
-			})
-		})
 		When("a branch is provided which isn't domain compatible", func() {
 			It("will not care because the name is sanitised", func() {
 				cfg = catalog.InstallConfig{
-					CatalogName:   "nginx",
-					CatalogClient: fakeCatalogClient,
-					Namespace:     "default",
-					ProfileName:   "nginx-1",
-					SubName:       "mysub",
-					URL:           "https://github.com/weaveworks/profiles-examples",
-					Directory:     tempDir,
-					ProfileBranch: "not_domain_compatible",
-					Path:          "path",
+					Clients: catalog.Clients{
+						CatalogClient: fakeCatalogClient,
+						GitClient:     fakeGit,
+					},
+					ProfileConfig: catalog.ProfileConfig{
+						CatalogName:   "nginx",
+						Namespace:     "default",
+						Path:          "path",
+						ProfileBranch: "not_domain_compatible",
+						ProfileName:   "nginx-1",
+						SubName:       "mysub",
+						URL:           "https://github.com/weaveworks/profiles-examples",
+					},
+					Directory: tempDir,
 				}
 				err := catalog.Install(cfg)
 				Expect(err).NotTo(HaveOccurred())
