@@ -15,14 +15,16 @@ import (
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 
 	"github.com/otiai10/copy"
+
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/profile"
 )
 
 // Clients contains a set of clients which are used by install.
 type Clients struct {
-	CatalogClient CatalogClient
-	GitClient     git.Git
+	CatalogClient  CatalogClient
+	GitClient      git.Git // this will be refactor out of here, so it's not Install's responsibility
+	ArtifactsMaker profile.ArtifactsMaker
 }
 
 // ProfileConfig contains configuration for profiles ie. catalogName, profilesName, etc.
@@ -45,11 +47,6 @@ type InstallConfig struct {
 	ProfileConfig
 	Directory string
 }
-
-// MakeArtifacts returns artifacts for a subscription
-type MakeArtifacts func(sub profilesv1.ProfileInstallation, gitClient git.Git, repoRoot, gitRepoNamespace, gitRepoName string) ([]profile.Artifact, error)
-
-var makeArtifacts = profile.MakeArtifacts
 
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile subscription
 // and its artifacts
@@ -78,20 +75,8 @@ func Install(cfg InstallConfig) error {
 			},
 		}
 	}
-	var (
-		gitRepoNamespace string
-		gitRepoName      string
-	)
-	if cfg.GitRepository != "" {
-		split := strings.Split(cfg.GitRepository, "/")
-		if len(split) != 2 {
-			return fmt.Errorf("git-repository must in format <namespace>/<name>; was: %s", cfg.GitRepository)
-		}
-		gitRepoNamespace = split[0]
-		gitRepoName = split[1]
-	}
 	profileRootdir := filepath.Join(cfg.Directory, cfg.ProfileName)
-	artifacts, err := makeArtifacts(subscription, cfg.GitClient, profileRootdir, gitRepoNamespace, gitRepoName)
+	artifacts, err := cfg.ArtifactsMaker.MakeArtifacts(subscription)
 	if err != nil {
 		return fmt.Errorf("failed to generate artifacts: %w", err)
 	}

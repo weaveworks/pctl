@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -11,6 +12,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
 	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/pctl/pkg/profile"
 	"github.com/weaveworks/pctl/pkg/runner"
 )
 
@@ -160,10 +162,29 @@ func install(c *cli.Context) error {
 	fmt.Printf("generating subscription for profile %s:\n\n", name)
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{}, r)
+	var (
+		gitRepoNamespace string
+		gitRepoName      string
+	)
+	if gitRepository != "" {
+		split := strings.Split(gitRepository, "/")
+		if len(split) != 2 {
+			return fmt.Errorf("git-repository must in format <namespace>/<name>; was: %s", gitRepository)
+		}
+		gitRepoNamespace = split[0]
+		gitRepoName = split[1]
+	}
+	artifactsMaker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+		GitClient:        g,
+		RootDir:          filepath.Join(dir, profileName),
+		GitRepoNamespace: gitRepoNamespace,
+		GitRepoName:      gitRepoName,
+	})
 	cfg := catalog.InstallConfig{
 		Clients: catalog.Clients{
-			CatalogClient: catalogClient,
-			GitClient:     g,
+			CatalogClient:  catalogClient,
+			GitClient:      g,
+			ArtifactsMaker: artifactsMaker,
 		},
 		ProfileConfig: catalog.ProfileConfig{
 			CatalogName:   catalogName,
