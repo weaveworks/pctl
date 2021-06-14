@@ -42,7 +42,7 @@ var _ = Describe("git", func() {
 		})
 		When("normal flow operations", func() {
 			It("detects if there are changes to be committed if stats returns a list of files", func() {
-				runner.RunReturns([]byte("profile_subscription.yaml"), nil)
+				runner.RunReturns([]byte("profile_installation.yaml"), nil)
 				g := git.NewCLIGit(git.CLIGitConfig{
 					Directory: "location",
 					Branch:    "main",
@@ -145,7 +145,7 @@ var _ = Describe("git", func() {
 	Context("Commit", func() {
 		When("normal flow operations", func() {
 			It("commit changes", func() {
-				runner.RunReturnsOnCall(0, []byte("profile_subscription.yaml"), nil)
+				runner.RunReturnsOnCall(0, []byte("profile_installation.yaml"), nil)
 				g := git.NewCLIGit(git.CLIGitConfig{
 					Directory: "location",
 					Branch:    "main",
@@ -164,7 +164,7 @@ var _ = Describe("git", func() {
 		})
 		When("the flow is disrupted with errors", func() {
 			It("returns a sensible wrapped error", func() {
-				runner.RunReturnsOnCall(0, []byte("profile_subscription.yaml"), nil)
+				runner.RunReturnsOnCall(0, []byte("profile_installation.yaml"), nil)
 				runner.RunReturnsOnCall(1, []byte(""), errors.New("nope"))
 				g := git.NewCLIGit(git.CLIGitConfig{
 					Directory: "location",

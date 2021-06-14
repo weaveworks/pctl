@@ -1,4 +1,4 @@
-package subscription_test
+package installation_test
 
 import (
 	"testing"
@@ -9,5 +9,5 @@ import (
 
 func TestProfile(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Subscription Suite")
+	RunSpecs(t, "Installation Suite")
 }
