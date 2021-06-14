@@ -402,7 +402,8 @@ var _ = Describe("Profile", func() {
 				Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("failed to get profile definition %s on branch %s: foo", pNestedDefURL, branch))))
 			})
 		})
-		PWhen("configured with an invalid artifact", func() {
+
+		When("configured with an invalid artifact", func() {
 			When("the Kind of artifact is unknown", func() {
 				BeforeEach(func() {
 					pDef.Spec.Artifacts[0] = profilesv1.Artifact{}
@@ -416,7 +417,7 @@ var _ = Describe("Profile", func() {
 						GitRepoName:      gitRepoName,
 					})
 					_, err := maker.MakeArtifacts(pSub)
-					Expect(err).To(MatchError(ContainSubstring("artifact kind \"SomeUnknownKind\" not recognized")))
+					Expect(err).To(MatchError(ContainSubstring("no artifact set")))
 				})
 			})
 
@@ -473,11 +474,54 @@ var _ = Describe("Profile", func() {
 						GitRepoName:      gitRepoName,
 					})
 					_, err := maker.MakeArtifacts(pSub)
-					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: chart, path")))
+					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: chart.path, chart.url")))
 				})
 			})
 
-			When("profile and path", func() {
+			When("chart and kustomize", func() {
+				BeforeEach(func() {
+					pDef = profilesv1.ProfileDefinition{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: profileName1,
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Profile",
+							APIVersion: "packages.weave.works/profilesv1",
+						},
+						Spec: profilesv1.ProfileDefinitionSpec{
+							ProfileDescription: profilesv1.ProfileDescription{
+								Description: "foo",
+							},
+							Artifacts: []profilesv1.Artifact{
+								{
+									Name: helmChartName1,
+									Chart: &profilesv1.Chart{
+										URL:     helmChartURL1,
+										Name:    helmChartChart1,
+										Version: helmChartVersion1,
+									},
+									Kustomize: &profilesv1.Kustomize{
+										Path: "https://not.empty",
+									},
+								},
+							},
+						},
+					}
+				})
+
+				It("errors", func() {
+					maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+						GitClient:        fakeGitClient,
+						RootDir:          rootDir,
+						GitRepoNamespace: gitRepoNamespace,
+						GitRepoName:      gitRepoName,
+					})
+					_, err := maker.MakeArtifacts(pSub)
+					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: chart, kustomize")))
+				})
+			})
+
+			When("profile and kustomize", func() {
 				BeforeEach(func() {
 					pDef = profilesv1.ProfileDefinition{
 						ObjectMeta: metav1.ObjectMeta{
@@ -517,7 +561,7 @@ var _ = Describe("Profile", func() {
 						GitRepoName:      gitRepoName,
 					})
 					_, err := maker.MakeArtifacts(pSub)
-					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: path, profile")))
+					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: kustomize, profile")))
 				})
 			})
 

@@ -95,10 +95,6 @@ var _ = Describe("Install", func() {
 		}, nil)
 	})
 
-	//JustBeforeEach(func() {
-	//	catalog.SetMakeArtifacts(fakeMakeArtifacts)
-	//})
-
 	AfterEach(func() {
 		_ = os.RemoveAll(tempDir)
 	})

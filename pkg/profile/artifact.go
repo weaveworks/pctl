@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"knative.dev/pkg/apis"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
@@ -77,7 +78,7 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 	profileRepoPath := p.subscription.Spec.Source.Path
 
 	for _, artifact := range p.definition.Spec.Artifacts {
-		if err := artifact.Validate(); err != nil {
+		if err := validateArtifact(artifact); err != nil {
 			return nil, fmt.Errorf("validation failed for artifact %s: %w", artifact.Name, err)
 		}
 		if p.nestedName != "" {
@@ -161,7 +162,7 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			a.PathsToCopy = append(a.PathsToCopy, artifact.Kustomize.Path)
 			artifacts = append(artifacts, a)
 		} else {
-			return nil, fmt.Errorf("artifact kind %v not recognized", artifact)
+			return nil, fmt.Errorf("no artifact set")
 		}
 	}
 	return artifacts, nil
@@ -186,4 +187,24 @@ func (p *Profile) makeArtifactName(name string) string {
 
 func join(s ...string) string {
 	return strings.Join(s, "-")
+}
+
+func validateArtifact(in profilesv1.Artifact) error {
+	if in.Chart != nil && in.Profile != nil {
+		return apis.ErrMultipleOneOf("chart", "profile")
+	}
+
+	if in.Profile != nil && in.Kustomize != nil {
+		return apis.ErrMultipleOneOf("profile", "kustomize")
+	}
+
+	if in.Chart != nil && in.Kustomize != nil {
+		return apis.ErrMultipleOneOf("chart", "kustomize")
+	}
+
+	if in.Chart != nil && in.Chart.Path != "" && in.Chart.URL != "" {
+		return apis.ErrMultipleOneOf("chart.path", "chart.url")
+	}
+
+	return nil
 }
