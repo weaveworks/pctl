@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -31,8 +30,6 @@ var _ = Describe("Install", func() {
 		httpBody          []byte
 		cfg               catalog.InstallConfig
 		fakeMakeArtifacts *artifactFakes.FakeArtifactsMaker
-		gitRepoNamespace  = "git-repo-namespace"
-		gitRepoName       = "git-repo-name"
 	)
 
 	BeforeEach(func() {
@@ -59,7 +56,6 @@ var _ = Describe("Install", func() {
 		cfg = catalog.InstallConfig{
 			ProfileConfig: catalog.ProfileConfig{
 				CatalogName:   "nginx",
-				GitRepository: gitRepoNamespace + "/" + gitRepoName,
 				Namespace:     "default",
 				ProfileBranch: "main",
 				ProfileName:   "nginx-1",
@@ -68,10 +64,8 @@ var _ = Describe("Install", func() {
 			},
 			Clients: catalog.Clients{
 				CatalogClient:  fakeCatalogClient,
-				GitClient:      fakeGit,
 				ArtifactsMaker: fakeMakeArtifacts,
 			},
-			Directory: tempDir,
 		}
 		fakeMakeArtifacts.MakeArtifactsReturns([]profile.Artifact{
 			{
@@ -101,62 +95,10 @@ var _ = Describe("Install", func() {
 
 	Describe("install", func() {
 		It("generates the artifacts", func() {
+			fakeMakeArtifacts.GenerateArtifactsOutputReturns(nil)
 			err := catalog.Install(cfg)
 			Expect(err).NotTo(HaveOccurred())
-
-			var files []string
-			profileDir := filepath.Join(tempDir, "nginx-1")
-			err = filepath.Walk(profileDir, func(path string, info os.FileInfo, err error) error {
-				if !info.IsDir() {
-					files = append(files, path)
-				}
-				return nil
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			profileFile := filepath.Join(profileDir, "profile.yaml")
-			artifactFile := filepath.Join(profileDir, "artifacts", "foo", "kustomize.yaml")
-			Expect(files).To(ConsistOf(profileFile, artifactFile))
-
-			Expect(hasCorrectFilePerms(profileFile)).To(BeTrue())
-			Expect(hasCorrectFilePerms(artifactFile)).To(BeTrue())
-
-			content, err := ioutil.ReadFile(profileFile)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
-kind: ProfileInstallation
-metadata:
-  creationTimestamp: null
-  name: mysub
-  namespace: default
-spec:
-  catalog:
-    catalog: nginx
-    profile: nginx-1
-    version: v0.0.1
-  source:
-    path: nginx-1
-    tag: nginx-1/v0.0.1
-    url: https://github.com/weaveworks/nginx-profile
-status: {}
-`))
-
-			content, err = ioutil.ReadFile(artifactFile)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(content)).To(Equal(`apiVersion: api
-kind: kustomize
-metadata:
-  creationTimestamp: null
-  name: foo
-  namespace: default
-spec:
-  interval: 0s
-  prune: true
-  sourceRef:
-    kind: ""
-    name: ""
-status: {}
-`))
+			// TODO: verify GenerateArtifactsOutputReturns called with correct parameters.
 		})
 
 		When("getting the artifacts fails", func() {
@@ -170,23 +112,11 @@ status: {}
 			})
 		})
 
-		When("creating the dir fails", func() {
-			BeforeEach(func() {
-				cfg.Directory = "/23123~@$~!@£$~1'24!"
-			})
-
-			It("errors", func() {
-				err := catalog.Install(cfg)
-				Expect(err).To(MatchError(ContainSubstring("failed to create directory")))
-			})
-		})
-
-		When("a url is provided with branch and path", func() {
+		PWhen("a url is provided with branch and path", func() {
 			It("generates a spec with url and branch and path", func() {
 				cfg = catalog.InstallConfig{
 					Clients: catalog.Clients{
 						CatalogClient:  fakeCatalogClient,
-						GitClient:      fakeGit,
 						ArtifactsMaker: fakeMakeArtifacts,
 					},
 					ProfileConfig: catalog.ProfileConfig{
@@ -198,7 +128,6 @@ status: {}
 						SubName:       "mysub",
 						URL:           "https://github.com/weaveworks/profiles-examples",
 					},
-					Directory: tempDir,
 				}
 				err := catalog.Install(cfg)
 				Expect(err).NotTo(HaveOccurred())
@@ -257,7 +186,6 @@ status: {}
 				cfg = catalog.InstallConfig{
 					Clients: catalog.Clients{
 						CatalogClient:  fakeCatalogClient,
-						GitClient:      fakeGit,
 						ArtifactsMaker: fakeMakeArtifacts,
 					},
 					ProfileConfig: catalog.ProfileConfig{
@@ -269,7 +197,6 @@ status: {}
 						SubName:       "mysub",
 						URL:           "https://github.com/weaveworks/profiles-examples",
 					},
-					Directory: tempDir,
 				}
 				err := catalog.Install(cfg)
 				Expect(err).NotTo(HaveOccurred())
@@ -318,9 +245,3 @@ status: {}
 		})
 	})
 })
-
-func hasCorrectFilePerms(file string) bool {
-	info, err := os.Stat(file)
-	Expect(err).NotTo(HaveOccurred())
-	return strconv.FormatUint(uint64(info.Mode().Perm()), 8) == strconv.FormatInt(0644, 8)
-}

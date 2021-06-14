@@ -2,7 +2,10 @@ package profile_test
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
@@ -168,7 +171,7 @@ var _ = Describe("Profile", func() {
 		})
 	})
 
-	Describe("MakeArtifacts", func() {
+	Context("MakeArtifacts", func() {
 		It("generates the artifacts", func() {
 			maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
 				GitClient:        fakeGitClient,
@@ -678,4 +681,125 @@ var _ = Describe("Profile", func() {
 			})
 		})
 	})
+	Context("GenerateArtifactsOutput", func() {
+		It("creates files for all artifacts", func() {
+			//profileName := "test-generate"
+			pSub = profilesv1.ProfileInstallation{
+				TypeMeta: profileTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      subscriptionName,
+					Namespace: namespace,
+				},
+				Spec: profilesv1.ProfileInstallationSpec{
+					Source: &profilesv1.Source{
+						URL:    "https://github.com/weaveworks/profiles-examples",
+						Branch: "main",
+						Path:   "weaveworks-nginx",
+					},
+				},
+			}
+			p.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
+				return profilesv1.ProfileDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "weaveworks-nginx",
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Profile",
+						APIVersion: "packages.weave.works.io/profilesv1",
+					},
+					Spec: profilesv1.ProfileDefinitionSpec{
+						ProfileDescription: profilesv1.ProfileDescription{
+							Description: "foo",
+						},
+						Artifacts: []profilesv1.Artifact{
+							{
+								Name: "nginx-deployment",
+								Kustomize: &profilesv1.Kustomize{
+									Path: "nginx/deployment",
+								},
+							},
+						},
+					},
+				}, nil
+			})
+			tempDir, err := ioutil.TempDir("", "catalog-install")
+			Expect(err).NotTo(HaveOccurred())
+			maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				ProfileName:      "generate-test",
+				GitClient:        fakeGitClient,
+				RootDir:          tempDir,
+				GitRepoNamespace: gitRepoNamespace,
+				GitRepoName:      gitRepoName,
+			})
+			artifacts, err := maker.MakeArtifacts(pSub)
+			Expect(err).NotTo(HaveOccurred())
+			fakeGitClient.SparseCloneStub = func(url string, branch string, dir string, p string) error {
+				fullPath := filepath.Join(dir, "weaveworks-nginx", "nginx", "deployment")
+				err := os.MkdirAll(fullPath, 0755)
+				Expect(err).NotTo(HaveOccurred())
+				return ioutil.WriteFile(filepath.Join(fullPath, "deployment.yaml"), []byte("validYaml:"), 0755)
+			}
+			err = maker.GenerateArtifactsOutput(artifacts, pSub)
+			Expect(err).NotTo(HaveOccurred())
+
+			var files []string
+			err = filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
+				if !info.IsDir() {
+					files = append(files, path)
+				}
+				return nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			profileFile := filepath.Join(tempDir, "generate-test", "profile.yaml")
+			artifactFile := filepath.Join(tempDir, "generate-test", "artifacts", "nginx-deployment", "Kustomization.yaml")
+			artifactFileDeployment := filepath.Join(tempDir, "generate-test", "artifacts", "nginx-deployment", "nginx", "deployment", "deployment.yaml")
+			Expect(files).To(ConsistOf(artifactFile, artifactFileDeployment, profileFile))
+
+			Expect(hasCorrectFilePerms(profileFile)).To(BeTrue())
+			Expect(hasCorrectFilePerms(artifactFile)).To(BeTrue())
+
+			content, err := ioutil.ReadFile(profileFile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(Equal(`apiVersion: weave.works/v1alpha1
+kind: ProfileInstallation
+metadata:
+  creationTimestamp: null
+  name: mySub
+  namespace: default
+spec:
+  source:
+    branch: main
+    path: weaveworks-nginx
+    url: https://github.com/weaveworks/profiles-examples
+status: {}
+`))
+
+			content, err = ioutil.ReadFile(artifactFile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+kind: Kustomization
+metadata:
+  creationTimestamp: null
+  name: mySub-weaveworks-nginx-nginx-deployment
+  namespace: default
+spec:
+  interval: 5m0s
+  path: %s/artifacts/nginx-deployment/nginx/deployment
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: git-repo-name
+    namespace: git-repo-namespace
+  targetNamespace: default
+status: {}
+`, tempDir)))
+		})
+	})
 })
+
+func hasCorrectFilePerms(file string) bool {
+	info, err := os.Stat(file)
+	Expect(err).NotTo(HaveOccurred())
+	return strconv.FormatUint(uint64(info.Mode().Perm()), 8) == strconv.FormatInt(0644, 8)
+}

@@ -2,10 +2,15 @@ package profile
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/google/uuid"
+	"github.com/otiai10/copy"
 	"k8s.io/apimachinery/pkg/runtime"
+	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"knative.dev/pkg/apis"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
@@ -27,6 +32,7 @@ type Artifact struct {
 //go:generate counterfeiter -o fakes/artifacts_maker.go . ArtifactsMaker
 type ArtifactsMaker interface {
 	MakeArtifacts(installation profilesv1.ProfileInstallation) ([]Artifact, error)
+	GenerateArtifactsOutput(artifacts []Artifact, profilesInstallations profilesv1.ProfileInstallation) error
 }
 
 // MakerConfig contains all configuration properties for the Artifacts Maker.
@@ -35,6 +41,7 @@ type MakerConfig struct {
 	RootDir          string
 	GitRepoNamespace string
 	GitRepoName      string
+	ProfileName      string
 }
 
 // ProfilesArtifactsMaker creates a list of artifacts from profiles data.
@@ -47,6 +54,84 @@ func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
 	return &ProfilesArtifactsMaker{
 		MakerConfig: cfg,
 	}
+}
+
+// GenerateArtifactsOutput takes a slice of generated artifacts and creates files, folders and cloned artifacts for them.
+func (pa *ProfilesArtifactsMaker) GenerateArtifactsOutput(artifacts []Artifact, profilesInstallations profilesv1.ProfileInstallation) error {
+	profileRootdir := filepath.Join(pa.RootDir, pa.ProfileName)
+	artifactsRootDir := filepath.Join(profileRootdir, "artifacts")
+	for _, artifact := range artifacts {
+		artifactDir := filepath.Join(artifactsRootDir, artifact.Name)
+		if err := os.MkdirAll(artifactDir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory")
+		}
+		if artifact.RepoURL != "" {
+			if err := pa.getRepositoryLocalArtifacts(artifact, artifactDir); err != nil {
+				return fmt.Errorf("failed to get package local artifacts: %w", err)
+			}
+		}
+		for _, obj := range artifact.Objects {
+			filename := filepath.Join(artifactDir, fmt.Sprintf("%s.%s", obj.GetObjectKind().GroupVersionKind().Kind, "yaml"))
+			if err := pa.generateOutput(filename, obj); err != nil {
+				return err
+			}
+		}
+	}
+
+	return pa.generateOutput(filepath.Join(profileRootdir, "profile.yaml"), &profilesInstallations)
+
+}
+
+// getRepositoryLocalArtifacts clones all repository local artifacts so they can be copied over to the flux repository.
+func (pa *ProfilesArtifactsMaker) getRepositoryLocalArtifacts(a Artifact, artifactDir string) error {
+	u := uuid.NewString()[:6]
+	tmp, err := ioutil.TempDir("", "sparse_clone_git_repo_"+u)
+	if err != nil {
+		return fmt.Errorf("failed to create temp folder: %w", err)
+	}
+	defer func() {
+		if err := os.RemoveAll(tmp); err != nil {
+			fmt.Println("Failed to remove tmp folder: ", tmp)
+		}
+	}()
+	profilePath := a.SparseFolder
+	branch := a.Branch
+	if err := pa.GitClient.SparseClone(a.RepoURL, branch, tmp, profilePath); err != nil {
+		return fmt.Errorf("failed to sparse clone folder with url: %s; branch: %s; path: %s; with error: %w",
+			a.RepoURL,
+			branch,
+			profilePath,
+			err)
+	}
+	for _, path := range a.PathsToCopy {
+		// nginx/chart/...
+		if strings.Contains(path, string(os.PathSeparator)) {
+			path = filepath.Dir(path)
+		}
+		fullPath := filepath.Join(tmp, profilePath, path)
+		if err := copy.Copy(fullPath, filepath.Join(artifactDir, path)); err != nil {
+			return fmt.Errorf("failed to move folder: %w", err)
+		}
+	}
+	return nil
+}
+
+func (pa *ProfilesArtifactsMaker) generateOutput(filename string, o runtime.Object) error {
+	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer func(f *os.File) {
+		if err := f.Close(); err != nil {
+			fmt.Printf("Failed to properly close file %s\n", f.Name())
+		}
+	}(f)
+	if err := e.Encode(o, f); err != nil {
+		return err
+	}
+	return nil
+
 }
 
 // MakeArtifacts generates artifacts without owners for manual applying to

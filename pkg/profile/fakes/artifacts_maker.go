@@ -9,6 +9,18 @@ import (
 )
 
 type FakeArtifactsMaker struct {
+	GenerateArtifactsOutputStub        func([]profile.Artifact, v1alpha1.ProfileInstallation) error
+	generateArtifactsOutputMutex       sync.RWMutex
+	generateArtifactsOutputArgsForCall []struct {
+		arg1 []profile.Artifact
+		arg2 v1alpha1.ProfileInstallation
+	}
+	generateArtifactsOutputReturns struct {
+		result1 error
+	}
+	generateArtifactsOutputReturnsOnCall map[int]struct {
+		result1 error
+	}
 	MakeArtifactsStub        func(v1alpha1.ProfileInstallation) ([]profile.Artifact, error)
 	makeArtifactsMutex       sync.RWMutex
 	makeArtifactsArgsForCall []struct {
@@ -24,6 +36,73 @@ type FakeArtifactsMaker struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeArtifactsMaker) GenerateArtifactsOutput(arg1 []profile.Artifact, arg2 v1alpha1.ProfileInstallation) error {
+	var arg1Copy []profile.Artifact
+	if arg1 != nil {
+		arg1Copy = make([]profile.Artifact, len(arg1))
+		copy(arg1Copy, arg1)
+	}
+	fake.generateArtifactsOutputMutex.Lock()
+	ret, specificReturn := fake.generateArtifactsOutputReturnsOnCall[len(fake.generateArtifactsOutputArgsForCall)]
+	fake.generateArtifactsOutputArgsForCall = append(fake.generateArtifactsOutputArgsForCall, struct {
+		arg1 []profile.Artifact
+		arg2 v1alpha1.ProfileInstallation
+	}{arg1Copy, arg2})
+	stub := fake.GenerateArtifactsOutputStub
+	fakeReturns := fake.generateArtifactsOutputReturns
+	fake.recordInvocation("GenerateArtifactsOutput", []interface{}{arg1Copy, arg2})
+	fake.generateArtifactsOutputMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeArtifactsMaker) GenerateArtifactsOutputCallCount() int {
+	fake.generateArtifactsOutputMutex.RLock()
+	defer fake.generateArtifactsOutputMutex.RUnlock()
+	return len(fake.generateArtifactsOutputArgsForCall)
+}
+
+func (fake *FakeArtifactsMaker) GenerateArtifactsOutputCalls(stub func([]profile.Artifact, v1alpha1.ProfileInstallation) error) {
+	fake.generateArtifactsOutputMutex.Lock()
+	defer fake.generateArtifactsOutputMutex.Unlock()
+	fake.GenerateArtifactsOutputStub = stub
+}
+
+func (fake *FakeArtifactsMaker) GenerateArtifactsOutputArgsForCall(i int) ([]profile.Artifact, v1alpha1.ProfileInstallation) {
+	fake.generateArtifactsOutputMutex.RLock()
+	defer fake.generateArtifactsOutputMutex.RUnlock()
+	argsForCall := fake.generateArtifactsOutputArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeArtifactsMaker) GenerateArtifactsOutputReturns(result1 error) {
+	fake.generateArtifactsOutputMutex.Lock()
+	defer fake.generateArtifactsOutputMutex.Unlock()
+	fake.GenerateArtifactsOutputStub = nil
+	fake.generateArtifactsOutputReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeArtifactsMaker) GenerateArtifactsOutputReturnsOnCall(i int, result1 error) {
+	fake.generateArtifactsOutputMutex.Lock()
+	defer fake.generateArtifactsOutputMutex.Unlock()
+	fake.GenerateArtifactsOutputStub = nil
+	if fake.generateArtifactsOutputReturnsOnCall == nil {
+		fake.generateArtifactsOutputReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.generateArtifactsOutputReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeArtifactsMaker) MakeArtifacts(arg1 v1alpha1.ProfileInstallation) ([]profile.Artifact, error) {
@@ -93,6 +172,8 @@ func (fake *FakeArtifactsMaker) MakeArtifactsReturnsOnCall(i int, result1 []prof
 func (fake *FakeArtifactsMaker) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.generateArtifactsOutputMutex.RLock()
+	defer fake.generateArtifactsOutputMutex.RUnlock()
 	fake.makeArtifactsMutex.RLock()
 	defer fake.makeArtifactsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
