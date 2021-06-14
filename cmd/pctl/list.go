@@ -36,6 +36,12 @@ func listCmd() *cli.Command {
 			if err != nil {
 				return err
 			}
+
+			if len(data) == 0 {
+				fmt.Println("no profiles installed")
+				return nil
+			}
+
 			var f formatter.Formatter
 			f = formatter.NewTableFormatter()
 			getter := listDataFunc(data)
