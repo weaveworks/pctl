@@ -678,6 +678,7 @@ status: {}
 			}
 			_ = kClient.Delete(context.Background(), &nsp)
 		})
+
 		It("generates valid artifacts to the local directory", func() {
 			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--config-secret", "values.yaml", "nginx-catalog/nginx/v2.0.0")
 			cmd.Dir = temp
@@ -686,6 +687,7 @@ status: {}
 				fmt.Println("Output from failing command: ", string(session))
 			}
 			Expect(err).ToNot(HaveOccurred())
+			Expect(string(session)).To(ContainSubstring("generating subscription for profile nginx-catalog/nginx:. Output directory: nginx/"))
 
 			var files []string
 			profilesDir := filepath.Join(temp, "nginx")

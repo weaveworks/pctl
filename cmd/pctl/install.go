@@ -159,7 +159,8 @@ func install(c *cli.Context) error {
 	} else {
 		name = fmt.Sprintf("%s/%s", catalogName, profileName)
 	}
-	fmt.Printf("generating subscription for profile %s:\n\n", name)
+	outputDir := filepath.Join(dir, profileName)
+	fmt.Printf("generating subscription for profile %s:. Output directory: %s/\n\n", name, outputDir)
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{}, r)
 	var (
@@ -176,7 +177,7 @@ func install(c *cli.Context) error {
 	}
 	artifactsMaker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
 		GitClient:        g,
-		RootDir:          filepath.Join(dir, profileName),
+		RootDir:          outputDir,
 		GitRepoNamespace: gitRepoNamespace,
 		GitRepoName:      gitRepoName,
 	})
