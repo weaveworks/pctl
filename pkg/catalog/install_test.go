@@ -14,13 +14,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
-	"github.com/weaveworks/pctl/pkg/git"
 	gitfakes "github.com/weaveworks/pctl/pkg/git/fakes"
 	"github.com/weaveworks/pctl/pkg/profile"
+	artifactFakes "github.com/weaveworks/pctl/pkg/profile/fakes"
 )
 
 var _ = Describe("Install", func() {
@@ -31,7 +30,7 @@ var _ = Describe("Install", func() {
 		tempDir           string
 		httpBody          []byte
 		cfg               catalog.InstallConfig
-		fakeMakeArtifacts catalog.MakeArtifacts
+		fakeMakeArtifacts *artifactFakes.FakeArtifactsMaker
 		gitRepoNamespace  = "git-repo-namespace"
 		gitRepoName       = "git-repo-name"
 	)
@@ -40,6 +39,7 @@ var _ = Describe("Install", func() {
 		fakeCatalogClient = new(fakes.FakeCatalogClient)
 		fakeGit = new(gitfakes.FakeGit)
 		fakeScm = new(gitfakes.FakeSCMClient)
+		fakeMakeArtifacts = new(artifactFakes.FakeArtifactsMaker)
 		var err error
 		tempDir, err = ioutil.TempDir("", "catalog-install")
 		Expect(err).NotTo(HaveOccurred())
@@ -67,37 +67,32 @@ var _ = Describe("Install", func() {
 				Version:       "v0.0.1",
 			},
 			Clients: catalog.Clients{
-				CatalogClient: fakeCatalogClient,
-				GitClient:     fakeGit,
+				CatalogClient:  fakeCatalogClient,
+				GitClient:      fakeGit,
+				ArtifactsMaker: fakeMakeArtifacts,
 			},
 			Directory: tempDir,
 		}
-		fakeMakeArtifacts = func(sub profilesv1.ProfileInstallation, gitClient git.Git, rootDir, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
-			return []profile.Artifact{
-				{
-					Objects: []runtime.Object{
-						&kustomizev1.Kustomization{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "foo",
-								Namespace: "default",
-							},
-							TypeMeta: metav1.TypeMeta{
-								Kind:       "kustomize",
-								APIVersion: "api",
-							},
-							Spec: kustomizev1.KustomizationSpec{
-								Prune: true,
-							},
+		fakeMakeArtifacts.MakeArtifactsReturns([]profile.Artifact{
+			{
+				Objects: []runtime.Object{
+					&kustomizev1.Kustomization{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "foo",
+							Namespace: "default",
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "kustomize",
+							APIVersion: "api",
+						},
+						Spec: kustomizev1.KustomizationSpec{
+							Prune: true,
 						},
 					},
-					Name: "foo",
 				},
-			}, nil
-		}
-	})
-
-	JustBeforeEach(func() {
-		catalog.SetMakeArtifacts(fakeMakeArtifacts)
+				Name: "foo",
+			},
+		}, nil)
 	})
 
 	AfterEach(func() {
@@ -166,9 +161,7 @@ status: {}
 
 		When("getting the artifacts fails", func() {
 			BeforeEach(func() {
-				fakeMakeArtifacts = func(sub profilesv1.ProfileInstallation, gitClient git.Git, rootDir, gitRepoNamespace string, gitRepoName string) ([]profile.Artifact, error) {
-					return nil, fmt.Errorf("foo")
-				}
+				fakeMakeArtifacts.MakeArtifactsReturns(nil, fmt.Errorf("foo"))
 			})
 
 			It("errors", func() {
@@ -192,8 +185,9 @@ status: {}
 			It("generates a spec with url and branch and path", func() {
 				cfg = catalog.InstallConfig{
 					Clients: catalog.Clients{
-						CatalogClient: fakeCatalogClient,
-						GitClient:     fakeGit,
+						CatalogClient:  fakeCatalogClient,
+						GitClient:      fakeGit,
+						ArtifactsMaker: fakeMakeArtifacts,
 					},
 					ProfileConfig: catalog.ProfileConfig{
 						CatalogName:   "nginx",
@@ -262,8 +256,9 @@ status: {}
 			It("will not care because the name is sanitised", func() {
 				cfg = catalog.InstallConfig{
 					Clients: catalog.Clients{
-						CatalogClient: fakeCatalogClient,
-						GitClient:     fakeGit,
+						CatalogClient:  fakeCatalogClient,
+						GitClient:      fakeGit,
+						ArtifactsMaker: fakeMakeArtifacts,
 					},
 					ProfileConfig: catalog.ProfileConfig{
 						CatalogName:   "nginx",

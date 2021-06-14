@@ -170,7 +170,13 @@ var _ = Describe("Profile", func() {
 
 	Describe("MakeArtifacts", func() {
 		It("generates the artifacts", func() {
-			artifacts, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
+			maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				GitClient:        fakeGitClient,
+				RootDir:          rootDir,
+				GitRepoNamespace: gitRepoNamespace,
+				GitRepoName:      gitRepoName,
+			})
+			artifacts, err := maker.MakeArtifacts(pSub)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(artifacts).To(HaveLen(4))
 
@@ -318,7 +324,13 @@ var _ = Describe("Profile", func() {
 						},
 					},
 				}
-				artifacts, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGitClient,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
+				artifacts, err := maker.MakeArtifacts(pSub)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(artifacts).To(HaveLen(4))
 
@@ -359,7 +371,11 @@ var _ = Describe("Profile", func() {
 						},
 					},
 				}
-				artifacts, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, "", "")
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient: fakeGitClient,
+					RootDir:   rootDir,
+				})
+				artifacts, err := maker.MakeArtifacts(pSub)
 				Expect(err).To(MatchError("failed to generate resources for nested profile \"profileName2\": in case of local resources, the flux gitrepository object's details must be provided"))
 				Expect(artifacts).To(BeEmpty())
 			})
@@ -376,7 +392,13 @@ var _ = Describe("Profile", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGitClient,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
+				_, err := maker.MakeArtifacts(pSub)
 				Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("failed to get profile definition %s on branch %s: foo", pNestedDefURL, branch))))
 			})
 		})
@@ -388,7 +410,13 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
+					maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+						GitClient:        fakeGitClient,
+						RootDir:          rootDir,
+						GitRepoNamespace: gitRepoNamespace,
+						GitRepoName:      gitRepoName,
+					})
+					_, err := maker.MakeArtifacts(pSub)
 					Expect(err).To(MatchError(ContainSubstring("no artifact set")))
 				})
 			})
@@ -399,7 +427,13 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
+					maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+						GitClient:        fakeGitClient,
+						RootDir:          rootDir,
+						GitRepoNamespace: gitRepoNamespace,
+						GitRepoName:      gitRepoName,
+					})
+					_, err := maker.MakeArtifacts(pSub)
 					Expect(err).To(MatchError(ContainSubstring("failed to generate resources for nested profile \"profileName2\":")))
 				})
 			})
@@ -433,7 +467,13 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
+					maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+						GitClient:        fakeGitClient,
+						RootDir:          rootDir,
+						GitRepoNamespace: gitRepoNamespace,
+						GitRepoName:      gitRepoName,
+					})
+					_, err := maker.MakeArtifacts(pSub)
 					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: chart.path, chart.url")))
 				})
 			})
@@ -470,7 +510,13 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
+					maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+						GitClient:        fakeGitClient,
+						RootDir:          rootDir,
+						GitRepoNamespace: gitRepoNamespace,
+						GitRepoName:      gitRepoName,
+					})
+					_, err := maker.MakeArtifacts(pSub)
 					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: chart, kustomize")))
 				})
 			})
@@ -508,7 +554,13 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
+					maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+						GitClient:        fakeGitClient,
+						RootDir:          rootDir,
+						GitRepoNamespace: gitRepoNamespace,
+						GitRepoName:      gitRepoName,
+					})
+					_, err := maker.MakeArtifacts(pSub)
 					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: kustomize, profile")))
 				})
 			})
@@ -548,7 +600,13 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
+					maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+						GitClient:        fakeGitClient,
+						RootDir:          rootDir,
+						GitRepoNamespace: gitRepoNamespace,
+						GitRepoName:      gitRepoName,
+					})
+					_, err := maker.MakeArtifacts(pSub)
 					Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: chart, profile")))
 				})
 			})
@@ -608,7 +666,13 @@ var _ = Describe("Profile", func() {
 				})
 
 				It("errors", func() {
-					_, err := profile.MakeArtifacts(pSub, fakeGitClient, rootDir, gitRepoNamespace, gitRepoName)
+					maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+						GitClient:        fakeGitClient,
+						RootDir:          rootDir,
+						GitRepoNamespace: gitRepoNamespace,
+						GitRepoName:      gitRepoName,
+					})
+					_, err := maker.MakeArtifacts(pSub)
 					Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", pNestedDefURL, branch))))
 				})
 			})
