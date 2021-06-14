@@ -22,7 +22,6 @@ func List(k8sClient runtimeclient.Client, catalogClient CatalogClient) ([]Profil
 		return nil, err
 	}
 	if len(profiles) == 0 {
-		fmt.Println("no profiles found")
 		return nil, nil
 	}
 	profileData := make([]ProfileData, 0)

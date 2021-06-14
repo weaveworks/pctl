@@ -8,6 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -29,6 +30,7 @@ var _ = Describe("Install", func() {
 		httpBody          []byte
 		cfg               catalog.InstallConfig
 		fakeMakeArtifacts *artifactFakes.FakeArtifactsMaker
+		fakeArtifact      profile.Artifact
 	)
 
 	BeforeEach(func() {
@@ -66,25 +68,26 @@ var _ = Describe("Install", func() {
 				ArtifactsMaker: fakeMakeArtifacts,
 			},
 		}
-		fakeMakeArtifacts.MakeArtifactsReturns([]profile.Artifact{
-			{
-				Objects: []runtime.Object{
-					&kustomizev1.Kustomization{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "foo",
-							Namespace: "default",
-						},
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "kustomize",
-							APIVersion: "api",
-						},
-						Spec: kustomizev1.KustomizationSpec{
-							Prune: true,
-						},
+		fakeArtifact = profile.Artifact{
+			Objects: []runtime.Object{
+				&kustomizev1.Kustomization{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: "default",
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "kustomize",
+						APIVersion: "api",
+					},
+					Spec: kustomizev1.KustomizationSpec{
+						Prune: true,
 					},
 				},
-				Name: "foo",
 			},
+			Name: "foo",
+		}
+		fakeMakeArtifacts.MakeArtifactsReturns([]profile.Artifact{
+			fakeArtifact,
 		}, nil)
 	})
 
@@ -94,10 +97,34 @@ var _ = Describe("Install", func() {
 
 	Describe("install", func() {
 		It("generates the artifacts", func() {
-			fakeMakeArtifacts.GenerateArtifactsOutputReturns(nil)
 			err := catalog.Install(cfg)
 			Expect(err).NotTo(HaveOccurred())
-			// TODO: verify GenerateArtifactsOutputReturns called with correct parameters.
+			Expect(fakeMakeArtifacts.GenerateArtifactsOutputCallCount()).To(Equal(1))
+			args, arg := fakeMakeArtifacts.GenerateArtifactsOutputArgsForCall(0)
+			Expect(args).To(ConsistOf(fakeArtifact))
+			Expect(arg).To(Equal(profilesv1.ProfileInstallation{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ProfileInstallation",
+					APIVersion: "weave.works/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "mysub",
+					Namespace: "default",
+				},
+				Spec: profilesv1.ProfileInstallationSpec{
+					Source: &profilesv1.Source{
+						URL:    "https://github.com/weaveworks/nginx-profile",
+						Branch: "",
+						Path:   "nginx-1",
+						Tag:    "nginx-1/v0.0.1",
+					},
+					Catalog: &profilesv1.Catalog{
+						Version: "v0.0.1",
+						Catalog: "nginx",
+						Profile: "nginx-1",
+					},
+				},
+			}))
 		})
 
 		When("getting the artifacts fails", func() {
