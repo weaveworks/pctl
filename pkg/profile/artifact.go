@@ -12,7 +12,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/git"
 )
 
-//Artifact contains the name and objects belonging to a profile artifact
+// Artifact contains the name and objects belonging to a profile artifact
 type Artifact struct {
 	Objects      []runtime.Object
 	Name         string
@@ -22,20 +22,46 @@ type Artifact struct {
 	Branch       string
 }
 
+// ArtifactsMaker can create a list of artifacts.
+//go:generate counterfeiter -o fakes/artifacts_maker.go . ArtifactsMaker
+type ArtifactsMaker interface {
+	MakeArtifacts(installation profilesv1.ProfileInstallation) ([]Artifact, error)
+}
+
+// MakerConfig contains all configuration properties for the Artifacts Maker.
+type MakerConfig struct {
+	GitClient        git.Git
+	RootDir          string
+	GitRepoNamespace string
+	GitRepoName      string
+}
+
+// ProfilesArtifactsMaker creates a list of artifacts from profiles data.
+type ProfilesArtifactsMaker struct {
+	MakerConfig
+}
+
+// NewProfilesArtifactsMaker creates a new profiles artifacts maker.
+func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
+	return &ProfilesArtifactsMaker{
+		MakerConfig: cfg,
+	}
+}
+
 // MakeArtifacts generates artifacts without owners for manual applying to
 // a personal cluster.
-func MakeArtifacts(installation profilesv1.ProfileInstallation, gitClient git.Git, rootDir, gitRepoNamespace, gitRepoName string) ([]Artifact, error) {
+func (pa *ProfilesArtifactsMaker) MakeArtifacts(installation profilesv1.ProfileInstallation) ([]Artifact, error) {
 	path := installation.Spec.Source.Path
 	branchOrTag := installation.Spec.Source.Tag
 	if installation.Spec.Source.Tag == "" {
 		branchOrTag = installation.Spec.Source.Branch
 	}
-	def, err := getProfileDefinition(installation.Spec.Source.URL, branchOrTag, path, gitClient)
+	def, err := getProfileDefinition(installation.Spec.Source.URL, branchOrTag, path, pa.GitClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get profile definition: %w", err)
 	}
-	p := newProfile(def, installation, rootDir, gitRepoNamespace, gitRepoName)
-	return p.makeArtifacts([]string{p.profileRepo()}, gitClient)
+	p := newProfile(def, installation, pa.RootDir, pa.GitRepoNamespace, pa.GitRepoName)
+	return p.makeArtifacts([]string{p.profileRepo()}, pa.GitClient)
 }
 
 func (p *Profile) profileRepo() string {
@@ -45,6 +71,7 @@ func (p *Profile) profileRepo() string {
 	return p.subscription.Spec.Source.URL + ":" + p.subscription.Spec.Source.Branch + ":" + p.subscription.Spec.Source.Path
 }
 
+// makeArtifacts will be part of the artifacts maker and not profiles.
 func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Artifact, error) {
 	var artifacts []Artifact
 	profileRepoPath := p.subscription.Spec.Source.Path
