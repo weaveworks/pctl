@@ -1,4 +1,4 @@
-package subscription
+package installation
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
-// InstallationSummary contains a summary of a subscription
-type InstallationSummary struct {
+// Summary contains a summary of a installation
+type Summary struct {
 	Name      string
 	Namespace string
 	Version   string
@@ -18,15 +18,15 @@ type InstallationSummary struct {
 	URL       string
 }
 
-// List returns a list of subscriptions
-func (sm *Manager) List() ([]InstallationSummary, error) {
-	var subscriptions profilesv1.ProfileInstallationList
-	err := sm.kClient.List(sm.ctx, &subscriptions)
+// List returns a list of installations
+func (sm *Manager) List() ([]Summary, error) {
+	var installations profilesv1.ProfileInstallationList
+	err := sm.kClient.List(sm.ctx, &installations)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list profile subscriptions: %w", err)
+		return nil, fmt.Errorf("failed to list profile installations: %w", err)
 	}
-	var descriptions []InstallationSummary
-	for _, sub := range subscriptions.Items {
+	var descriptions []Summary
+	for _, sub := range installations.Items {
 		version := "-"
 		profile := "-"
 		catalog := "-"
@@ -49,7 +49,7 @@ func (sm *Manager) List() ([]InstallationSummary, error) {
 				url = sub.Spec.Source.URL
 			}
 		}
-		descriptions = append(descriptions, InstallationSummary{
+		descriptions = append(descriptions, Summary{
 			Name:      sub.Name,
 			Namespace: sub.Namespace,
 			Version:   version,

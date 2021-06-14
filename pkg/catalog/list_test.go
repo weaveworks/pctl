@@ -15,7 +15,7 @@ import (
 
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
-	"github.com/weaveworks/pctl/pkg/subscription"
+	"github.com/weaveworks/pctl/pkg/installation"
 )
 
 var _ = Describe("List", func() {
@@ -85,7 +85,7 @@ var _ = Describe("List", func() {
 		Expect(err).NotTo(HaveOccurred())
 		expected := []catalog.ProfileData{
 			{
-				Profile: subscription.InstallationSummary{
+				Profile: installation.Summary{
 					Name:      "sub1",
 					Namespace: "default",
 					Profile:   "weaveworks-nginx",
@@ -118,7 +118,7 @@ var _ = Describe("List", func() {
 			Expect(err).NotTo(HaveOccurred())
 			expected := []catalog.ProfileData{
 				{
-					Profile: subscription.InstallationSummary{
+					Profile: installation.Summary{
 						Name:      "sub1",
 						Namespace: "default",
 						Profile:   "weaveworks-nginx",
@@ -150,7 +150,7 @@ var _ = Describe("List", func() {
 			fakeRuntimeClient = fake.NewClientBuilder().Build()
 			fakeCatalogClient.DoRequestReturns(nil, 200, nil)
 			_, err := catalog.List(fakeRuntimeClient, fakeCatalogClient)
-			Expect(err).To(MatchError("failed to list profile subscriptions: no kind is registered for the type v1alpha1.ProfileInstallationList in scheme \"pkg/runtime/scheme.go:100\""))
+			Expect(err).To(MatchError("failed to list profile installations: no kind is registered for the type v1alpha1.ProfileInstallationList in scheme \"pkg/runtime/scheme.go:100\""))
 		})
 	})
 
@@ -231,7 +231,7 @@ var _ = Describe("List", func() {
 			Expect(err).NotTo(HaveOccurred())
 			expected := []catalog.ProfileData{
 				{
-					Profile: subscription.InstallationSummary{
+					Profile: installation.Summary{
 						Name:      "sub1",
 						Namespace: "default",
 						Profile:   "weaveworks-nginx",
@@ -244,7 +244,7 @@ var _ = Describe("List", func() {
 					AvailableVersionUpdates: []string{"v0.1.1"},
 				},
 				{
-					Profile: subscription.InstallationSummary{
+					Profile: installation.Summary{
 						Name:      "sub2",
 						Namespace: "namespace2",
 						Profile:   "weaveworks-nginx-2",
@@ -257,7 +257,7 @@ var _ = Describe("List", func() {
 					AvailableVersionUpdates: []string{"-"},
 				},
 				{
-					Profile: subscription.InstallationSummary{
+					Profile: installation.Summary{
 						Name:      "sub3",
 						Namespace: "namespace3",
 						Profile:   "weaveworks-nginx-3",

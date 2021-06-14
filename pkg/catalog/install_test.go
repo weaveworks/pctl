@@ -114,7 +114,7 @@ var _ = Describe("Install", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			profileFile := filepath.Join(profileDir, "profile.yaml")
+			profileFile := filepath.Join(profileDir, "profile-installation.yaml")
 			artifactFile := filepath.Join(profileDir, "artifacts", "foo", "kustomize.yaml")
 			Expect(files).To(ConsistOf(profileFile, artifactFile))
 
@@ -211,7 +211,7 @@ status: {}
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				profileFile := filepath.Join(profileDir, "profile.yaml")
+				profileFile := filepath.Join(profileDir, "profile-installation.yaml")
 				artifactsDir := filepath.Join(profileDir, "artifacts")
 				artifactsFooDir := filepath.Join(profileDir, "artifacts", "foo")
 				artifactFile := filepath.Join(profileDir, "artifacts", "foo", "kustomize.yaml")

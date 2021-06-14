@@ -88,11 +88,11 @@ weaveworks-nginx
 │   └── nginx-deployment
 │       ├── GitRepository.yaml
 │       └── Kustomization.yaml
-└── profile.yaml
+└── profile-installation.yaml
 
 ```
 
-The `profile.yaml` is the top-level Profile installation object. It describes the profile installation. The artifacts
+The `profile-installation.yaml` is the top-level Profile installation object. It describes the profile installation. The artifacts
 directory contains all of the resources required for deploying the profile. Each of the artifacts corresponds to a
 [Flux 2 resource](https://fluxcd.io/docs/components/).
 
@@ -116,20 +116,20 @@ tree
 │   │       ├── Chart.lock
 │   │       ├── ...
 │   │       └── values.yaml
-│   └── profile.yaml
+│   └── profile-installation.yaml
 └── weaveworks-nginx
     ├── README.md
     ├── nginx
     │   └── deployment
     │       └── deployment.yaml
-    └── profile.yaml
+    └── profile-installation.yaml
 ```
 
 Given a development branch called `devel` to install the `bitnami-nginx` profile from this repository, call `install`
 with the following parameters:
 
 ```
-pctl install --subscription-name pctl-profile \
+pctl install --name pctl-profile \
              --namespace default \
              --profile-branch devel \
              --profile-url https://github.com/<usr>/<repo> \
@@ -153,7 +153,7 @@ Provide the following information when running install: `--git-repository <names
 This looks as follows if installing via a URL:
 
 ```
-pctl install --subscription-name pctl-profile \
+pctl install --name pctl-profile \
              --namespace [default] \
              --profile-branch [main] \
              --profile-url git@github.com:org/private-profile-repo \

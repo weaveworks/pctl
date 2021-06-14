@@ -1,11 +1,11 @@
-package subscription_test
+package installation_test
 
 import (
 	"context"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/subscription"
+	"github.com/weaveworks/pctl/pkg/installation"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,7 +15,7 @@ import (
 
 var _ = Describe("List", func() {
 	var (
-		sm              *subscription.Manager
+		sm              *installation.Manager
 		fakeClient      client.Client
 		profileTypeMeta = metav1.TypeMeta{
 			Kind:       "ProfileInstallation",
@@ -85,14 +85,14 @@ var _ = Describe("List", func() {
 		Expect(fakeClient.Create(context.TODO(), pSub2)).To(Succeed())
 		Expect(fakeClient.Create(context.TODO(), pSub3)).To(Succeed())
 
-		sm = subscription.NewManager(fakeClient)
+		sm = installation.NewManager(fakeClient)
 	})
 
 	It("returns a list of profiles deployed in the cluster", func() {
 		subs, err := sm.List()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(subs).To(ConsistOf(
-			subscription.InstallationSummary{
+			installation.Summary{
 				Name:      sub1,
 				Namespace: namespace1,
 				Version:   version,
@@ -102,7 +102,7 @@ var _ = Describe("List", func() {
 				Path:      "-",
 				URL:       "https://github.com/org/repo-name",
 			},
-			subscription.InstallationSummary{
+			installation.Summary{
 				Name:      sub2,
 				Namespace: namespace2,
 				Version:   "-",
@@ -112,7 +112,7 @@ var _ = Describe("List", func() {
 				Path:      "-",
 				URL:       "https://github.com/org/repo-name",
 			},
-			subscription.InstallationSummary{
+			installation.Summary{
 				Name:      sub3,
 				Namespace: namespace3,
 				Version:   "-",
@@ -130,12 +130,12 @@ var _ = Describe("List", func() {
 			//remove profilesv1 from scheme
 			scheme := runtime.NewScheme()
 			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
-			sm = subscription.NewManager(fakeClient)
+			sm = installation.NewManager(fakeClient)
 		})
 
 		It("returns an error", func() {
 			_, err := sm.List()
-			Expect(err).To(MatchError(ContainSubstring("failed to list profile subscriptions:")))
+			Expect(err).To(MatchError(ContainSubstring("failed to list profile installations:")))
 		})
 	})
 })
