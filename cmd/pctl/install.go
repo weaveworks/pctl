@@ -19,15 +19,15 @@ import (
 func installCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "install",
-		Usage: "generate a profile subscription",
-		UsageText: "To install from a profile catalog entry: pctl --catalog-url <URL> install --subscription-name pctl-profile --namespace default --profile-branch main --config-secret configmap-name <CATALOG>/<PROFILE>[/<VERSION>]\n   " +
-			"To install directly from a profile repository: pctl install --subscription-name pctl-profile --namespace default --profile-branch development --profile-url https://github.com/weaveworks/profiles-examples --profile-path bitnami-nginx",
+		Usage: "generate a profile installation",
+		UsageText: "To install from a profile catalog entry: pctl --catalog-url <URL> install --name pctl-profile --namespace default --profile-branch main --config-secret configmap-name <CATALOG>/<PROFILE>[/<VERSION>]\n   " +
+			"To install directly from a profile repository: pctl install --name pctl-profile --namespace default --profile-branch development --profile-url https://github.com/weaveworks/profiles-examples --profile-path bitnami-nginx",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "subscription-name",
+				Name:        "name",
 				DefaultText: "pctl-profile",
 				Value:       "pctl-profile",
-				Usage:       "The name of the subscription.",
+				Usage:       "The name of the installation.",
 			},
 			&cli.StringFlag{
 				Name:        "namespace",
@@ -146,7 +146,7 @@ func install(c *cli.Context) error {
 	}
 
 	branch := c.String("profile-branch")
-	subName := c.String("subscription-name")
+	subName := c.String("name")
 	namespace := c.String("namespace")
 	configValues := c.String("config-secret")
 	dir := c.String("out")
@@ -159,7 +159,7 @@ func install(c *cli.Context) error {
 	} else {
 		name = fmt.Sprintf("%s/%s", catalogName, profileName)
 	}
-	fmt.Printf("generating subscription for profile %s:\n\n", name)
+	fmt.Printf("generating installation for profile %s:\n\n", name)
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{}, r)
 	var (
@@ -212,7 +212,7 @@ func createPullRequest(c *cli.Context) error {
 		return errors.New("repo must be defined if create-pr is true")
 	}
 	if branch == "" {
-		branch = c.String("subscription-name") + "-" + uuid.NewString()[:6]
+		branch = c.String("name") + "-" + uuid.NewString()[:6]
 	}
 	fmt.Printf("Creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
 	r := &runner.CLIRunner{}

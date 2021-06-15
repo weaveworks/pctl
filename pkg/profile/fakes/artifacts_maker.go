@@ -38,7 +38,7 @@ type FakeArtifactsMaker struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeArtifactsMaker) GenerateArtifactsOutput(arg1 []profile.Artifact, arg2 v1alpha1.ProfileInstallation) error {
+func (fake *FakeArtifactsMaker) GenerateOutput(arg1 []profile.Artifact, arg2 v1alpha1.ProfileInstallation) error {
 	var arg1Copy []profile.Artifact
 	if arg1 != nil {
 		arg1Copy = make([]profile.Artifact, len(arg1))
@@ -52,7 +52,7 @@ func (fake *FakeArtifactsMaker) GenerateArtifactsOutput(arg1 []profile.Artifact,
 	}{arg1Copy, arg2})
 	stub := fake.GenerateArtifactsOutputStub
 	fakeReturns := fake.generateArtifactsOutputReturns
-	fake.recordInvocation("GenerateArtifactsOutput", []interface{}{arg1Copy, arg2})
+	fake.recordInvocation("GenerateOutput", []interface{}{arg1Copy, arg2})
 	fake.generateArtifactsOutputMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)

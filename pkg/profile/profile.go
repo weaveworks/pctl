@@ -11,7 +11,7 @@ import (
 // managing profile artefacts (child resources)
 type Profile struct {
 	definition             profilesv1.ProfileDefinition
-	subscription           profilesv1.ProfileInstallation
+	installation           profilesv1.ProfileInstallation
 	nestedName             string
 	rootDir                string
 	gitRepositoryName      string
@@ -27,7 +27,7 @@ var getProfileDefinition = repo.GetProfileDefinition
 func newProfile(def profilesv1.ProfileDefinition, sub profilesv1.ProfileInstallation, rootDir, gitRepoNamespace, gitRepoName string) *Profile {
 	return &Profile{
 		definition:             def,
-		subscription:           sub,
+		installation:           sub,
 		gitRepositoryName:      gitRepoName,
 		gitRepositoryNamespace: gitRepoNamespace,
 		rootDir:                rootDir,

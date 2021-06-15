@@ -32,7 +32,7 @@ type Artifact struct {
 //go:generate counterfeiter -o fakes/artifacts_maker.go . ArtifactsMaker
 type ArtifactsMaker interface {
 	MakeArtifacts(installation profilesv1.ProfileInstallation) ([]Artifact, error)
-	GenerateArtifactsOutput(artifacts []Artifact, profilesInstallations profilesv1.ProfileInstallation) error
+	GenerateOutput(artifacts []Artifact, profilesInstallations profilesv1.ProfileInstallation) error
 }
 
 // MakerConfig contains all configuration properties for the Artifacts Maker.
@@ -56,8 +56,8 @@ func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
 	}
 }
 
-// GenerateArtifactsOutput takes a slice of generated artifacts and creates files, folders and cloned artifacts for them.
-func (pa *ProfilesArtifactsMaker) GenerateArtifactsOutput(artifacts []Artifact, profilesInstallations profilesv1.ProfileInstallation) error {
+// GenerateOutput takes a slice of generated artifacts and creates files, folders and cloned artifacts for them.
+func (pa *ProfilesArtifactsMaker) GenerateOutput(artifacts []Artifact, profilesInstallations profilesv1.ProfileInstallation) error {
 	profileRootdir := filepath.Join(pa.RootDir, pa.ProfileName)
 	artifactsRootDir := filepath.Join(profileRootdir, "artifacts")
 	for _, artifact := range artifacts {
@@ -151,16 +151,16 @@ func (pa *ProfilesArtifactsMaker) MakeArtifacts(installation profilesv1.ProfileI
 }
 
 func (p *Profile) profileRepo() string {
-	if p.subscription.Spec.Source.Tag != "" {
-		return p.subscription.Spec.Source.URL + ":" + p.subscription.Spec.Source.Tag
+	if p.installation.Spec.Source.Tag != "" {
+		return p.installation.Spec.Source.URL + ":" + p.installation.Spec.Source.Tag
 	}
-	return p.subscription.Spec.Source.URL + ":" + p.subscription.Spec.Source.Branch + ":" + p.subscription.Spec.Source.Path
+	return p.installation.Spec.Source.URL + ":" + p.installation.Spec.Source.Branch + ":" + p.installation.Spec.Source.Path
 }
 
 // makeArtifacts will be part of the artifacts maker and not profiles.
 func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Artifact, error) {
 	var artifacts []Artifact
-	profileRepoPath := p.subscription.Spec.Source.Path
+	profileRepoPath := p.installation.Spec.Source.Path
 
 	for _, artifact := range p.definition.Spec.Artifacts {
 		if err := validateArtifact(artifact); err != nil {
@@ -182,7 +182,7 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			if err != nil {
 				return nil, fmt.Errorf("failed to get profile definition %s on branch %s: %w", artifact.Profile.Source.URL, branchOrTag, err)
 			}
-			nestedProfile := p.subscription.DeepCopyObject().(*profilesv1.ProfileInstallation)
+			nestedProfile := p.installation.DeepCopyObject().(*profilesv1.ProfileInstallation)
 			nestedProfile.Spec.Source.URL = artifact.Profile.Source.URL
 			nestedProfile.Spec.Source.Branch = artifact.Profile.Source.Branch
 			nestedProfile.Spec.Source.Tag = artifact.Profile.Source.Tag
@@ -217,11 +217,11 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 					return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 				}
 				helmRelease.Spec.Chart.Spec.Chart = filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Chart.Path)
-				branch := p.subscription.Spec.Source.Branch
-				if p.subscription.Spec.Source.Tag != "" {
-					branch = p.subscription.Spec.Source.Tag
+				branch := p.installation.Spec.Source.Branch
+				if p.installation.Spec.Source.Tag != "" {
+					branch = p.installation.Spec.Source.Tag
 				}
-				a.RepoURL = p.subscription.Spec.Source.URL
+				a.RepoURL = p.installation.Spec.Source.URL
 				a.SparseFolder = p.definition.Name
 				a.Branch = branch
 				a.PathsToCopy = append(a.PathsToCopy, artifact.Chart.Path)
@@ -237,11 +237,11 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			}
 			path := filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Kustomize.Path)
 			a.Objects = append(a.Objects, p.makeKustomization(artifact, path))
-			branch := p.subscription.Spec.Source.Branch
-			if p.subscription.Spec.Source.Tag != "" {
-				branch = p.subscription.Spec.Source.Tag
+			branch := p.installation.Spec.Source.Branch
+			if p.installation.Spec.Source.Tag != "" {
+				branch = p.installation.Spec.Source.Tag
 			}
-			a.RepoURL = p.subscription.Spec.Source.URL
+			a.RepoURL = p.installation.Spec.Source.URL
 			a.SparseFolder = p.definition.Name
 			a.Branch = branch
 			a.PathsToCopy = append(a.PathsToCopy, artifact.Kustomize.Path)
@@ -267,7 +267,7 @@ func (p *Profile) makeArtifactName(name string) string {
 	if strings.Contains(name, "/") {
 		name = filepath.Base(name)
 	}
-	return join(p.subscription.Name, p.definition.Name, name)
+	return join(p.installation.Name, p.definition.Name, name)
 }
 
 func join(s ...string) string {

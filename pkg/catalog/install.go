@@ -37,14 +37,14 @@ type InstallConfig struct {
 	ProfileConfig
 }
 
-// Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile subscription
+// Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile installation
 // and its artifacts
 func Install(cfg InstallConfig) error {
 	pSpec, err := getProfileSpec(cfg)
 	if err != nil {
 		return err
 	}
-	subscription := profilesv1.ProfileInstallation{
+	installation := profilesv1.ProfileInstallation{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ProfileInstallation",
 			APIVersion: "weave.works/v1alpha1",
@@ -56,7 +56,7 @@ func Install(cfg InstallConfig) error {
 		Spec: pSpec,
 	}
 	if cfg.ConfigMap != "" {
-		subscription.Spec.ValuesFrom = []helmv2.ValuesReference{
+		installation.Spec.ValuesFrom = []helmv2.ValuesReference{
 			{
 				Kind:      "ConfigMap",
 				Name:      cfg.SubName + "-values",
@@ -64,11 +64,11 @@ func Install(cfg InstallConfig) error {
 			},
 		}
 	}
-	artifacts, err := cfg.ArtifactsMaker.MakeArtifacts(subscription)
+	artifacts, err := cfg.ArtifactsMaker.MakeArtifacts(installation)
 	if err != nil {
 		return fmt.Errorf("failed to generate artifacts: %w", err)
 	}
-	if err := cfg.ArtifactsMaker.GenerateArtifactsOutput(artifacts, subscription); err != nil {
+	if err := cfg.ArtifactsMaker.GenerateOutput(artifacts, installation); err != nil {
 		return fmt.Errorf("failed to generate output for artifacts: %w", err)
 	}
 	return nil

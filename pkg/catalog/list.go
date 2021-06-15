@@ -5,19 +5,19 @@ import (
 
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/weaveworks/pctl/pkg/subscription"
+	"github.com/weaveworks/pctl/pkg/installation"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 // ProfileData data containing profile and available version update for format printing.
 type ProfileData struct {
-	Profile                 subscription.InstallationSummary
+	Profile                 installation.Summary
 	AvailableVersionUpdates []string
 }
 
 // List will fetch all installed profiles on the cluster and check if there are updated versions available.
 func List(k8sClient runtimeclient.Client, catalogClient CatalogClient) ([]ProfileData, error) {
-	profiles, err := subscription.NewManager(k8sClient).List()
+	profiles, err := installation.NewManager(k8sClient).List()
 	if err != nil {
 		return nil, err
 	}

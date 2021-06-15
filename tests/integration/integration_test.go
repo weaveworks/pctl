@@ -180,7 +180,7 @@ var _ = Describe("PCTL", func() {
 	Context("list", func() {
 		var (
 			namespace        = "default"
-			subscriptionName = "long-name-to-ensure-padding"
+			installationName = "long-name-to-ensure-padding"
 			ctx              = context.TODO()
 			pSub             profilesv1.ProfileInstallation
 		)
@@ -190,10 +190,10 @@ var _ = Describe("PCTL", func() {
 			pSub = profilesv1.ProfileInstallation{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ProfileInstallation",
-					APIVersion: "profilesubscriptions.weave.works/v1alpha1",
+					APIVersion: "profileinstallations.weave.works/v1alpha1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      subscriptionName,
+					Name:      installationName,
 					Namespace: namespace,
 				},
 				Spec: profilesv1.ProfileInstallationSpec{
@@ -215,7 +215,7 @@ var _ = Describe("PCTL", func() {
 			Expect(kClient.Delete(ctx, &pSub)).Should(Succeed())
 		})
 
-		It("returns the subscriptions", func() {
+		It("returns the installations", func() {
 			listCmd := func() []string {
 				cmd := exec.Command(binaryPath, "list")
 				session, err := cmd.CombinedOutput()
@@ -230,12 +230,12 @@ var _ = Describe("PCTL", func() {
 		})
 
 		When("there are no available updates", func() {
-			It("returns the subscriptions", func() {
+			It("returns the installations", func() {
 				profileURL := "https://github.com/weaveworks/profiles-examples"
 				bitnamiSub := profilesv1.ProfileInstallation{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "ProfileInstallation",
-						APIVersion: "profilesubscriptions.weave.works/v1alpha1",
+						APIVersion: "profileinstallations.weave.works/v1alpha1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "bitnami-profile",
@@ -347,12 +347,12 @@ var _ = Describe("PCTL", func() {
 
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
-				"profile.yaml",
+				"profile-installation.yaml",
 				"artifacts/nginx-deployment/Kustomization.yaml",
 				"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
 			))
 
-			filename := filepath.Join(temp, "profile.yaml")
+			filename := filepath.Join(temp, "profile-installation.yaml")
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
@@ -446,7 +446,7 @@ status: {}
 				Expect(err).NotTo(HaveOccurred())
 
 				By("creating the artifacts")
-				profilesDirProfile := filepath.Join(temp, "profile.yaml")
+				profilesDirProfile := filepath.Join(temp, "profile-installation.yaml")
 				profilesArtifacts := filepath.Join(temp, "artifacts")
 				profilesArtifactsChartDir := filepath.Join(profilesArtifacts, "nginx-server")
 				profilesArtifactsRelease := filepath.Join(profilesArtifactsChartDir, "HelmRelease.yaml")
@@ -459,7 +459,7 @@ status: {}
 					profilesArtifactsChart,
 					profilesArtifactsRelease,
 				))
-				filename := filepath.Join(temp, "profile.yaml")
+				filename := filepath.Join(temp, "profile-installation.yaml")
 				content, err := ioutil.ReadFile(filename)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
@@ -499,7 +499,7 @@ status: {}
 				Expect(err).NotTo(HaveOccurred())
 
 				By("creating the artifacts")
-				profilesDirProfile := filepath.Join(temp, "profile.yaml")
+				profilesDirProfile := filepath.Join(temp, "profile-installation.yaml")
 				profilesArtifacts := filepath.Join(temp, "artifacts")
 				profilesArtifactsDeployment := filepath.Join(temp, "artifacts", "nginx-server")
 				profilesArtifactsDeploymentKustomizationNginx := filepath.Join(temp, "artifacts", "nginx-server", "nginx")
@@ -514,7 +514,7 @@ status: {}
 					profilesArtifactsDeploymentKustomizationNginxChart,
 					profilesArtifactsDeploymentKustomizationNginxChartYaml,
 				))
-				filename := filepath.Join(temp, "profile.yaml")
+				filename := filepath.Join(temp, "profile-installation.yaml")
 				content, err := ioutil.ReadFile(filename)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
@@ -699,12 +699,12 @@ status: {}
 
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
-				"profile.yaml",
+				"profile-installation.yaml",
 				"artifacts/bitnami-nginx/HelmRelease.yaml",
 				"artifacts/bitnami-nginx/HelmRepository.yaml",
 			))
 
-			filename := filepath.Join(temp, "nginx", "profile.yaml")
+			filename := filepath.Join(temp, "nginx", "profile-installation.yaml")
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1

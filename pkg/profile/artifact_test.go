@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	subscriptionName     = "mySub"
+	installationName     = "mySub"
 	namespace            = "default"
 	branch               = "main"
 	profileName1         = "profileName"
@@ -71,7 +71,7 @@ var _ = Describe("Profile", func() {
 		pSub = profilesv1.ProfileInstallation{
 			TypeMeta: profileTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      subscriptionName,
+				Name:      installationName,
 				Namespace: namespace,
 			},
 			Spec: profilesv1.ProfileInstallationSpec{
@@ -190,7 +190,7 @@ var _ = Describe("Profile", func() {
 				objects := nestedProfileArtifact.Objects
 				Expect(objects).To(HaveLen(1))
 
-				helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName2, chartName1)
+				helmReleaseName := fmt.Sprintf("%s-%s-%s", installationName, profileName2, chartName1)
 				helmRelease := objects[0].(*helmv2.HelmRelease)
 
 				Expect(helmRelease.Name).To(Equal(helmReleaseName))
@@ -223,7 +223,7 @@ var _ = Describe("Profile", func() {
 
 				objects := pathBasedHelmArtifact.Objects
 
-				helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, chartName2)
+				helmReleaseName := fmt.Sprintf("%s-%s-%s", installationName, profileName1, chartName2)
 				helmRelease := objects[0].(*helmv2.HelmRelease)
 				Expect(helmRelease.Name).To(Equal(helmReleaseName))
 				Expect(err).NotTo(HaveOccurred())
@@ -256,7 +256,7 @@ var _ = Describe("Profile", func() {
 
 				objects := kustomizeArtifact.Objects
 
-				kustomizeName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, kustomizeName1)
+				kustomizeName := fmt.Sprintf("%s-%s-%s", installationName, profileName1, kustomizeName1)
 				kustomize := objects[0].(*kustomizev1.Kustomization)
 				Expect(kustomize.Name).To(Equal(kustomizeName))
 				Expect(kustomize.Spec.Path).To(Equal("root-dir/artifacts/kustomizeOneArtifactName/kustomize/artifact/path-one"))
@@ -279,12 +279,12 @@ var _ = Describe("Profile", func() {
 				objects := helmArtifact.Objects
 				Expect(objects).To(HaveLen(2))
 
-				helmRefName := fmt.Sprintf("%s-%s-%s", subscriptionName, "repo-name", helmChartChart1)
+				helmRefName := fmt.Sprintf("%s-%s-%s", installationName, "repo-name", helmChartChart1)
 				helmRepo := objects[1].(*sourcev1.HelmRepository)
 				Expect(helmRepo.Name).To(Equal(helmRefName))
 				Expect(helmRepo.Spec.URL).To(Equal(helmChartURL1))
 
-				helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, helmChartName1)
+				helmReleaseName := fmt.Sprintf("%s-%s-%s", installationName, profileName1, helmChartName1)
 				helmRelease := objects[0].(*helmv2.HelmRelease)
 				Expect(helmRelease.Name).To(Equal(helmReleaseName))
 				Expect(helmRelease.Spec.Chart.Spec.Chart).To(Equal(helmChartChart1))
@@ -317,7 +317,7 @@ var _ = Describe("Profile", func() {
 				pSub = profilesv1.ProfileInstallation{
 					TypeMeta: profileTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      subscriptionName,
+						Name:      installationName,
 						Namespace: namespace,
 					},
 					Spec: profilesv1.ProfileInstallationSpec{
@@ -343,7 +343,7 @@ var _ = Describe("Profile", func() {
 
 					objects := pathBasedHelmArtifact.Objects
 
-					helmReleaseName := fmt.Sprintf("%s-%s-%s", subscriptionName, profileName1, chartName2)
+					helmReleaseName := fmt.Sprintf("%s-%s-%s", installationName, profileName1, chartName2)
 					helmRelease := objects[0].(*helmv2.HelmRelease)
 					Expect(helmRelease.Name).To(Equal(helmReleaseName))
 					Expect(err).NotTo(HaveOccurred())
@@ -364,7 +364,7 @@ var _ = Describe("Profile", func() {
 				pSub = profilesv1.ProfileInstallation{
 					TypeMeta: profileTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      subscriptionName,
+						Name:      installationName,
 						Namespace: namespace,
 					},
 					Spec: profilesv1.ProfileInstallationSpec{
@@ -681,12 +681,12 @@ var _ = Describe("Profile", func() {
 			})
 		})
 	})
-	Context("GenerateArtifactsOutput", func() {
+	Context("GenerateOutput", func() {
 		It("creates files for all artifacts", func() {
 			pSub = profilesv1.ProfileInstallation{
 				TypeMeta: profileTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      subscriptionName,
+					Name:      installationName,
 					Namespace: namespace,
 				},
 				Spec: profilesv1.ProfileInstallationSpec{
@@ -738,7 +738,7 @@ var _ = Describe("Profile", func() {
 				Expect(err).NotTo(HaveOccurred())
 				return ioutil.WriteFile(filepath.Join(fullPath, "deployment.yaml"), []byte("validYaml:"), 0644)
 			}
-			err = maker.GenerateArtifactsOutput(artifacts, pSub)
+			err = maker.GenerateOutput(artifacts, pSub)
 			Expect(err).NotTo(HaveOccurred())
 
 			var files []string
@@ -802,7 +802,7 @@ status: {}
 			pSub = profilesv1.ProfileInstallation{
 				TypeMeta: profileTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      subscriptionName,
+					Name:      installationName,
 					Namespace: namespace,
 				},
 				Spec: profilesv1.ProfileInstallationSpec{
@@ -850,7 +850,7 @@ status: {}
 			})
 			artifacts, err := maker.MakeArtifacts(pSub)
 			Expect(err).NotTo(HaveOccurred())
-			err = maker.GenerateArtifactsOutput(artifacts, pSub)
+			err = maker.GenerateOutput(artifacts, pSub)
 			Expect(err).NotTo(HaveOccurred())
 
 			var files []string
