@@ -10,14 +10,10 @@ import (
 	. "github.com/onsi/gomega"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-
-	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
 	gitfakes "github.com/weaveworks/pctl/pkg/git/fakes"
-	"github.com/weaveworks/pctl/pkg/profile"
 	artifactFakes "github.com/weaveworks/pctl/pkg/profile/fakes"
 )
 
@@ -30,7 +26,6 @@ var _ = Describe("Install", func() {
 		httpBody          []byte
 		cfg               catalog.InstallConfig
 		fakeMakeArtifacts *artifactFakes.FakeArtifactsMaker
-		fakeArtifact      profile.Artifact
 	)
 
 	BeforeEach(func() {
@@ -68,27 +63,6 @@ var _ = Describe("Install", func() {
 				ArtifactsMaker: fakeMakeArtifacts,
 			},
 		}
-		fakeArtifact = profile.Artifact{
-			Objects: []runtime.Object{
-				&kustomizev1.Kustomization{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo",
-						Namespace: "default",
-					},
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "kustomize",
-						APIVersion: "api",
-					},
-					Spec: kustomizev1.KustomizationSpec{
-						Prune: true,
-					},
-				},
-			},
-			Name: "foo",
-		}
-		fakeMakeArtifacts.MakeArtifactsReturns([]profile.Artifact{
-			fakeArtifact,
-		}, nil)
 	})
 
 	AfterEach(func() {
@@ -99,9 +73,8 @@ var _ = Describe("Install", func() {
 		It("generates the artifacts", func() {
 			err := catalog.Install(cfg)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(fakeMakeArtifacts.GenerateArtifactsOutputCallCount()).To(Equal(1))
-			args, arg := fakeMakeArtifacts.GenerateArtifactsOutputArgsForCall(0)
-			Expect(args).To(ConsistOf(fakeArtifact))
+			Expect(fakeMakeArtifacts.MakeCallCount()).To(Equal(1))
+			arg := fakeMakeArtifacts.MakeArgsForCall(0)
 			Expect(arg).To(Equal(profilesv1.ProfileInstallation{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ProfileInstallation",
@@ -129,22 +102,15 @@ var _ = Describe("Install", func() {
 
 		When("getting the artifacts fails", func() {
 			It("errors", func() {
-				fakeMakeArtifacts.MakeArtifactsReturns(nil, fmt.Errorf("foo"))
+				fakeMakeArtifacts.MakeReturns(fmt.Errorf("foo"))
 				err := catalog.Install(cfg)
-				Expect(err).To(MatchError("failed to generate artifacts: foo"))
-			})
-		})
-
-		When("generating output for the artifacts fails", func() {
-			It("errors", func() {
-				fakeMakeArtifacts.GenerateArtifactsOutputReturns(errors.New("nope"))
-				err := catalog.Install(cfg)
-				Expect(err).To(MatchError("failed to generate output for artifacts: nope"))
+				Expect(err).To(MatchError("failed to make artifacts: foo"))
 			})
 		})
 
 		When("a branch is provided which isn't domain compatible", func() {
 			It("will not care because the name is sanitised", func() {
+				fakeMakeArtifacts.MakeReturns(nil)
 				cfg = catalog.InstallConfig{
 					Clients: catalog.Clients{
 						CatalogClient:  fakeCatalogClient,

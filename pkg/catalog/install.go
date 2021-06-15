@@ -64,12 +64,8 @@ func Install(cfg InstallConfig) error {
 			},
 		}
 	}
-	artifacts, err := cfg.ArtifactsMaker.MakeArtifacts(installation)
-	if err != nil {
-		return fmt.Errorf("failed to generate artifacts: %w", err)
-	}
-	if err := cfg.ArtifactsMaker.GenerateOutput(artifacts, installation); err != nil {
-		return fmt.Errorf("failed to generate output for artifacts: %w", err)
+	if err := cfg.ArtifactsMaker.Make(installation); err != nil {
+		return fmt.Errorf("failed to make artifacts: %w", err)
 	}
 	return nil
 }

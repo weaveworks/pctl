@@ -31,8 +31,7 @@ type Artifact struct {
 // ArtifactsMaker can create a list of artifacts.
 //go:generate counterfeiter -o fakes/artifacts_maker.go . ArtifactsMaker
 type ArtifactsMaker interface {
-	MakeArtifacts(installation profilesv1.ProfileInstallation) ([]Artifact, error)
-	GenerateOutput(artifacts []Artifact, profilesInstallations profilesv1.ProfileInstallation) error
+	Make(installation profilesv1.ProfileInstallation) error
 }
 
 // MakerConfig contains all configuration properties for the Artifacts Maker.
@@ -56,8 +55,22 @@ func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
 	}
 }
 
-// GenerateOutput takes a slice of generated artifacts and creates files, folders and cloned artifacts for them.
-func (pa *ProfilesArtifactsMaker) GenerateOutput(artifacts []Artifact, profilesInstallations profilesv1.ProfileInstallation) error {
+// Make generates artifacts without owners for manual applying to a personal cluster.
+func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallation) error {
+	path := installation.Spec.Source.Path
+	branchOrTag := installation.Spec.Source.Tag
+	if installation.Spec.Source.Tag == "" {
+		branchOrTag = installation.Spec.Source.Branch
+	}
+	def, err := getProfileDefinition(installation.Spec.Source.URL, branchOrTag, path, pa.GitClient)
+	if err != nil {
+		return fmt.Errorf("failed to get profile definition: %w", err)
+	}
+	p := newProfile(def, installation, pa.RootDir, pa.GitRepoNamespace, pa.GitRepoName)
+	artifacts, err := p.makeArtifacts([]string{p.profileRepo()}, pa.GitClient)
+	if err != nil {
+		return err
+	}
 	profileRootdir := filepath.Join(pa.RootDir, pa.ProfileName)
 	artifactsRootDir := filepath.Join(profileRootdir, "artifacts")
 	for _, artifact := range artifacts {
@@ -78,8 +91,7 @@ func (pa *ProfilesArtifactsMaker) GenerateOutput(artifacts []Artifact, profilesI
 		}
 	}
 
-	return pa.generateOutput(filepath.Join(profileRootdir, "profile.yaml"), &profilesInstallations)
-
+	return pa.generateOutput(filepath.Join(profileRootdir, "profile-installation.yaml"), &installation)
 }
 
 // getRepositoryLocalArtifacts clones all repository local artifacts so they can be copied over to the flux repository.
@@ -132,22 +144,6 @@ func (pa *ProfilesArtifactsMaker) generateOutput(filename string, o runtime.Obje
 	}
 	return nil
 
-}
-
-// MakeArtifacts generates artifacts without owners for manual applying to
-// a personal cluster.
-func (pa *ProfilesArtifactsMaker) MakeArtifacts(installation profilesv1.ProfileInstallation) ([]Artifact, error) {
-	path := installation.Spec.Source.Path
-	branchOrTag := installation.Spec.Source.Tag
-	if installation.Spec.Source.Tag == "" {
-		branchOrTag = installation.Spec.Source.Branch
-	}
-	def, err := getProfileDefinition(installation.Spec.Source.URL, branchOrTag, path, pa.GitClient)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get profile definition: %w", err)
-	}
-	p := newProfile(def, installation, pa.RootDir, pa.GitRepoNamespace, pa.GitRepoName)
-	return p.makeArtifacts([]string{p.profileRepo()}, pa.GitClient)
 }
 
 func (p *Profile) profileRepo() string {
