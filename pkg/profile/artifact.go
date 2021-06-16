@@ -1,6 +1,7 @@
 package profile
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -41,6 +42,8 @@ type MakerConfig struct {
 	GitRepoNamespace string
 	GitRepoName      string
 	ProfileName      string
+	Builders         map[int]Builder
+	nestedName       string
 }
 
 // ProfilesArtifactsMaker creates a list of artifacts from profiles data.
@@ -57,17 +60,7 @@ func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
 
 // Make generates artifacts without owners for manual applying to a personal cluster.
 func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallation) error {
-	path := installation.Spec.Source.Path
-	branchOrTag := installation.Spec.Source.Tag
-	if installation.Spec.Source.Tag == "" {
-		branchOrTag = installation.Spec.Source.Branch
-	}
-	def, err := getProfileDefinition(installation.Spec.Source.URL, branchOrTag, path, pa.GitClient)
-	if err != nil {
-		return fmt.Errorf("failed to get profile definition: %w", err)
-	}
-	p := newProfile(def, installation, pa.RootDir, pa.GitRepoNamespace, pa.GitRepoName)
-	artifacts, err := p.makeArtifacts([]string{p.profileRepo()}, pa.GitClient)
+	artifacts, err := pa.MakeArtifacts(installation)
 	if err != nil {
 		return err
 	}
@@ -92,6 +85,67 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 	}
 
 	return pa.generateOutput(filepath.Join(profileRootdir, "profile-installation.yaml"), &installation)
+}
+
+func (pa *ProfilesArtifactsMaker) MakeArtifacts(installation profilesv1.ProfileInstallation) ([]Artifact, error) {
+	path := installation.Spec.Source.Path
+	branchOrTag := installation.Spec.Source.Tag
+	if installation.Spec.Source.Tag == "" {
+		branchOrTag = installation.Spec.Source.Branch
+	}
+	def, err := getProfileDefinition(installation.Spec.Source.URL, branchOrTag, path, pa.GitClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get profile definition: %w", err)
+	}
+	var artifacts []Artifact
+
+	for _, artifact := range def.Spec.Artifacts {
+		if pa.nestedName != "" {
+			artifact.Name = filepath.Join(pa.nestedName, artifact.Name)
+		}
+
+		if err := validateArtifact(artifact); err != nil {
+			return nil, fmt.Errorf("validation failed for artifact %s: %w", artifact.Name, err)
+		}
+
+		// ----------------- The new way
+		t := -1
+		if artifact.Profile != nil {
+			// this needs to call itself.
+			nestedProfile := installation.DeepCopyObject().(*profilesv1.ProfileInstallation)
+			nestedProfile.Spec.Source.URL = artifact.Profile.Source.URL
+			nestedProfile.Spec.Source.Branch = artifact.Profile.Source.Branch
+			nestedProfile.Spec.Source.Tag = artifact.Profile.Source.Tag
+			nestedProfile.Spec.Source.Path = artifact.Profile.Source.Path
+			if artifact.Profile.Source.Tag != "" {
+				path := "."
+				splitTag := strings.Split(artifact.Profile.Source.Tag, "/")
+				if len(splitTag) > 1 {
+					path = splitTag[0]
+				}
+				nestedProfile.Spec.Source.Path = path
+			}
+			nestedArtifacts, err := pa.MakeArtifacts(*nestedProfile)
+			if err != nil {
+				return nil, err
+			}
+			artifacts = append(artifacts, nestedArtifacts...)
+			pa.nestedName = ""
+		} else if artifact.Kustomize != nil {
+			t = KUSTOMIZE
+		} else if artifact.Chart != nil {
+			t = CHART
+		}
+		if t == -1 {
+			return nil, errors.New("invalid builder type")
+		}
+		arts, err := pa.Builders[t].Build(artifact, installation, def)
+		if err != nil {
+			return nil, err
+		}
+		artifacts = append(artifacts, arts...)
+	}
+	return artifacts, nil
 }
 
 // getRepositoryLocalArtifacts clones all repository local artifacts so they can be copied over to the flux repository.
@@ -146,107 +200,19 @@ func (pa *ProfilesArtifactsMaker) generateOutput(filename string, o runtime.Obje
 
 }
 
-func (p *Profile) profileRepo() string {
-	if p.installation.Spec.Source.Tag != "" {
-		return p.installation.Spec.Source.URL + ":" + p.installation.Spec.Source.Tag
+func profileRepo(installation profilesv1.ProfileInstallation) string {
+	if installation.Spec.Source.Tag != "" {
+		return installation.Spec.Source.URL + ":" + installation.Spec.Source.Tag
 	}
-	return p.installation.Spec.Source.URL + ":" + p.installation.Spec.Source.Branch + ":" + p.installation.Spec.Source.Path
+	return installation.Spec.Source.URL + ":" + installation.Spec.Source.Branch + ":" + installation.Spec.Source.Path
 }
 
-// makeArtifacts will be part of the artifacts maker and not profiles.
-func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Artifact, error) {
-	var artifacts []Artifact
-	profileRepoPath := p.installation.Spec.Source.Path
-
-	for _, artifact := range p.definition.Spec.Artifacts {
-		if err := validateArtifact(artifact); err != nil {
-			return nil, fmt.Errorf("validation failed for artifact %s: %w", artifact.Name, err)
-		}
-		if p.nestedName != "" {
-			artifact.Name = filepath.Join(p.nestedName, artifact.Name)
-		}
-		a := Artifact{Name: artifact.Name}
-
-		if artifact.Profile != nil {
-			branchOrTag := artifact.Profile.Source.Branch
-			path := artifact.Profile.Source.Path
-			if artifact.Profile.Source.Tag != "" {
-				branchOrTag = artifact.Profile.Source.Tag
-				path = strings.Split(artifact.Profile.Source.Tag, "/")[0]
-			}
-			nestedProfileDef, err := getProfileDefinition(artifact.Profile.Source.URL, branchOrTag, path, gitClient)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get profile definition %s on branch %s: %w", artifact.Profile.Source.URL, branchOrTag, err)
-			}
-			nestedProfile := p.installation.DeepCopyObject().(*profilesv1.ProfileInstallation)
-			nestedProfile.Spec.Source.URL = artifact.Profile.Source.URL
-			nestedProfile.Spec.Source.Branch = artifact.Profile.Source.Branch
-			nestedProfile.Spec.Source.Tag = artifact.Profile.Source.Tag
-			nestedProfile.Spec.Source.Path = artifact.Profile.Source.Path
-			if artifact.Profile.Source.Tag != "" {
-				path := "."
-				splitTag := strings.Split(artifact.Profile.Source.Tag, "/")
-				if len(splitTag) > 1 {
-					path = splitTag[0]
-				}
-				nestedProfile.Spec.Source.Path = path
-			}
-
-			nestedSub := newProfile(nestedProfileDef, *nestedProfile, p.rootDir, p.gitRepositoryNamespace, p.gitRepositoryName)
-			nestedSub.nestedName = artifact.Name
-			profileRepoName := nestedSub.profileRepo()
-			if containsKey(profileRepos, profileRepoName) {
-				return nil, fmt.Errorf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", artifact.Profile.Source.URL, artifact.Profile.Source.Branch)
-			}
-			profileRepos = append(profileRepos, profileRepoName)
-			nestedArtifacts, err := nestedSub.makeArtifacts(profileRepos, gitClient)
-			if err != nil {
-				return nil, fmt.Errorf("failed to generate resources for nested profile %q: %w", artifact.Name, err)
-			}
-			artifacts = append(artifacts, nestedArtifacts...)
-			p.nestedName = ""
-		} else if artifact.Chart != nil {
-			helmRelease := p.makeHelmRelease(artifact, profileRepoPath)
-			a.Objects = append(a.Objects, helmRelease)
-			if artifact.Chart.Path != "" {
-				if p.gitRepositoryNamespace == "" && p.gitRepositoryName == "" {
-					return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
-				}
-				helmRelease.Spec.Chart.Spec.Chart = filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Chart.Path)
-				branch := p.installation.Spec.Source.Branch
-				if p.installation.Spec.Source.Tag != "" {
-					branch = p.installation.Spec.Source.Tag
-				}
-				a.RepoURL = p.installation.Spec.Source.URL
-				a.SparseFolder = p.definition.Name
-				a.Branch = branch
-				a.PathsToCopy = append(a.PathsToCopy, artifact.Chart.Path)
-			}
-			if artifact.Chart.URL != "" {
-				helmRepository := p.makeHelmRepository(artifact.Chart.URL, artifact.Chart.Name)
-				a.Objects = append(a.Objects, helmRepository)
-			}
-			artifacts = append(artifacts, a)
-		} else if artifact.Kustomize != nil {
-			if p.gitRepositoryNamespace == "" && p.gitRepositoryName == "" {
-				return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
-			}
-			path := filepath.Join(p.rootDir, "artifacts", artifact.Name, artifact.Kustomize.Path)
-			a.Objects = append(a.Objects, p.makeKustomization(artifact, path))
-			branch := p.installation.Spec.Source.Branch
-			if p.installation.Spec.Source.Tag != "" {
-				branch = p.installation.Spec.Source.Tag
-			}
-			a.RepoURL = p.installation.Spec.Source.URL
-			a.SparseFolder = p.definition.Name
-			a.Branch = branch
-			a.PathsToCopy = append(a.PathsToCopy, artifact.Kustomize.Path)
-			artifacts = append(artifacts, a)
-		} else {
-			return nil, fmt.Errorf("no artifact set")
-		}
+func makeArtifactName(name string, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) string {
+	// if this is a nested artifact, it's name contains a /
+	if strings.Contains(name, "/") {
+		name = filepath.Base(name)
 	}
-	return artifacts, nil
+	return join(installation.Name, definition.Name, name)
 }
 
 func containsKey(list []string, key string) bool {
@@ -256,14 +222,6 @@ func containsKey(list []string, key string) bool {
 		}
 	}
 	return false
-}
-
-func (p *Profile) makeArtifactName(name string) string {
-	// if this is a nested artifact, it's name contains a /
-	if strings.Contains(name, "/") {
-		name = filepath.Base(name)
-	}
-	return join(p.installation.Name, p.definition.Name, name)
 }
 
 func join(s ...string) string {

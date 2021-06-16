@@ -48,7 +48,6 @@ var (
 
 var _ = Describe("Profile", func() {
 	var (
-		p             *profile.Profile
 		pSub          profilesv1.ProfileInstallation
 		pDef          profilesv1.ProfileDefinition
 		pNestedDef    profilesv1.ProfileDefinition
@@ -146,7 +145,7 @@ var _ = Describe("Profile", func() {
 			},
 		}
 		fakeGitClient = &fakegit.FakeGit{}
-		p.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
+		profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
 			if path == "weaveworks-nginx" {
 				return pDef, nil
 			}
@@ -330,7 +329,7 @@ status: {}
 
 		When("fetching the nested profile definition fails", func() {
 			It("returns an error", func() {
-				p.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
+				profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
 					return profilesv1.ProfileDefinition{}, fmt.Errorf("foo")
 				})
 				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
@@ -592,7 +591,7 @@ status: {}
 						},
 					}
 
-					p.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
+					profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
 						if repoURL == profileURL {
 							return pDef, nil
 						}
@@ -631,7 +630,7 @@ status: {}
 					},
 				},
 			}
-			p.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
+			profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
 				return profilesv1.ProfileDefinition{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "nginx",
