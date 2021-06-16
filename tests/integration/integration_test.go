@@ -365,7 +365,7 @@ spec:
   source:
     branch: local_clone_test
     path: weaveworks-nginx
-    profileURL: https://github.com/weaveworks/profiles-examples
+    url: https://github.com/weaveworks/profiles-examples
 status: {}
 `, namespace)))
 
@@ -699,12 +699,12 @@ status: {}
 
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
-				"profile-installation.yaml",
-				"artifacts/bitnami-nginx/HelmRelease.yaml",
-				"artifacts/bitnami-nginx/HelmRepository.yaml",
+				"nginx/profile-installation.yaml",
+				"nginx/artifacts/bitnami-nginx/HelmRelease.yaml",
+				"nginx/artifacts/bitnami-nginx/HelmRepository.yaml",
 			))
 
-			filename := filepath.Join(temp, "nginx", "profile-installation.yaml")
+			filename := filepath.Join(temp, "nginx", "nginx", "profile-installation.yaml")
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1

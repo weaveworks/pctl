@@ -175,6 +175,7 @@ func install(c *cli.Context) error {
 		gitRepoName = split[1]
 	}
 	artifactsMaker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+		ProfileName:      profileName,
 		GitClient:        g,
 		RootDir:          filepath.Join(dir, profileName),
 		GitRepoNamespace: gitRepoNamespace,
@@ -183,13 +184,11 @@ func install(c *cli.Context) error {
 	cfg := catalog.InstallConfig{
 		Clients: catalog.Clients{
 			CatalogClient:  catalogClient,
-			GitClient:      g,
 			ArtifactsMaker: artifactsMaker,
 		},
 		ProfileConfig: catalog.ProfileConfig{
 			CatalogName:   catalogName,
 			ConfigMap:     configValues,
-			GitRepository: gitRepository,
 			Namespace:     namespace,
 			Path:          path,
 			ProfileBranch: branch,
@@ -198,7 +197,6 @@ func install(c *cli.Context) error {
 			URL:           url,
 			Version:       version,
 		},
-		Directory: dir,
 	}
 	return catalog.Install(cfg)
 }

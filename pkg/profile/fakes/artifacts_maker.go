@@ -9,92 +9,87 @@ import (
 )
 
 type FakeArtifactsMaker struct {
-	MakeArtifactsStub        func(v1alpha1.ProfileInstallation) ([]profile.Artifact, error)
-	makeArtifactsMutex       sync.RWMutex
-	makeArtifactsArgsForCall []struct {
+	MakeStub        func(v1alpha1.ProfileInstallation) error
+	makeMutex       sync.RWMutex
+	makeArgsForCall []struct {
 		arg1 v1alpha1.ProfileInstallation
 	}
-	makeArtifactsReturns struct {
-		result1 []profile.Artifact
-		result2 error
+	makeReturns struct {
+		result1 error
 	}
-	makeArtifactsReturnsOnCall map[int]struct {
-		result1 []profile.Artifact
-		result2 error
+	makeReturnsOnCall map[int]struct {
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeArtifactsMaker) MakeArtifacts(arg1 v1alpha1.ProfileInstallation) ([]profile.Artifact, error) {
-	fake.makeArtifactsMutex.Lock()
-	ret, specificReturn := fake.makeArtifactsReturnsOnCall[len(fake.makeArtifactsArgsForCall)]
-	fake.makeArtifactsArgsForCall = append(fake.makeArtifactsArgsForCall, struct {
+func (fake *FakeArtifactsMaker) Make(arg1 v1alpha1.ProfileInstallation) error {
+	fake.makeMutex.Lock()
+	ret, specificReturn := fake.makeReturnsOnCall[len(fake.makeArgsForCall)]
+	fake.makeArgsForCall = append(fake.makeArgsForCall, struct {
 		arg1 v1alpha1.ProfileInstallation
 	}{arg1})
-	stub := fake.MakeArtifactsStub
-	fakeReturns := fake.makeArtifactsReturns
-	fake.recordInvocation("MakeArtifacts", []interface{}{arg1})
-	fake.makeArtifactsMutex.Unlock()
+	stub := fake.MakeStub
+	fakeReturns := fake.makeReturns
+	fake.recordInvocation("Make", []interface{}{arg1})
+	fake.makeMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1
 	}
-	return fakeReturns.result1, fakeReturns.result2
+	return fakeReturns.result1
 }
 
-func (fake *FakeArtifactsMaker) MakeArtifactsCallCount() int {
-	fake.makeArtifactsMutex.RLock()
-	defer fake.makeArtifactsMutex.RUnlock()
-	return len(fake.makeArtifactsArgsForCall)
+func (fake *FakeArtifactsMaker) MakeCallCount() int {
+	fake.makeMutex.RLock()
+	defer fake.makeMutex.RUnlock()
+	return len(fake.makeArgsForCall)
 }
 
-func (fake *FakeArtifactsMaker) MakeArtifactsCalls(stub func(v1alpha1.ProfileInstallation) ([]profile.Artifact, error)) {
-	fake.makeArtifactsMutex.Lock()
-	defer fake.makeArtifactsMutex.Unlock()
-	fake.MakeArtifactsStub = stub
+func (fake *FakeArtifactsMaker) MakeCalls(stub func(v1alpha1.ProfileInstallation) error) {
+	fake.makeMutex.Lock()
+	defer fake.makeMutex.Unlock()
+	fake.MakeStub = stub
 }
 
-func (fake *FakeArtifactsMaker) MakeArtifactsArgsForCall(i int) v1alpha1.ProfileInstallation {
-	fake.makeArtifactsMutex.RLock()
-	defer fake.makeArtifactsMutex.RUnlock()
-	argsForCall := fake.makeArtifactsArgsForCall[i]
+func (fake *FakeArtifactsMaker) MakeArgsForCall(i int) v1alpha1.ProfileInstallation {
+	fake.makeMutex.RLock()
+	defer fake.makeMutex.RUnlock()
+	argsForCall := fake.makeArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeArtifactsMaker) MakeArtifactsReturns(result1 []profile.Artifact, result2 error) {
-	fake.makeArtifactsMutex.Lock()
-	defer fake.makeArtifactsMutex.Unlock()
-	fake.MakeArtifactsStub = nil
-	fake.makeArtifactsReturns = struct {
-		result1 []profile.Artifact
-		result2 error
-	}{result1, result2}
+func (fake *FakeArtifactsMaker) MakeReturns(result1 error) {
+	fake.makeMutex.Lock()
+	defer fake.makeMutex.Unlock()
+	fake.MakeStub = nil
+	fake.makeReturns = struct {
+		result1 error
+	}{result1}
 }
 
-func (fake *FakeArtifactsMaker) MakeArtifactsReturnsOnCall(i int, result1 []profile.Artifact, result2 error) {
-	fake.makeArtifactsMutex.Lock()
-	defer fake.makeArtifactsMutex.Unlock()
-	fake.MakeArtifactsStub = nil
-	if fake.makeArtifactsReturnsOnCall == nil {
-		fake.makeArtifactsReturnsOnCall = make(map[int]struct {
-			result1 []profile.Artifact
-			result2 error
+func (fake *FakeArtifactsMaker) MakeReturnsOnCall(i int, result1 error) {
+	fake.makeMutex.Lock()
+	defer fake.makeMutex.Unlock()
+	fake.MakeStub = nil
+	if fake.makeReturnsOnCall == nil {
+		fake.makeReturnsOnCall = make(map[int]struct {
+			result1 error
 		})
 	}
-	fake.makeArtifactsReturnsOnCall[i] = struct {
-		result1 []profile.Artifact
-		result2 error
-	}{result1, result2}
+	fake.makeReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeArtifactsMaker) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.makeArtifactsMutex.RLock()
-	defer fake.makeArtifactsMutex.RUnlock()
+	fake.makeMutex.RLock()
+	defer fake.makeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
