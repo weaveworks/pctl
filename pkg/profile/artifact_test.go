@@ -323,7 +323,7 @@ status: {}
 					RootDir:   rootDir,
 				})
 				err := maker.Make(pSub)
-				Expect(err).To(MatchError("failed to generate resources for nested profile \"bitnami-nginx\": in case of local resources, the flux gitrepository object's details must be provided"))
+				Expect(err).To(MatchError("in case of local resources, the flux gitrepository object's details must be provided"))
 			})
 		})
 
@@ -373,7 +373,7 @@ status: {}
 						GitRepoName:      gitRepoName,
 					})
 					err := maker.Make(pSub)
-					Expect(err).To(MatchError(ContainSubstring("failed to generate resources for nested profile \"bitnami-nginx\":")))
+					Expect(err).To(MatchError(ContainSubstring("no artifact set")))
 				})
 			})
 			When("helmRepository and path", func() {
@@ -610,7 +610,7 @@ status: {}
 						GitRepoName:      gitRepoName,
 					})
 					err := maker.Make(pSub)
-					Expect(err).To(MatchError(ContainSubstring("failed to generate resources for nested profile \"bitnami-nginx\": failed to generate resources for nested profile \"bitnami-nginx/recursive\": failed to generate resources for nested profile \"bitnami-nginx/recursive/recursive\": recursive artifact detected: profile https://github.com/org/repo-name-nested on branch")))
+					Expect(err).To(MatchError(ContainSubstring("recursive artifact detected: profile example.com/nested on branch main contains an artifact that points recursively back at itself")))
 				})
 			})
 		})

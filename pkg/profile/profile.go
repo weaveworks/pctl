@@ -7,30 +7,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/repo"
 )
 
-//
-//// Profile contains information and interfaces required for creating and
-//// managing profile artefacts (child resources)
-//type Profile struct {
-//	definition             profilesv1.ProfileDefinition
-//	installation           profilesv1.ProfileInstallation
-//	nestedName             string
-//	rootDir                string
-//	gitRepositoryName      string
-//	gitRepositoryNamespace string
-//}
-
 // ProfileGetter is a func that can fetch a profile definition
 type ProfileGetter func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error)
 
 var getProfileDefinition = repo.GetProfileDefinition
-
-// New returns a new Profile object
-//func newProfile(def profilesv1.ProfileDefinition, sub profilesv1.ProfileInstallation, rootDir, gitRepoNamespace, gitRepoName string) *Profile {
-//	return &Profile{
-//		definition:             def,
-//		installation:           sub,
-//		gitRepositoryName:      gitRepoName,
-//		gitRepositoryNamespace: gitRepoNamespace,
-//		rootDir:                rootDir,
-//	}
-//}

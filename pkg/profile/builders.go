@@ -3,13 +3,17 @@ package profile
 import profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
 const (
-	// PROFILE is a profile builder type
-	PROFILE = iota
 	// KUSTOMIZE is a kustomization builder type
-	KUSTOMIZE
+	KUSTOMIZE = iota
 	// CHART is a chart builder type
 	CHART
 )
+
+type BuilderConfig struct {
+	GitRepositoryName      string
+	GitRepositoryNamespace string
+	RootDir                string
+}
 
 // Builder can build an artifacts from an installation and a profile artifact.
 type Builder interface {

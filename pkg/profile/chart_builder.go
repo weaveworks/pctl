@@ -12,15 +12,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ChartBuilder will build helm chart resources.
 type ChartBuilder struct {
-	GitRepositoryNamespace string
-	GitRepositoryName      string
-	RootDir                string
+	BuilderConfig
 }
 
+// Build a single artifact from a profile artifact and installation.
 func (c *ChartBuilder) Build(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]Artifact, error) {
 	a := Artifact{Name: artifact.Name}
-	helmRelease := c.makeHelmRelease(artifact, installation, definition)
+	helmRelease := c.makeHelmRelease(artifact, installation, definition.Name)
 	a.Objects = append(a.Objects, helmRelease)
 	if artifact.Chart.Path != "" {
 		if c.GitRepositoryNamespace == "" && c.GitRepositoryName == "" {
@@ -43,7 +43,7 @@ func (c *ChartBuilder) Build(artifact profilesv1.Artifact, installation profiles
 	return []Artifact{a}, nil
 }
 
-func (c *ChartBuilder) makeHelmRelease(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) *helmv2.HelmRelease {
+func (c *ChartBuilder) makeHelmRelease(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string) *helmv2.HelmRelease {
 	var helmChartSpec helmv2.HelmChartTemplateSpec
 	if artifact.Chart.Path != "" {
 		helmChartSpec = c.makeGitChartSpec(path.Join(installation.Spec.Source.Path, artifact.Chart.Path))
@@ -52,7 +52,7 @@ func (c *ChartBuilder) makeHelmRelease(artifact profilesv1.Artifact, installatio
 	}
 	helmRelease := &helmv2.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      makeArtifactName(artifact.Name, installation, definition),
+			Name:      makeArtifactName(artifact.Name, installation.Name, definitionName),
 			Namespace: installation.ObjectMeta.Namespace,
 		},
 		TypeMeta: metav1.TypeMeta{

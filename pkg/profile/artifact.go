@@ -42,25 +42,41 @@ type MakerConfig struct {
 	GitRepoNamespace string
 	GitRepoName      string
 	ProfileName      string
-	Builders         map[int]Builder
-	nestedName       string
 }
 
 // ProfilesArtifactsMaker creates a list of artifacts from profiles data.
 type ProfilesArtifactsMaker struct {
 	MakerConfig
+
+	Builders     map[int]Builder
+	nestedName   string
+	profileRepos []string
 }
 
 // NewProfilesArtifactsMaker creates a new profiles artifacts maker.
 func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
+	builderConfig := BuilderConfig{
+		GitRepositoryName:      cfg.GitRepoName,
+		GitRepositoryNamespace: cfg.GitRepoNamespace,
+		RootDir:                cfg.RootDir,
+	}
+	builders := map[int]Builder{
+		KUSTOMIZE: &KustomizeBuilder{
+			BuilderConfig: builderConfig,
+		},
+		CHART: &ChartBuilder{
+			BuilderConfig: builderConfig,
+		},
+	}
 	return &ProfilesArtifactsMaker{
 		MakerConfig: cfg,
+		Builders:    builders,
 	}
 }
 
 // Make generates artifacts without owners for manual applying to a personal cluster.
 func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallation) error {
-	artifacts, err := pa.MakeArtifacts(installation)
+	artifacts, err := pa.makeArtifacts(installation)
 	if err != nil {
 		return err
 	}
@@ -87,7 +103,9 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 	return pa.generateOutput(filepath.Join(profileRootdir, "profile-installation.yaml"), &installation)
 }
 
-func (pa *ProfilesArtifactsMaker) MakeArtifacts(installation profilesv1.ProfileInstallation) ([]Artifact, error) {
+// makeArtifacts creates artifacts. This is a separate function from the main Make function in order to handle
+// nested profiles recursively.
+func (pa *ProfilesArtifactsMaker) makeArtifacts(installation profilesv1.ProfileInstallation) ([]Artifact, error) {
 	path := installation.Spec.Source.Path
 	branchOrTag := installation.Spec.Source.Tag
 	if installation.Spec.Source.Tag == "" {
@@ -108,36 +126,28 @@ func (pa *ProfilesArtifactsMaker) MakeArtifacts(installation profilesv1.ProfileI
 			return nil, fmt.Errorf("validation failed for artifact %s: %w", artifact.Name, err)
 		}
 
-		// ----------------- The new way
 		t := -1
 		if artifact.Profile != nil {
-			// this needs to call itself.
-			nestedProfile := installation.DeepCopyObject().(*profilesv1.ProfileInstallation)
-			nestedProfile.Spec.Source.URL = artifact.Profile.Source.URL
-			nestedProfile.Spec.Source.Branch = artifact.Profile.Source.Branch
-			nestedProfile.Spec.Source.Tag = artifact.Profile.Source.Tag
-			nestedProfile.Spec.Source.Path = artifact.Profile.Source.Path
-			if artifact.Profile.Source.Tag != "" {
-				path := "."
-				splitTag := strings.Split(artifact.Profile.Source.Tag, "/")
-				if len(splitTag) > 1 {
-					path = splitTag[0]
-				}
-				nestedProfile.Spec.Source.Path = path
+			profileRepoName := profileRepo(installation)
+			if containsKey(pa.profileRepos, profileRepoName) {
+				return nil, fmt.Errorf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", artifact.Profile.Source.URL, artifact.Profile.Source.Branch)
 			}
-			nestedArtifacts, err := pa.MakeArtifacts(*nestedProfile)
+			pa.profileRepos = append(pa.profileRepos, profileRepoName)
+			nestedArtifacts, err := pa.handleNestedProfile(artifact, installation)
 			if err != nil {
 				return nil, err
 			}
 			artifacts = append(artifacts, nestedArtifacts...)
 			pa.nestedName = ""
+			pa.profileRepos = nil
+			continue
 		} else if artifact.Kustomize != nil {
 			t = KUSTOMIZE
 		} else if artifact.Chart != nil {
 			t = CHART
 		}
 		if t == -1 {
-			return nil, errors.New("invalid builder type")
+			return nil, errors.New("no artifact set")
 		}
 		arts, err := pa.Builders[t].Build(artifact, installation, def)
 		if err != nil {
@@ -200,6 +210,25 @@ func (pa *ProfilesArtifactsMaker) generateOutput(filename string, o runtime.Obje
 
 }
 
+// handleNestedProfile takes care of creating nested profile configuration.
+func (pa *ProfilesArtifactsMaker) handleNestedProfile(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation) ([]Artifact, error) {
+	nestedProfile := installation.DeepCopyObject().(*profilesv1.ProfileInstallation)
+	nestedProfile.Spec.Source.URL = artifact.Profile.Source.URL
+	nestedProfile.Spec.Source.Branch = artifact.Profile.Source.Branch
+	nestedProfile.Spec.Source.Tag = artifact.Profile.Source.Tag
+	nestedProfile.Spec.Source.Path = artifact.Profile.Source.Path
+	if artifact.Profile.Source.Tag != "" {
+		path := "."
+		splitTag := strings.Split(artifact.Profile.Source.Tag, "/")
+		if len(splitTag) > 1 {
+			path = splitTag[0]
+		}
+		nestedProfile.Spec.Source.Path = path
+	}
+	pa.nestedName = artifact.Name
+	return pa.makeArtifacts(*nestedProfile)
+}
+
 func profileRepo(installation profilesv1.ProfileInstallation) string {
 	if installation.Spec.Source.Tag != "" {
 		return installation.Spec.Source.URL + ":" + installation.Spec.Source.Tag
@@ -207,12 +236,12 @@ func profileRepo(installation profilesv1.ProfileInstallation) string {
 	return installation.Spec.Source.URL + ":" + installation.Spec.Source.Branch + ":" + installation.Spec.Source.Path
 }
 
-func makeArtifactName(name string, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) string {
+func makeArtifactName(name string, installationName, definitionName string) string {
 	// if this is a nested artifact, it's name contains a /
 	if strings.Contains(name, "/") {
 		name = filepath.Base(name)
 	}
-	return join(installation.Name, definition.Name, name)
+	return join(installationName, definitionName, name)
 }
 
 func containsKey(list []string, key string) bool {
