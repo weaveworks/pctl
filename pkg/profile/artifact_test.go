@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/otiai10/copy"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
@@ -69,9 +68,6 @@ var _ = Describe("Profile", func() {
 					URL:    profileURL,
 					Branch: branch,
 					Path:   profileName1,
-				},
-				Values: &apiextensionsv1.JSON{
-					Raw: []byte(`{"replicaCount": 3,"service":{"port":8081}}`),
 				},
 				ValuesFrom: []helmv2.ValuesReference{
 					{
@@ -207,10 +203,6 @@ spec:
     branch: main
     path: weaveworks-nginx
     url: https://github.com/org/repo-name
-  values:
-    replicaCount: 3
-    service:
-      port: 8081
   valuesFrom:
   - kind: Secret
     name: nginx-values
@@ -237,10 +229,6 @@ spec:
         name: git-repo-name
         namespace: git-repo-namespace
   interval: 0s
-  values:
-    replicaCount: 3
-    service:
-      port: 8081
   valuesFrom:
   - kind: Secret
     name: nginx-values
@@ -291,10 +279,6 @@ spec:
         namespace: default
       version: 11.1.6
   interval: 0s
-  values:
-    replicaCount: 3
-    service:
-      port: 8081
   valuesFrom:
   - kind: Secret
     name: nginx-values

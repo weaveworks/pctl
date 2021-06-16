@@ -52,7 +52,6 @@ func (p *Profile) makeHelmRelease(artifact profilesv1.Artifact, repoPath string)
 			Chart: helmv2.HelmChartTemplate{
 				Spec: helmChartSpec,
 			},
-			Values:     p.installation.Spec.Values,
 			ValuesFrom: p.installation.Spec.ValuesFrom,
 		},
 	}
