@@ -111,13 +111,13 @@ func (pa *ProfilesArtifactsMaker) makeArtifacts(installation profilesv1.ProfileI
 	if installation.Spec.Source.Tag == "" {
 		branchOrTag = installation.Spec.Source.Branch
 	}
-	def, err := getProfileDefinition(installation.Spec.Source.URL, branchOrTag, path, pa.GitClient)
+	definition, err := getProfileDefinition(installation.Spec.Source.URL, branchOrTag, path, pa.GitClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get profile definition: %w", err)
 	}
 	var artifacts []Artifact
 
-	for _, artifact := range def.Spec.Artifacts {
+	for _, artifact := range definition.Spec.Artifacts {
 		if pa.nestedName != "" {
 			artifact.Name = filepath.Join(pa.nestedName, artifact.Name)
 		}
@@ -149,9 +149,9 @@ func (pa *ProfilesArtifactsMaker) makeArtifacts(installation profilesv1.ProfileI
 		if t == -1 {
 			return nil, errors.New("no artifact set")
 		}
-		arts, err := pa.Builders[t].Build(artifact, installation, def)
+		arts, err := pa.Builders[t].Build(artifact, installation, definition)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to build artifact: %w", err)
 		}
 		artifacts = append(artifacts, arts...)
 	}
