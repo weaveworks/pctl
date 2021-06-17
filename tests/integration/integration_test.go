@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"context"
+
 	"crypto/rand"
 	"fmt"
 	"io/ioutil"
@@ -275,6 +276,7 @@ var _ = Describe("PCTL", func() {
 		var (
 			temp      string
 			namespace string
+			branch    string
 		)
 
 		BeforeEach(func() {
@@ -288,9 +290,17 @@ var _ = Describe("PCTL", func() {
 				},
 			}
 			Expect(kClient.Create(context.Background(), &nsp)).To(Succeed())
+
+			branch = "flux_repo_test_" + uuid.NewString()[:6]
 		})
 
 		AfterEach(func() {
+			cmd := exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "push", "-d", "origin", branch)
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				fmt.Println("output from failed command: ", string(output))
+			}
+
 			_ = os.RemoveAll(temp)
 			nsp := v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
@@ -298,31 +308,48 @@ var _ = Describe("PCTL", func() {
 				},
 			}
 			_ = kClient.Delete(context.Background(), &nsp)
+
 		})
 
-		PIt("generates valid artifacts to the local directory", func() {
-			branch := "flux_repo_test_" + uuid.NewString()[:6]
+		It("generates valid artifacts to the local directory", func() {
 			profileBranch := "local_clone_test"
 			subName := "pctl-profile"
-			// bootstrap the flux repo
-			cmd := exec.Command("flux", "bootstrap", "github", "--owner", "weaveworks", "--repository", "pctl-test-repo", "--branch", branch)
-			cmd.Dir = temp
+			gitRepoName := "pctl-repo"
+
+			// check out the branch
+			cmd := exec.Command("git", "clone", pctlTestRepositoryName, temp)
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				fmt.Println("output from failed command: ", string(output))
+			}
+			Expect(err).ToNot(HaveOccurred())
+			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "checkout", "-b", branch)
 			session, err := cmd.CombinedOutput()
 			if err != nil {
 				fmt.Println("Output from failing command: ", string(session))
 			}
 			Expect(err).ToNot(HaveOccurred())
 
-			// check out the branch
-			cmd = exec.Command("git", "clone", pctlTestRepositoryName, "--branch", branch, temp)
-			err = cmd.Run()
+			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "push", "-u", "origin", branch)
+			output, err = cmd.CombinedOutput()
+			if err != nil {
+				fmt.Println("output from failed command: ", string(output))
+			}
+			Expect(err).ToNot(HaveOccurred())
+			// setup the gitrepository resources. Requires the branch to exist first
+			cmd = exec.Command("flux", "create", "source", "git", gitRepoName, "--url", "https://github.com/weaveworks/pctl-test-repo", "--branch", branch, "--namespace", namespace)
+			cmd.Dir = temp
+			session, err = cmd.CombinedOutput()
+			if err != nil {
+				fmt.Println("Output from failing command: ", string(session))
+			}
 			Expect(err).ToNot(HaveOccurred())
 
 			cmd = exec.Command(
 				binaryPath,
 				"install",
 				"--git-repository",
-				"flux-system/flux-system",
+				fmt.Sprintf("%s/%s", namespace, gitRepoName),
 				"--namespace", namespace,
 				"--profile-branch",
 				profileBranch,
@@ -372,7 +399,7 @@ status: {}
 			By("the artifacts being deployable")
 			// Generate the resources into the flux repo, and push them up the repo?
 			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "add", ".")
-			output, err := cmd.CombinedOutput()
+			output, err = cmd.CombinedOutput()
 			if err != nil {
 				fmt.Println("output from failed command: ", string(output))
 			}
@@ -390,10 +417,26 @@ status: {}
 			}
 			Expect(err).ToNot(HaveOccurred())
 
+			cmd = exec.Command("flux", "reconcile", "source", "git", gitRepoName, "--namespace", namespace)
+			cmd.Dir = temp
+			session, err = cmd.CombinedOutput()
+			if err != nil {
+				fmt.Println("Output from failing command: ", string(session))
+			}
+
+			cmd = exec.Command("flux", "create", "kustomization", "kustomization", "--source", fmt.Sprintf("GitRepository/%s", gitRepoName), "--path", ".", "--namespace", namespace)
+			cmd.Dir = temp
+			session, err = cmd.CombinedOutput()
+			if err != nil {
+				fmt.Println("Output from failing command: ", string(session))
+			}
+			Expect(err).ToNot(HaveOccurred())
+
 			By("successfully deploying the kustomize resource")
 			kustomizeName := fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "nginx-deployment")
 			var kustomize *kustomizev1.Kustomization
 			Eventually(func() bool {
+
 				kustomize = &kustomizev1.Kustomization{}
 				err := kClient.Get(context.Background(), client.ObjectKey{Name: kustomizeName, Namespace: namespace}, kustomize)
 				if err != nil {
