@@ -1,4 +1,4 @@
-package profile_test
+package kustomize_test
 
 import (
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
@@ -8,20 +8,32 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/weaveworks/pctl/pkg/profile"
+	"github.com/weaveworks/pctl/pkg/profile/artifact"
+	"github.com/weaveworks/pctl/pkg/profile/kustomize"
 )
 
-var _ = Describe("KustomizeBuilder", func() {
+var _ = Describe("Builder", func() {
 	var (
 		profileName            string
 		profileURL             string
 		profilePath            string
-		artifact               profilesv1.Artifact
+		partifact              profilesv1.Artifact
 		pSub                   profilesv1.ProfileInstallation
 		pDef                   profilesv1.ProfileDefinition
 		rootDir                string
 		gitRepositoryName      string
 		gitRepositoryNamespace string
+		profileName1           = "weaveworks-nginx"
+		namespace              = "default"
+		profileSubAPIVersion   = "weave.works/v1alpha1"
+		profileSubKind         = "ProfileInstallation"
+	)
+
+	var (
+		profileTypeMeta = metav1.TypeMeta{
+			Kind:       profileSubKind,
+			APIVersion: profileSubAPIVersion,
+		}
 	)
 	BeforeEach(func() {
 		profileName = "test-profile"
@@ -41,7 +53,7 @@ var _ = Describe("KustomizeBuilder", func() {
 				},
 			},
 		}
-		artifact = profilesv1.Artifact{
+		partifact = profilesv1.Artifact{
 			Name: "kustomize",
 			Kustomize: &profilesv1.Kustomize{
 				Path: "nginx/deployment",
@@ -59,7 +71,7 @@ var _ = Describe("KustomizeBuilder", func() {
 				ProfileDescription: profilesv1.ProfileDescription{
 					Description: "foo",
 				},
-				Artifacts: []profilesv1.Artifact{artifact},
+				Artifacts: []profilesv1.Artifact{partifact},
 			},
 		}
 		rootDir = "root-dir"
@@ -68,15 +80,15 @@ var _ = Describe("KustomizeBuilder", func() {
 	})
 
 	Context("Build", func() {
-		It("creates an artifact from an install and a profile definition", func() {
-			builder := &profile.KustomizeBuilder{
-				BuilderConfig: profile.BuilderConfig{
+		It("creates an partifact from an install and a profile definition", func() {
+			builder := &kustomize.Builder{
+				Config: kustomize.Config{
 					GitRepositoryName:      gitRepositoryName,
 					GitRepositoryNamespace: gitRepositoryNamespace,
 					RootDir:                rootDir,
 				},
 			}
-			artifacts, err := builder.Build(artifact, pSub, pDef)
+			artifacts, err := builder.Build(partifact, pSub, pDef)
 			Expect(err).NotTo(HaveOccurred())
 			kustomization := &kustomizev1.Kustomization{
 				TypeMeta: metav1.TypeMeta{
@@ -99,7 +111,7 @@ var _ = Describe("KustomizeBuilder", func() {
 					TargetNamespace: "default",
 				},
 			}
-			expected := profile.Artifact{
+			expected := artifact.Artifact{
 				Objects:      []runtime.Object{kustomization},
 				Name:         "kustomize",
 				RepoURL:      "https://github.com/weaveworks/profiles-examples",
@@ -125,14 +137,14 @@ var _ = Describe("KustomizeBuilder", func() {
 						},
 					},
 				}
-				builder := &profile.KustomizeBuilder{
-					BuilderConfig: profile.BuilderConfig{
+				builder := &kustomize.Builder{
+					Config: kustomize.Config{
 						GitRepositoryName:      gitRepositoryName,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						RootDir:                rootDir,
 					},
 				}
-				artifacts, err := builder.Build(artifact, pSub, pDef)
+				artifacts, err := builder.Build(partifact, pSub, pDef)
 				Expect(err).NotTo(HaveOccurred())
 				kustomization := &kustomizev1.Kustomization{
 					TypeMeta: metav1.TypeMeta{
@@ -155,7 +167,7 @@ var _ = Describe("KustomizeBuilder", func() {
 						TargetNamespace: "default",
 					},
 				}
-				expected := profile.Artifact{
+				expected := artifact.Artifact{
 					Objects:      []runtime.Object{kustomization},
 					Name:         "kustomize",
 					RepoURL:      "https://github.com/weaveworks/profiles-examples",
@@ -168,13 +180,13 @@ var _ = Describe("KustomizeBuilder", func() {
 		})
 		When("git-repository-name and git-repository-namespace aren't defined", func() {
 			It("returns an error", func() {
-				builder := &profile.KustomizeBuilder{
-					BuilderConfig: profile.BuilderConfig{
+				builder := &kustomize.Builder{
+					Config: kustomize.Config{
 						RootDir: rootDir,
 					},
 				}
-				artifact = profilesv1.Artifact{
-					Name: "local-artifact",
+				partifact = profilesv1.Artifact{
+					Name: "local-partifact",
 					Chart: &profilesv1.Chart{
 						Path: "nginx/chart",
 					},
@@ -191,10 +203,10 @@ var _ = Describe("KustomizeBuilder", func() {
 						ProfileDescription: profilesv1.ProfileDescription{
 							Description: "foo",
 						},
-						Artifacts: []profilesv1.Artifact{artifact},
+						Artifacts: []profilesv1.Artifact{partifact},
 					},
 				}
-				_, err := builder.Build(artifact, pSub, pDef)
+				_, err := builder.Build(partifact, pSub, pDef)
 				Expect(err).To(MatchError("in case of local resources, the flux gitrepository object's details must be provided"))
 			})
 		})

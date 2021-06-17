@@ -1,29 +1,39 @@
-package profile
+package kustomize
 
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/weaveworks/pctl/pkg/profile/artifact"
 )
 
-// KustomizeBuilder will build kustomize resources.
-type KustomizeBuilder struct {
-	BuilderConfig
+// Config defines some common configuration values for builders.
+type Config struct {
+	GitRepositoryName      string
+	GitRepositoryNamespace string
+	RootDir                string
+}
+
+// Builder will build kustomize resources.
+type Builder struct {
+	Config
 }
 
 // Build a single artifact from a profile artifact and installation.
-func (k *KustomizeBuilder) Build(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]Artifact, error) {
+func (k *Builder) Build(att profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]artifact.Artifact, error) {
 	if k.GitRepositoryNamespace == "" && k.GitRepositoryName == "" {
 		return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 	}
-	a := Artifact{Name: artifact.Name}
-	path := filepath.Join(k.RootDir, "artifacts", artifact.Name, artifact.Kustomize.Path)
-	a.Objects = append(a.Objects, k.makeKustomization(artifact, path, installation, definition.Name))
+	a := artifact.Artifact{Name: att.Name}
+	path := filepath.Join(k.RootDir, "artifacts", att.Name, att.Kustomize.Path)
+	a.Objects = append(a.Objects, k.makeKustomization(att, path, installation, definition.Name))
 	branch := installation.Spec.Source.Branch
 	if installation.Spec.Source.Tag != "" {
 		branch = installation.Spec.Source.Tag
@@ -31,11 +41,11 @@ func (k *KustomizeBuilder) Build(artifact profilesv1.Artifact, installation prof
 	a.RepoURL = installation.Spec.Source.URL
 	a.SparseFolder = definition.Name
 	a.Branch = branch
-	a.PathsToCopy = append(a.PathsToCopy, artifact.Kustomize.Path)
-	return []Artifact{a}, nil
+	a.PathsToCopy = append(a.PathsToCopy, att.Kustomize.Path)
+	return []artifact.Artifact{a}, nil
 }
 
-func (k *KustomizeBuilder) makeKustomization(artifact profilesv1.Artifact, repoPath string, installation profilesv1.ProfileInstallation, definitionName string) *kustomizev1.Kustomization {
+func (k *Builder) makeKustomization(artifact profilesv1.Artifact, repoPath string, installation profilesv1.ProfileInstallation, definitionName string) *kustomizev1.Kustomization {
 	return &kustomizev1.Kustomization{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      makeArtifactName(artifact.Name, installation.Name, definitionName),
@@ -57,4 +67,16 @@ func (k *KustomizeBuilder) makeKustomization(artifact profilesv1.Artifact, repoP
 			},
 		},
 	}
+}
+
+func makeArtifactName(name string, installationName, definitionName string) string {
+	// if this is a nested artifact, it's name contains a /
+	if strings.Contains(name, "/") {
+		name = filepath.Base(name)
+	}
+	return join(installationName, definitionName, name)
+}
+
+func join(s ...string) string {
+	return strings.Join(s, "-")
 }

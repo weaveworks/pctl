@@ -17,17 +17,10 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
 	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/pctl/pkg/profile/artifact"
+	"github.com/weaveworks/pctl/pkg/profile/chart"
+	"github.com/weaveworks/pctl/pkg/profile/kustomize"
 )
-
-// Artifact contains the name and objects belonging to a profile artifact
-type Artifact struct {
-	Objects      []runtime.Object
-	Name         string
-	RepoURL      string
-	PathsToCopy  []string
-	SparseFolder string
-	Branch       string
-}
 
 // ArtifactsMaker can create a list of artifacts.
 //go:generate counterfeiter -o fakes/artifacts_maker.go . ArtifactsMaker
@@ -55,17 +48,20 @@ type ProfilesArtifactsMaker struct {
 
 // NewProfilesArtifactsMaker creates a new profiles artifacts maker.
 func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
-	builderConfig := BuilderConfig{
-		GitRepositoryName:      cfg.GitRepoName,
-		GitRepositoryNamespace: cfg.GitRepoNamespace,
-		RootDir:                cfg.RootDir,
-	}
 	builders := map[int]Builder{
-		KUSTOMIZE: &KustomizeBuilder{
-			BuilderConfig: builderConfig,
+		KUSTOMIZE: &kustomize.Builder{
+			Config: kustomize.Config{
+				GitRepositoryName:      cfg.GitRepoName,
+				GitRepositoryNamespace: cfg.GitRepoNamespace,
+				RootDir:                cfg.RootDir,
+			},
 		},
-		CHART: &ChartBuilder{
-			BuilderConfig: builderConfig,
+		CHART: &chart.Builder{
+			Config: chart.Config{
+				GitRepositoryName:      cfg.GitRepoName,
+				GitRepositoryNamespace: cfg.GitRepoNamespace,
+				RootDir:                cfg.RootDir,
+			},
 		},
 	}
 	return &ProfilesArtifactsMaker{
@@ -105,7 +101,7 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 
 // makeArtifacts creates artifacts. This is a separate function from the main Make function in order to handle
 // nested profiles recursively.
-func (pa *ProfilesArtifactsMaker) makeArtifacts(installation profilesv1.ProfileInstallation) ([]Artifact, error) {
+func (pa *ProfilesArtifactsMaker) makeArtifacts(installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
 	path := installation.Spec.Source.Path
 	branchOrTag := installation.Spec.Source.Tag
 	if installation.Spec.Source.Tag == "" {
@@ -115,7 +111,7 @@ func (pa *ProfilesArtifactsMaker) makeArtifacts(installation profilesv1.ProfileI
 	if err != nil {
 		return nil, fmt.Errorf("failed to get profile definition: %w", err)
 	}
-	var artifacts []Artifact
+	var artifacts []artifact.Artifact
 
 	for _, artifact := range definition.Spec.Artifacts {
 		if pa.nestedName != "" {
@@ -126,14 +122,14 @@ func (pa *ProfilesArtifactsMaker) makeArtifacts(installation profilesv1.ProfileI
 			return nil, fmt.Errorf("validation failed for artifact %s: %w", artifact.Name, err)
 		}
 
-		t := -1
+		var builder Builder
 		if artifact.Profile != nil {
 			profileRepoName := profileRepo(installation)
 			if containsKey(pa.profileRepos, profileRepoName) {
 				return nil, fmt.Errorf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", artifact.Profile.Source.URL, artifact.Profile.Source.Branch)
 			}
 			pa.profileRepos = append(pa.profileRepos, profileRepoName)
-			nestedArtifacts, err := pa.handleNestedProfile(artifact, installation)
+			nestedArtifacts, err := pa.createNestedProfileArtifacts(artifact, installation)
 			if err != nil {
 				return nil, err
 			}
@@ -142,14 +138,13 @@ func (pa *ProfilesArtifactsMaker) makeArtifacts(installation profilesv1.ProfileI
 			pa.profileRepos = nil
 			continue
 		} else if artifact.Kustomize != nil {
-			t = KUSTOMIZE
+			builder = pa.Builders[KUSTOMIZE]
 		} else if artifact.Chart != nil {
-			t = CHART
-		}
-		if t == -1 {
+			builder = pa.Builders[CHART]
+		} else {
 			return nil, errors.New("no artifact set")
 		}
-		arts, err := pa.Builders[t].Build(artifact, installation, definition)
+		arts, err := builder.Build(artifact, installation, definition)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build artifact: %w", err)
 		}
@@ -159,7 +154,7 @@ func (pa *ProfilesArtifactsMaker) makeArtifacts(installation profilesv1.ProfileI
 }
 
 // getRepositoryLocalArtifacts clones all repository local artifacts so they can be copied over to the flux repository.
-func (pa *ProfilesArtifactsMaker) getRepositoryLocalArtifacts(a Artifact, artifactDir string) error {
+func (pa *ProfilesArtifactsMaker) getRepositoryLocalArtifacts(a artifact.Artifact, artifactDir string) error {
 	u := uuid.NewString()[:6]
 	tmp, err := ioutil.TempDir("", "sparse_clone_git_repo_"+u)
 	if err != nil {
@@ -210,8 +205,8 @@ func (pa *ProfilesArtifactsMaker) generateOutput(filename string, o runtime.Obje
 
 }
 
-// handleNestedProfile takes care of creating nested profile configuration.
-func (pa *ProfilesArtifactsMaker) handleNestedProfile(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation) ([]Artifact, error) {
+// createNestedProfileArtifacts takes care of creating nested profile configuration.
+func (pa *ProfilesArtifactsMaker) createNestedProfileArtifacts(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
 	nestedProfile := installation.DeepCopyObject().(*profilesv1.ProfileInstallation)
 	nestedProfile.Spec.Source.URL = artifact.Profile.Source.URL
 	nestedProfile.Spec.Source.Branch = artifact.Profile.Source.Branch
@@ -236,14 +231,6 @@ func profileRepo(installation profilesv1.ProfileInstallation) string {
 	return installation.Spec.Source.URL + ":" + installation.Spec.Source.Branch + ":" + installation.Spec.Source.Path
 }
 
-func makeArtifactName(name string, installationName, definitionName string) string {
-	// if this is a nested artifact, it's name contains a /
-	if strings.Contains(name, "/") {
-		name = filepath.Base(name)
-	}
-	return join(installationName, definitionName, name)
-}
-
 func containsKey(list []string, key string) bool {
 	for _, value := range list {
 		if value == key {
@@ -251,10 +238,6 @@ func containsKey(list []string, key string) bool {
 		}
 	}
 	return false
-}
-
-func join(s ...string) string {
-	return strings.Join(s, "-")
 }
 
 func validateArtifact(in profilesv1.Artifact) error {
