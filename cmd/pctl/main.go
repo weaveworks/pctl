@@ -93,6 +93,21 @@ func parseArgs(c *cli.Context) (string, *client.Client, error) {
 	return c.Args().First(), client, nil
 }
 
+func getClient(c *cli.Context) (*client.Client, error) {
+	options := client.ServiceOptions{
+		KubeconfigPath: c.String("kubeconfig"),
+		Namespace:      c.String("catalog-service-namespace"),
+		ServiceName:    c.String("catalog-service-name"),
+		ServicePort:    c.String("catalog-service-port"),
+	}
+
+	client, err := client.NewFromOptions(options)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
 func buildK8sClient(kubeconfig string) (runtimeclient.Client, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
