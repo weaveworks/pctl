@@ -301,6 +301,83 @@ status: {}
 			})
 		})
 
+		When("the Helm chart artifact has default values set", func() {
+			It("will apply those values to the profile installation", func() {
+				pDef.Spec.Artifacts[2].Chart.DefaultValues = `{"foo": "bar", "service": {"port": 1234}}`
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGitClient,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
+				Expect(maker.Make(pSub)).To(Succeed())
+
+				files := make(map[string]string)
+				err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+					if !info.IsDir() {
+						files[fmt.Sprintf("%s/%s", filepath.Base(filepath.Dir(path)), filepath.Base(path))] = path
+					}
+					return nil
+				})
+				Expect(err).NotTo(HaveOccurred())
+				consistsOf := []string{
+					filepath.Join(rootDir, "artifacts", "bitnami-nginx", "nginx-server", "HelmRelease.yaml"),
+					filepath.Join(rootDir, "artifacts", "bitnami-nginx", "nginx-server", "nginx", "chart", "Chart.yaml"),
+					filepath.Join(rootDir, "artifacts", "dokuwiki", "ConfigMap.yaml"),
+					filepath.Join(rootDir, "artifacts", "dokuwiki", "HelmRelease.yaml"),
+					filepath.Join(rootDir, "artifacts", "nginx-deployment", "Kustomization.yaml"),
+					filepath.Join(rootDir, "artifacts", "nginx-deployment", "nginx", "deployment", "deployment.yaml"),
+					filepath.Join(rootDir, "profile-installation.yaml"),
+					filepath.Join(rootDir, "artifacts", "dokuwiki", "HelmRepository.yaml"),
+				}
+				Expect(files).To(ConsistOf(consistsOf))
+
+				By("generating the default values configmap", func() {
+					content, err := ioutil.ReadFile(files["dokuwiki/ConfigMap.yaml"])
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(content)).To(Equal(`apiVersion: v1
+data:
+  default-values.yaml: '{"foo": "bar", "service": {"port": 1234}}'
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: mySub-dokuwiki-defaultvalues
+  namespace: default
+`))
+				})
+
+				By("adding that configmap to the start of the ValuesFrom array of the helm release", func() {
+					content, err := ioutil.ReadFile(files["dokuwiki/HelmRelease.yaml"])
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(content)).To(Equal(`apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  creationTimestamp: null
+  name: mySub-weaveworks-nginx-dokuwiki
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: dokuwiki
+      sourceRef:
+        kind: HelmRepository
+        name: mySub-repo-name-dokuwiki
+        namespace: default
+      version: 11.1.6
+  interval: 0s
+  valuesFrom:
+  - kind: ConfigMap
+    name: mySub-dokuwiki-defaultvalues
+    valuesKey: default-values.yaml
+  - kind: Secret
+    name: nginx-values
+    optional: true
+status: {}
+`))
+				})
+			})
+		})
+
 		When("the git repository name is not defined", func() {
 			It("errors out", func() {
 				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{

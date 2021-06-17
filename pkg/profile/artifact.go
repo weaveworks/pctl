@@ -206,7 +206,10 @@ func (p *Profile) makeArtifacts(profileRepos []string, gitClient git.Git) ([]Art
 			artifacts = append(artifacts, nestedArtifacts...)
 			p.nestedName = ""
 		} else if artifact.Chart != nil {
-			helmRelease := p.makeHelmRelease(artifact, profileRepoPath)
+			helmRelease, cfgMap := p.makeHelmReleaseObjects(artifact, profileRepoPath)
+			if cfgMap != nil {
+				a.Objects = append(a.Objects, cfgMap)
+			}
 			a.Objects = append(a.Objects, helmRelease)
 			if artifact.Chart.Path != "" {
 				if p.gitRepositoryNamespace == "" && p.gitRepositoryName == "" {
