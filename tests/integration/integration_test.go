@@ -298,7 +298,7 @@ var _ = Describe("PCTL", func() {
 			cmd := exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "push", "-d", "origin", branch)
 			output, err := cmd.CombinedOutput()
 			if err != nil {
-				fmt.Println("output from failed command: ", string(output))
+				fmt.Println("git delete remote branch failed ", string(output))
 			}
 
 			_ = os.RemoveAll(temp)
@@ -319,31 +319,19 @@ var _ = Describe("PCTL", func() {
 			// check out the branch
 			cmd := exec.Command("git", "clone", pctlTestRepositoryName, temp)
 			output, err := cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("output from failed command: ", string(output))
-			}
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("clone failed: %s", string(output)))
 			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "checkout", "-b", branch)
-			session, err := cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("Output from failing command: ", string(session))
-			}
-			Expect(err).ToNot(HaveOccurred())
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("checkout branch failed: %s", string(output)))
 
 			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "push", "-u", "origin", branch)
 			output, err = cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("output from failed command: ", string(output))
-			}
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("git push failed : %s", string(output)))
 			// setup the gitrepository resources. Requires the branch to exist first
 			cmd = exec.Command("flux", "create", "source", "git", gitRepoName, "--url", "https://github.com/weaveworks/pctl-test-repo", "--branch", branch, "--namespace", namespace)
 			cmd.Dir = temp
-			session, err = cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("Output from failing command: ", string(session))
-			}
-			Expect(err).ToNot(HaveOccurred())
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create source git failed: %s", string(output)))
 
 			cmd = exec.Command(
 				binaryPath,
@@ -356,11 +344,8 @@ var _ = Describe("PCTL", func() {
 				"--profile-url", "https://github.com/weaveworks/profiles-examples",
 				"--profile-path", "weaveworks-nginx")
 			cmd.Dir = temp
-			session, err = cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("Output from failing command: ", string(session))
-			}
-			Expect(err).ToNot(HaveOccurred())
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed: %s", string(output)))
 
 			var files []string
 			profilesDir := filepath.Join(temp)
@@ -400,43 +385,28 @@ status: {}
 			// Generate the resources into the flux repo, and push them up the repo?
 			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "add", ".")
 			output, err = cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("output from failed command: ", string(output))
-			}
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("git add . failed: %s", string(output)))
 			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "commit", "-am", "new content")
 			output, err = cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("output from failed command: ", string(output))
-			}
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("git commit failed : %s", string(output)))
 			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "push", "-u", "origin", branch)
 			output, err = cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("output from failed command: ", string(output))
-			}
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("git push failed : %s", string(output)))
 
 			cmd = exec.Command("flux", "reconcile", "source", "git", gitRepoName, "--namespace", namespace)
 			cmd.Dir = temp
-			session, err = cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("Output from failing command: ", string(session))
-			}
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux reconcile source git failed : %s", string(output)))
 
 			cmd = exec.Command("flux", "create", "kustomization", "kustomization", "--source", fmt.Sprintf("GitRepository/%s", gitRepoName), "--path", ".", "--namespace", namespace)
 			cmd.Dir = temp
-			session, err = cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("Output from failing command: ", string(session))
-			}
-			Expect(err).ToNot(HaveOccurred())
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create kustomization failed : %s", string(output)))
 
 			By("successfully deploying the kustomize resource")
 			kustomizeName := fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "nginx-deployment")
 			var kustomize *kustomizev1.Kustomization
 			Eventually(func() bool {
-
 				kustomize = &kustomizev1.Kustomization{}
 				err := kClient.Get(context.Background(), client.ObjectKey{Name: kustomizeName, Namespace: namespace}, kustomize)
 				if err != nil {
@@ -475,11 +445,8 @@ status: {}
 				path := "bitnami-nginx"
 				cmd := exec.Command(binaryPath, "install", "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-url", "https://github.com/weaveworks/profiles-examples", "--profile-branch", branch, "--profile-path", path)
 				cmd.Dir = temp
-				session, err := cmd.CombinedOutput()
-				if err != nil {
-					fmt.Println("Output from failing command: ", string(session))
-				}
-				Expect(err).ToNot(HaveOccurred())
+				output, err := cmd.CombinedOutput()
+				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
 
 				var files []string
 				err = filepath.Walk(temp, func(path string, info os.FileInfo, err error) error {
@@ -528,11 +495,8 @@ status: {}
 				path := "bitnami-nginx"
 				cmd := exec.Command(binaryPath, "install", "--out", temp, "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-url", pctlPrivateProfilesRepositoryName, "--profile-branch", branch, "--profile-path", path)
 				cmd.Dir = temp
-				session, err := cmd.CombinedOutput()
-				if err != nil {
-					fmt.Println("Output from failing command: ", string(session))
-				}
-				Expect(err).ToNot(HaveOccurred())
+				output, err := cmd.CombinedOutput()
+				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
 
 				var files []string
 				err = filepath.Walk(temp, func(path string, info os.FileInfo, err error) error {
@@ -585,9 +549,6 @@ status: {}
 				cmd := exec.Command(binaryPath, "install", "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-url", "https://github.com/weaveworks/profiles-examples", "--profile-branch", branch, "--profile-path", path, "catalog/profile/v0.0.1")
 				cmd.Dir = temp
 				session, err := cmd.CombinedOutput()
-				if err != nil {
-					fmt.Println("Output from failing command: ", string(session))
-				}
 				Expect(err).To(HaveOccurred())
 				Expect(string(session)).To(ContainSubstring("it looks like you provided a url with a catalog entry; please choose either format: url/branch/path or <CATALOG>/<PROFILE>[/<VERSION>]"))
 			})
@@ -627,12 +588,9 @@ status: {}
 					"--pr-repo",
 					"weaveworks/pctl-test-repo",
 					"nginx-catalog/weaveworks-nginx")
-				session, err := cmd.CombinedOutput()
-				if err != nil {
-					fmt.Println("Failed output from install: ", string(session))
-				}
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(session)).To(ContainSubstring("PR created with number:"))
+				output, err := cmd.CombinedOutput()
+				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
+				Expect(string(output)).To(ContainSubstring("PR created with number:"))
 			})
 
 			It("fails if repo is not defined", func() {
@@ -724,11 +682,8 @@ status: {}
 		It("generates valid artifacts to the local directory", func() {
 			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--config-secret", "values.yaml", "nginx-catalog/nginx/v2.0.0")
 			cmd.Dir = temp
-			session, err := cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("Output from failing command: ", string(session))
-			}
-			Expect(err).ToNot(HaveOccurred())
+			output, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
 
 			var files []string
 			profilesDir := filepath.Join(temp, "nginx")
@@ -776,11 +731,8 @@ status: {}
 
 			cmd = exec.Command("kubectl", "apply", "-R", "-f", profilesDir)
 			cmd.Dir = temp
-			session, err = cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println("Output from failing command: ", string(session))
-			}
-			Expect(err).ToNot(HaveOccurred())
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("kubectl apply failed : %s", string(output)))
 
 			By("successfully deploying the kustomize resource")
 			helmReleaseName := fmt.Sprintf("%s-%s-%s", subName, "nginx", "bitnami-nginx")
