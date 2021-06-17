@@ -75,19 +75,18 @@ var _ = Describe("Search", func() {
       "description": "nginx 2"
     },
 	{
-		"name": "some-new-profile",
-		"description": "some new profile"
+	  "name": "some-new-profile",
+	  "description": "some new profile"
 	}
 ]
 		  `)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
-			resp, err := catalog.Search(fakeCatalogClient, "")
+			resp, err := catalog.Search(fakeCatalogClient, "all")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeCatalogClient.DoRequestCallCount()).To(Equal(1))
-			path, query := fakeCatalogClient.DoRequestArgsForCall(0)
+			path, _ := fakeCatalogClient.DoRequestArgsForCall(0)
 			Expect(path).To(Equal("/profiles"))
-			Expect(query).To(Equal(""))
 			Expect(resp).To(ConsistOf(
 				profilesv1.ProfileCatalogEntry{
 					ProfileDescription: profilesv1.ProfileDescription{

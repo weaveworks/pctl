@@ -41,7 +41,7 @@ func searchCmd() *cli.Command {
 					_ = cli.ShowCommandHelp(c, "search")
 					return err
 				}
-				profiles, err = catalog.Search(catalogClient, "")
+				profiles, err = catalog.Search(catalogClient, "all")
 				if err != nil {
 					return err
 				}
