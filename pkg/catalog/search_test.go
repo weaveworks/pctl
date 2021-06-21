@@ -82,7 +82,7 @@ var _ = Describe("Search", func() {
 		  `)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
-			resp, err := catalog.Search(fakeCatalogClient, "all")
+			resp, err := catalog.Search(fakeCatalogClient, "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeCatalogClient.DoRequestCallCount()).To(Equal(1))
 			path, _ := fakeCatalogClient.DoRequestArgsForCall(0)

@@ -15,7 +15,7 @@ func Search(catalogClient CatalogClient, searchName string) ([]profilesv1.Profil
 	var statusCode int
 	var err error
 
-	if searchName == "all" {
+	if searchName == "" {
 		data, statusCode, err = catalogClient.DoRequest("/profiles", nil)
 	} else {
 		q := map[string]string{
