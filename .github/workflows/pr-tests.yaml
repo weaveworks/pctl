@@ -24,4 +24,4 @@ jobs:
           go get -u github.com/onsi/ginkgo/ginkgo
       - name: Test
         run: |
-          PATH=$PATH:$(go env GOPATH)/bin make unit
+          SKIP_CREDENTIAL_TESTS=true PATH=$PATH:$(go env GOPATH)/bin make test
