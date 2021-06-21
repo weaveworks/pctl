@@ -1,14 +1,1 @@
-apiVersion: weave.works/v1alpha1
-kind: ProfileDefinition
-metadata:
-  name: bitnami-nginx
-spec:
-  name: bitnami-nginx
-  description: Profile for deploying local nginx chart
-  maintainer: weaveworks
-  prerequisites:
-    - "kubernetes 1.19"
-  artifacts:
-    - name: nginx-server
-      chart:
-        path: nginx/chart
+nested test profile

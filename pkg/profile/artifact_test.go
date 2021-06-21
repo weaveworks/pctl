@@ -9,20 +9,16 @@ import (
 	"strconv"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
-	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/otiai10/copy"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
 	"github.com/weaveworks/pctl/pkg/git"
 	fakegit "github.com/weaveworks/pctl/pkg/git/fakes"
 	"github.com/weaveworks/pctl/pkg/profile"
-	"github.com/weaveworks/pctl/pkg/profile/artifact"
 	"github.com/weaveworks/pctl/pkg/profile/fakes"
 )
 
@@ -168,79 +164,6 @@ var _ = Describe("Profile", func() {
 	})
 
 	Context("Make", func() {
-		FIt("generates the fucking artifacts while mocked", func() {
-			fakeGitClient = &fakegit.FakeGit{}
-			profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
-				return profilesv1.ProfileDefinition{
-					Spec: profilesv1.ProfileDefinitionSpec{
-						Artifacts: []profilesv1.Artifact{
-							{
-								Name: "bla",
-								Chart: &profilesv1.Chart{
-									Name: "name",
-									Path: "asdf/asdf",
-								},
-							},
-						},
-					},
-				}, nil
-			})
-			fakeGitClient.SparseCloneStub = func(url string, branch string, dir string, p string) error {
-				from := filepath.Join("testdata", "simple_with_nested", p)
-				err := copy.Copy(from, filepath.Join(dir, p))
-				Expect(err).NotTo(HaveOccurred())
-				return nil
-			}
-			var err error
-			rootDir, err = ioutil.TempDir("", "test_make_artifacts")
-			Expect(err).NotTo(HaveOccurred())
-			fakeChartBuilder := &fakes.FakeBuilder{}
-			fakeChartBuilder.BuildReturns([]artifact.Artifact{
-				{
-					Name:        "test-artifact",
-					RepoURL:     "https://github.com/weaveworks/profiles-examples",
-					Branch:      "main",
-					PathsToCopy: []string{""},
-					//SparseFolder: "bla",
-					Objects: []runtime.Object{
-						&kustomizev1.Kustomization{
-							Spec: kustomizev1.KustomizationSpec{
-								Path: "asdf",
-								SourceRef: kustomizev1.CrossNamespaceSourceReference{
-									APIVersion: "",
-									Kind:       "GitRepository",
-									Name:       "git-repo-name",
-									Namespace:  "git-repo-namespace",
-								},
-							},
-						},
-					},
-				},
-			}, nil)
-			maker := profile.ProfilesArtifactsMaker{
-				MakerConfig: profile.MakerConfig{
-					GitClient:        fakeGitClient,
-					RootDir:          rootDir,
-					GitRepoNamespace: gitRepoNamespace,
-					GitRepoName:      gitRepoName,
-				},
-				Builders: map[int]profile.Builder{
-					profile.CHART: fakeChartBuilder,
-				},
-			}
-			err = maker.Make(pSub)
-			Expect(err).NotTo(HaveOccurred())
-			files := make(map[string]string)
-			err = filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
-				if !info.IsDir() {
-					files[fmt.Sprintf("%s/%s", filepath.Base(filepath.Dir(path)), filepath.Base(path))] = path
-				}
-				return nil
-			})
-			Expect(err).NotTo(HaveOccurred())
-			fmt.Println(files)
-		})
-
 		It("generates the artifacts", func() {
 			maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
 				GitClient:        fakeGitClient,
@@ -263,7 +186,7 @@ var _ = Describe("Profile", func() {
 				filepath.Join(rootDir, "artifacts", "nginx-deployment", "Kustomization.yaml"),
 				filepath.Join(rootDir, "artifacts", "nginx-deployment", "nginx", "deployment", "deployment.yaml"),
 				filepath.Join(rootDir, "artifacts", "bitnami-nginx", "nginx-server", "HelmRelease.yaml"),
-				filepath.Join(rootDir, "artifacts", "bitnami-nginx", "nginx-server", "nginx", "chart", "Chart.yaml"),
+				filepath.Join(rootDir, "artifacts", "bitnami-nginx", "nginx-server", "nginx", "chart.yaml"),
 				filepath.Join(rootDir, "artifacts", "dokuwiki", "HelmRelease.yaml"),
 				filepath.Join(rootDir, "artifacts", "dokuwiki", "HelmRepository.yaml"),
 			}

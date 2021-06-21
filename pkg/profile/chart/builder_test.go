@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -51,6 +52,16 @@ var _ = Describe("Builder", func() {
 					URL:    profileURL,
 					Branch: "main",
 					Path:   profilePath,
+				},
+				Values: &apiextensionsv1.JSON{
+					Raw: []byte(`{"replicaCount": 3,"service":{"port":8081}}`),
+				},
+				ValuesFrom: []helmv2.ValuesReference{
+					{
+						Name:     "nginx-values",
+						Kind:     "Secret",
+						Optional: true,
+					},
 				},
 			},
 		}
@@ -112,6 +123,16 @@ var _ = Describe("Builder", func() {
 								Name:      "test-profile-profiles-examples-dokuwiki",
 								Namespace: "default",
 							},
+						},
+					},
+					Values: &apiextensionsv1.JSON{
+						Raw: []byte(`{"replicaCount": 3,"service":{"port":8081}}`),
+					},
+					ValuesFrom: []helmv2.ValuesReference{
+						{
+							Name:     "nginx-values",
+							Kind:     "Secret",
+							Optional: true,
 						},
 					},
 				},
