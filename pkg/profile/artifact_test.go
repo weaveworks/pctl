@@ -159,6 +159,10 @@ var _ = Describe("Profile", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	AfterEach(func() {
+		Expect(os.RemoveAll(rootDir)).To(Succeed())
+	})
+
 	Context("Make", func() {
 		It("generates the artifacts", func() {
 			maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
@@ -719,20 +723,18 @@ status: {}
 					},
 				}, nil
 			})
-			tempDir, err := ioutil.TempDir("", "catalog-install")
-			Expect(err).NotTo(HaveOccurred())
 			maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
 				ProfileName:      "generate-test",
 				GitClient:        fakeGitClient,
-				RootDir:          tempDir,
+				RootDir:          rootDir,
 				GitRepoNamespace: gitRepoNamespace,
 				GitRepoName:      gitRepoName,
 			})
-			err = maker.Make(pSub)
+			err := maker.Make(pSub)
 			Expect(err).NotTo(HaveOccurred())
 
 			var files []string
-			err = filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
+			err = filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 				if !info.IsDir() {
 					files = append(files, path)
 				}
@@ -740,9 +742,9 @@ status: {}
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			profileFile := filepath.Join(tempDir, "generate-test", "profile-installation.yaml")
-			artifactHelmRelease := filepath.Join(tempDir, "generate-test", "artifacts", "bitnami-nginx", "HelmRelease.yaml")
-			artifactHelmRepository := filepath.Join(tempDir, "generate-test", "artifacts", "bitnami-nginx", "HelmRepository.yaml")
+			profileFile := filepath.Join(rootDir, "generate-test", "profile-installation.yaml")
+			artifactHelmRelease := filepath.Join(rootDir, "generate-test", "artifacts", "bitnami-nginx", "HelmRelease.yaml")
+			artifactHelmRepository := filepath.Join(rootDir, "generate-test", "artifacts", "bitnami-nginx", "HelmRepository.yaml")
 			Expect(files).To(ConsistOf(artifactHelmRepository, artifactHelmRelease, profileFile))
 
 			Expect(hasCorrectFilePerms(profileFile)).To(BeTrue())
