@@ -21,7 +21,8 @@ import (
 )
 
 var (
-	binaryPath string
+	binaryPath                      string
+	skipTestsThatRequireCredentials bool
 )
 
 func TestIntegration(t *testing.T) {
@@ -39,6 +40,10 @@ var _ = BeforeSuite(func() {
 	// overwrite the default test repository location if set
 	if v := os.Getenv("PCTL_TEST_REPOSITORY_URL"); v != "" {
 		pctlTestRepositoryName = v
+	}
+
+	if v := os.Getenv("SKIP_CREDENTIAL_TESTS"); v == "true" {
+		skipTestsThatRequireCredentials = true
 	}
 
 	scheme := runtime.NewScheme()

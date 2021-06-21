@@ -312,6 +312,10 @@ var _ = Describe("PCTL", func() {
 		})
 
 		It("generates valid artifacts to the local directory", func() {
+			if skipTestsThatRequireCredentials {
+				Skip("Skipping this tests as it requires credentials")
+			}
+
 			profileBranch := "local_clone_test"
 			subName := "pctl-profile"
 			gitRepoName := "pctl-repo"
@@ -490,6 +494,9 @@ status: {}
 
 		When("a url is provided to a private repository", func() {
 			It("will fetch information without a problem", func() {
+				if skipTestsThatRequireCredentials {
+					Skip("Skipping this tests as it requires credentials")
+				}
 				namespace := uuid.New().String()
 				branch := "main"
 				path := "bitnami-nginx"
@@ -566,6 +573,9 @@ status: {}
 		// Note, the repo cleans the creates PRs via Github actions.
 		When("create-pr is enabled", func() {
 			It("creates a pull request to the remote branch", func() {
+				if skipTestsThatRequireCredentials {
+					Skip("Skipping this tests as it requires credentials")
+				}
 				if os.Getenv("GIT_TOKEN") == "" {
 					Skip("SKIP, this test needs GIT_TOKEN to work. You really should be running this test!")
 				}
@@ -611,6 +621,9 @@ status: {}
 			})
 
 			It("fails if target location is not a git repository", func() {
+				if skipTestsThatRequireCredentials {
+					Skip("Skipping this tests as it requires credentials")
+				}
 				if _, ok := os.LookupEnv("GIT_TOKEN"); !ok {
 					// Set up a dummy token, because the SCM client is created before we check the git repo.
 					err := os.Setenv("GIT_TOKEN", "dummy")
