@@ -20,6 +20,10 @@ and run: mdtoc -inplace README.md
     - [Pre-Flight check](#pre-flight-check)
   - [Catalog service options](#catalog-service-options)
 - [Development](#development)
+  - [Working with profiles](#working-with-profiles)
+    - [Using local pin](#using-local-pin)
+    - [Using dev tag pin](#using-dev-tag-pin)
+    - [Using doki and the Makefile targets](#using-doki-and-the-makefile-targets)
 - [Release process](#release-process)
   - [Tests](#tests)
     - [Configuring Integration Tests](#configuring-integration-tests)
@@ -242,6 +246,71 @@ run the following to use pctl against it:
 `kubectl apply -f profiles/examples/profile-catalog-source.yaml`
 1. Ensure the current context in kubeconfig is set to the `profiles` cluster (`kubectl config current-context` should return `kind-profiles`)
 1. Create a `pctl` binary with `make build`.
+
+### Working with profiles
+
+In order to keep versioning parity and drift to a minimum with [Profiles](https://github.com/weaveworks/profiles) the following development
+process must be in place:
+
+#### Using local pin
+
+- Open a new branch in profiles and create new code
+- In `pctl` do a `replace` to a local location like this: `go mod edit -replace github.com/weaveworks/profiles=<profiles location>`
+- Work on the changes and once ready, open a PR with this local mod in place
+
+This has the benefit of being really simple, but the counter is that the PR checks will fail because this can't build on CI.
+The better way is to use a dev tag pin if you want CI to be happy as well for most in-place checks and verifications.
+
+#### Using dev tag pin
+
+- Open a new branch in `profiles` and create new code
+- Push new branch to fork and open a pull request
+- `profiles` creates a dev-tag for that branch in the format of: `<latestReleasedTag>-<branch-name>`
+- In `pctl`, do an update like this: `go get github.com/weaveworks/profiles@dev-tag`
+- If there are more changes for the `profiles` side, just keep pushing and repeat `go get`. The tag will be updated with the
+  new code.
+- Work on the changes and open a PR
+- Release `profiles` and run `go get github.com/weaveworks/profiles` which should get the latest
+- Update remote code
+
+This approach is convenient, however, it should be avoided for the sole reason that it's possible to forget running
+the `go get` again to update to the latest version of profiles. The better way is using a new Makefile target called
+`update-modules` and we explain why next:
+
+#### Using doki and the Makefile targets
+
+There is a convenient tool for all of these operations called [Doki](https://github.com/weaveworks/doki) and a new
+`make` target called `update-modules` which works together nicely. Also, the new make target allows for an extra check
+to be executed by CI so the developer doesn't forget to update to latest before merging new code.
+
+The same process as above using `doki` would be:
+
+- Open a new branch in `profiles` and create new code
+- Push new branch to fork and open a pull request
+- `profiles` creates a dev-tag
+- run `doki get dev tag` in `profiles` which should display something like this:
+```
+➜  profiles git:(keep_in_sync) doki get dev tag
+v0.0.4-keep_in_sync
+```
+- go to `pctl` and edit in `Makefile` this target:
+```Makefile
+.PHONY: update-modules
+	go get \
+		$(shell doki mod latest \
+			github.com/weaveworks/profiles \
+		)
+	go mod tidy
+```
+
+`github.com/weaveworks/profiles \` => `github.com/weaveworks/profiles@dev-tag \`
+- run `make update-modules` which should also synchronise other dependencies
+- Write the code and push pctl and create a PR
+- This will run a new Action called `Check pinned version`. It will check for version pins in the Makefile
+  and fail if there are any. This is to ensure that a `pctl` change which requires new profile code is not accidentally merged
+- Once coding has been finished, release `profiles` and remove the pin from the Makefile and run `make update-modules` again. Doki
+  will automatically fetch the new released tag.
+- Push new code and everything should be green
 
 ## Release process
 There are some manual steps right now, should be streamlined soon.
