@@ -1,0 +1,17 @@
+name: Check for pinned version in Makefile
+on: pull_request
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Run version check
+        run: |
+          pins=(github.com/weaveworks/profiles@)
+          for p in ${pins[@]}; do
+            if grep -q "${p}" Makefile; then
+              echo "Pin to version for ${p} exists in Makefile. Please make sure to use latest."
+              exit 1
+            fi
+          done
