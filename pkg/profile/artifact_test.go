@@ -27,7 +27,6 @@ import (
 var _ = Describe("Profile", func() {
 	var (
 		pSub                   profilesv1.ProfileInstallation
-		pDef                   profilesv1.ProfileDefinition
 		fakeGitClient          *fakegit.FakeGit
 		rootDir                string
 		gitRepositoryNamespace string
@@ -47,9 +46,6 @@ var _ = Describe("Profile", func() {
 					Branch: branch,
 					Path:   profileName1,
 				},
-				Values: &apiextensionsv1.JSON{
-					Raw: []byte(`{"replicaCount": 3,"service":{"port":8081}}`),
-				},
 				ValuesFrom: []helmv2.ValuesReference{
 					{
 						Name:     "nginx-values",
@@ -60,9 +56,6 @@ var _ = Describe("Profile", func() {
 			},
 		}
 		fakeGitClient = &fakegit.FakeGit{}
-		profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
-			return pDef, nil
-		})
 		fakeGitClient.SparseCloneStub = func(url string, branch string, dir string, p string) error {
 			from := filepath.Join("testdata", "simple_with_nested", p)
 			err := copy.Copy(from, filepath.Join(dir, p))
@@ -96,9 +89,6 @@ var _ = Describe("Profile", func() {
 									Namespace: "default",
 								},
 							},
-						},
-						Values: &apiextensionsv1.JSON{
-							Raw: []byte(`{"replicaCount": 3,"service":{"port":8081}}`),
 						},
 						ValuesFrom: []helmv2.ValuesReference{
 							{
@@ -148,6 +138,7 @@ var _ = Describe("Profile", func() {
 			return artifacts, nil
 		})
 	})
+
 	AfterEach(func() {
 		Expect(os.RemoveAll(rootDir)).To(Succeed())
 	})
@@ -194,10 +185,6 @@ spec:
     branch: main
     path: weaveworks-nginx
     url: https://github.com/org/repo-name
-  values:
-    replicaCount: 3
-    service:
-      port: 8081
   valuesFrom:
   - kind: Secret
     name: nginx-values
@@ -247,10 +234,6 @@ spec:
         namespace: default
       version: 11.1.6
   interval: 0s
-  values:
-    replicaCount: 3
-    service:
-      port: 8081
   valuesFrom:
   - kind: Secret
     name: nginx-values

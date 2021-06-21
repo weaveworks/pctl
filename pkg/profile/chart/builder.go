@@ -9,11 +9,14 @@ import (
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
 )
+
+const defaultValuesKey = "default-values.yaml"
 
 // Config defines some common configuration values for builders.
 type Config struct {
@@ -33,7 +36,10 @@ func (c *Builder) Build(att profilesv1.Artifact, installation profilesv1.Profile
 		return nil, fmt.Errorf("validation failed for artifact %s: %w", att.Name, err)
 	}
 	a := artifact.Artifact{Name: att.Name}
-	helmRelease := c.makeHelmRelease(att, installation, definition.Name)
+	helmRelease, cfgMap := c.makeHelmReleaseObjects(att, installation, definition.Name)
+	if cfgMap != nil {
+		a.Objects = append(a.Objects, cfgMap)
+	}
 	a.Objects = append(a.Objects, helmRelease)
 	if att.Chart.Path != "" {
 		if c.GitRepositoryNamespace == "" && c.GitRepositoryName == "" {
@@ -70,13 +76,27 @@ func validateArtifact(in profilesv1.Artifact) error {
 	return nil
 }
 
-func (c *Builder) makeHelmRelease(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string) *helmv2.HelmRelease {
+func (c *Builder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string) (*helmv2.HelmRelease, *corev1.ConfigMap) {
 	var helmChartSpec helmv2.HelmChartTemplateSpec
 	if artifact.Chart.Path != "" {
 		helmChartSpec = c.makeGitChartSpec(path.Join(installation.Spec.Source.Path, artifact.Chart.Path))
 	} else if artifact.Chart != nil {
 		helmChartSpec = c.makeHelmChartSpec(artifact.Chart.Name, artifact.Chart.Version, installation)
 	}
+	var (
+		cfgMap *corev1.ConfigMap
+		values []helmv2.ValuesReference
+	)
+	if artifact.Chart.DefaultValues != "" {
+		cfgMap = c.makeDefaultValuesCfgMap(artifact.Name, artifact.Chart.DefaultValues, installation)
+		// the default values always need to be at index 0
+		values = []helmv2.ValuesReference{{
+			Kind:      "ConfigMap",
+			Name:      cfgMap.Name,
+			ValuesKey: defaultValuesKey,
+		}}
+	}
+	values = append(values, installation.Spec.ValuesFrom...)
 	helmRelease := &helmv2.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      makeArtifactName(artifact.Name, installation.Name, definitionName),
@@ -90,11 +110,10 @@ func (c *Builder) makeHelmRelease(artifact profilesv1.Artifact, installation pro
 			Chart: helmv2.HelmChartTemplate{
 				Spec: helmChartSpec,
 			},
-			Values:     installation.Spec.Values,
-			ValuesFrom: installation.Spec.ValuesFrom,
+			ValuesFrom: values,
 		},
 	}
-	return helmRelease
+	return helmRelease, cfgMap
 }
 
 func (c *Builder) makeHelmRepository(url string, name string, installation profilesv1.ProfileInstallation) *sourcev1.HelmRepository {
@@ -152,4 +171,27 @@ func (c *Builder) makeHelmChartSpec(chart string, version string, installation p
 		},
 		Version: version,
 	}
+}
+
+func (c *Builder) makeDefaultValuesCfgMap(name, data string, installation profilesv1.ProfileInstallation) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      c.makeCfgMapName(name, installation),
+			Namespace: installation.ObjectMeta.Namespace,
+		},
+		Data: map[string]string{
+			defaultValuesKey: data,
+		},
+	}
+}
+
+func (c *Builder) makeCfgMapName(name string, installation profilesv1.ProfileInstallation) string {
+	if strings.Contains(name, "/") {
+		name = filepath.Base(name)
+	}
+	return join(installation.Name, name, "defaultvalues")
 }

@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -52,9 +52,6 @@ var _ = Describe("Builder", func() {
 					URL:    profileURL,
 					Branch: "main",
 					Path:   profilePath,
-				},
-				Values: &apiextensionsv1.JSON{
-					Raw: []byte(`{"replicaCount": 3,"service":{"port":8081}}`),
 				},
 				ValuesFrom: []helmv2.ValuesReference{
 					{
@@ -124,9 +121,6 @@ var _ = Describe("Builder", func() {
 								Namespace: "default",
 							},
 						},
-					},
-					Values: &apiextensionsv1.JSON{
-						Raw: []byte(`{"replicaCount": 3,"service":{"port":8081}}`),
 					},
 					ValuesFrom: []helmv2.ValuesReference{
 						{
@@ -251,6 +245,109 @@ var _ = Describe("Builder", func() {
 				}
 				_, err := chartBuilder.Build(a, pSub, pDef)
 				Expect(err).To(MatchError(ContainSubstring("validation failed for artifact test: expected exactly one, got both: chart, profile")))
+			})
+		})
+		When("the helm chart has default values set", func() {
+			It("will apply those values to the profile installation", func() {
+				partifact = profilesv1.Artifact{
+					Name: "dokuwiki",
+					Chart: &profilesv1.Chart{
+						URL:           "https://charts.bitnami.com/bitnami",
+						Name:          "dokuwiki",
+						Version:       "11.1.6",
+						DefaultValues: `{"foo": "bar", "service": {"port": 1234}}`,
+					},
+				}
+				pDef = profilesv1.ProfileDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: profileName1,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Profile",
+						APIVersion: "packages.weave.works/profilesv1",
+					},
+					Spec: profilesv1.ProfileDefinitionSpec{
+						ProfileDescription: profilesv1.ProfileDescription{
+							Description: "foo",
+						},
+						Artifacts: []profilesv1.Artifact{partifact},
+					},
+				}
+				chartBuilder := &chart.Builder{
+					Config: chart.Config{
+						GitRepositoryName:      gitRepositoryName,
+						GitRepositoryNamespace: gitRepositoryNamespace,
+						RootDir:                rootDir,
+					},
+				}
+				artifacts, err := chartBuilder.Build(partifact, pSub, pDef)
+				Expect(err).NotTo(HaveOccurred())
+				configMap := &corev1.ConfigMap{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-profile-dokuwiki-defaultvalues",
+						Namespace: "default",
+					},
+					Data: map[string]string{
+						"default-values.yaml": `{"foo": "bar", "service": {"port": 1234}}`,
+					},
+				}
+				helmRelease := &helmv2.HelmRelease{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "HelmRelease",
+						APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-profile-weaveworks-nginx-dokuwiki",
+						Namespace: "default",
+					},
+					Spec: helmv2.HelmReleaseSpec{
+						Chart: helmv2.HelmChartTemplate{
+							Spec: helmv2.HelmChartTemplateSpec{
+								Chart:   "dokuwiki",
+								Version: "11.1.6",
+								SourceRef: helmv2.CrossNamespaceObjectReference{
+									Kind:      "HelmRepository",
+									Name:      "test-profile-profiles-examples-dokuwiki",
+									Namespace: "default",
+								},
+							},
+						},
+						ValuesFrom: []helmv2.ValuesReference{
+							{
+								Name:      "test-profile-dokuwiki-defaultvalues",
+								Kind:      "ConfigMap",
+								ValuesKey: "default-values.yaml",
+							},
+							{
+								Name:     "nginx-values",
+								Kind:     "Secret",
+								Optional: true,
+							},
+						},
+					},
+				}
+				helmRepository := &sourcev1.HelmRepository{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "HelmRepository",
+						APIVersion: "source.toolkit.fluxcd.io/v1beta1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-profile-profiles-examples-dokuwiki",
+						Namespace: "default",
+					},
+					Spec: sourcev1.HelmRepositorySpec{
+						URL: "https://charts.bitnami.com/bitnami",
+					},
+				}
+				expected := artifact.Artifact{
+					Objects: []runtime.Object{configMap, helmRelease, helmRepository},
+					Name:    "dokuwiki",
+				}
+				Expect(artifacts).To(ConsistOf(expected))
 			})
 		})
 	})
