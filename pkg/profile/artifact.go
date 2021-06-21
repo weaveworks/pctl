@@ -10,11 +10,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/otiai10/copy"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"knative.dev/pkg/apis"
-
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
@@ -116,10 +114,6 @@ func (pa *ProfilesArtifactsMaker) makeArtifacts(installation profilesv1.ProfileI
 	for _, artifact := range definition.Spec.Artifacts {
 		if pa.nestedName != "" {
 			artifact.Name = filepath.Join(pa.nestedName, artifact.Name)
-		}
-
-		if err := validateArtifact(artifact); err != nil {
-			return nil, fmt.Errorf("validation failed for artifact %s: %w", artifact.Name, err)
 		}
 
 		var builder Builder
@@ -238,24 +232,4 @@ func containsKey(list []string, key string) bool {
 		}
 	}
 	return false
-}
-
-func validateArtifact(in profilesv1.Artifact) error {
-	if in.Chart != nil && in.Profile != nil {
-		return apis.ErrMultipleOneOf("chart", "profile")
-	}
-
-	if in.Profile != nil && in.Kustomize != nil {
-		return apis.ErrMultipleOneOf("profile", "kustomize")
-	}
-
-	if in.Chart != nil && in.Kustomize != nil {
-		return apis.ErrMultipleOneOf("chart", "kustomize")
-	}
-
-	if in.Chart != nil && in.Chart.Path != "" && in.Chart.URL != "" {
-		return apis.ErrMultipleOneOf("chart.path", "chart.url")
-	}
-
-	return nil
 }

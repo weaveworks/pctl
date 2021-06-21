@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/weaveworks/pctl/pkg/profile"
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
 	"github.com/weaveworks/pctl/pkg/profile/chart"
 )
@@ -186,6 +187,133 @@ var _ = Describe("Builder", func() {
 				}
 				_, err := chartBuilder.Build(partifact, pSub, pDef)
 				Expect(err).To(MatchError("in case of local resources, the flux gitrepository object's details must be provided"))
+			})
+		})
+		When("helmRepository and path", func() {
+			BeforeEach(func() {
+				pDef = profilesv1.ProfileDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: profileName1,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Profile",
+						APIVersion: "packages.weave.works/profilesv1",
+					},
+					Spec: profilesv1.ProfileDefinitionSpec{
+						ProfileDescription: profilesv1.ProfileDescription{
+							Description: "foo",
+						},
+						Artifacts: []profilesv1.Artifact{
+							{
+								Name: helmChartName1,
+								Chart: &profilesv1.Chart{
+									URL:     helmChartURL1,
+									Name:    helmChartChart1,
+									Version: helmChartVersion1,
+									Path:    "https://not.empty",
+								},
+							},
+						},
+					},
+				}
+			})
+
+			It("errors", func() {
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGitClient,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
+				err := maker.Make(pSub)
+				Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: chart.path, chart.url")))
+			})
+		})
+		When("chart and kustomize", func() {
+			BeforeEach(func() {
+				pDef = profilesv1.ProfileDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: profileName1,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Profile",
+						APIVersion: "packages.weave.works/profilesv1",
+					},
+					Spec: profilesv1.ProfileDefinitionSpec{
+						ProfileDescription: profilesv1.ProfileDescription{
+							Description: "foo",
+						},
+						Artifacts: []profilesv1.Artifact{
+							{
+								Name: helmChartName1,
+								Chart: &profilesv1.Chart{
+									URL:     helmChartURL1,
+									Name:    helmChartChart1,
+									Version: helmChartVersion1,
+								},
+								Kustomize: &profilesv1.Kustomize{
+									Path: "https://not.empty",
+								},
+							},
+						},
+					},
+				}
+			})
+
+			It("errors", func() {
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGitClient,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
+				err := maker.Make(pSub)
+				Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: chart, kustomize")))
+			})
+		})
+		When("helmRepository and profile", func() {
+			BeforeEach(func() {
+				pDef = profilesv1.ProfileDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: profileName1,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Profile",
+						APIVersion: "packages.weave.works/profilesv1",
+					},
+					Spec: profilesv1.ProfileDefinitionSpec{
+						ProfileDescription: profilesv1.ProfileDescription{
+							Description: "foo",
+						},
+						Artifacts: []profilesv1.Artifact{
+							{
+								Name: helmChartName1,
+								Chart: &profilesv1.Chart{
+									URL:     helmChartURL1,
+									Name:    helmChartChart1,
+									Version: helmChartVersion1,
+								},
+								Profile: &profilesv1.Profile{
+									Source: &profilesv1.Source{
+										URL:    "example.com",
+										Branch: "branch",
+									},
+								},
+							},
+						},
+					},
+				}
+			})
+
+			It("errors", func() {
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGitClient,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
+				err := maker.Make(pSub)
+				Expect(err).To(MatchError(ContainSubstring("validation failed for artifact helmChartArtifactName1: expected exactly one, got both: chart, profile")))
 			})
 		})
 	})

@@ -10,6 +10,7 @@ import (
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
 )
@@ -31,6 +32,9 @@ func (k *Builder) Build(att profilesv1.Artifact, installation profilesv1.Profile
 	if k.GitRepositoryNamespace == "" && k.GitRepositoryName == "" {
 		return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 	}
+	if err := validateArtifact(att); err != nil {
+		return nil, fmt.Errorf("validation failed for artifact %s: %w", att.Name, err)
+	}
 	a := artifact.Artifact{Name: att.Name}
 	path := filepath.Join(k.RootDir, "artifacts", att.Name, att.Kustomize.Path)
 	a.Objects = append(a.Objects, k.makeKustomization(att, path, installation, definition.Name))
@@ -43,6 +47,17 @@ func (k *Builder) Build(att profilesv1.Artifact, installation profilesv1.Profile
 	a.Branch = branch
 	a.PathsToCopy = append(a.PathsToCopy, att.Kustomize.Path)
 	return []artifact.Artifact{a}, nil
+}
+
+// validateArtifact validates that the artifact has valid chart properties.
+func validateArtifact(in profilesv1.Artifact) error {
+	if in.Chart != nil {
+		return apis.ErrMultipleOneOf("chart", "kustomize")
+	}
+	if in.Profile != nil {
+		return apis.ErrMultipleOneOf("profile", "kustomize")
+	}
+	return nil
 }
 
 func (k *Builder) makeKustomization(artifact profilesv1.Artifact, repoPath string, installation profilesv1.ProfileInstallation, definitionName string) *kustomizev1.Kustomization {

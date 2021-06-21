@@ -210,5 +210,52 @@ var _ = Describe("Builder", func() {
 				Expect(err).To(MatchError("in case of local resources, the flux gitrepository object's details must be provided"))
 			})
 		})
+		When("profile and kustomize", func() {
+			It("errors", func() {
+				a := profilesv1.Artifact{
+					Name: "test",
+					Profile: &profilesv1.Profile{
+						Source: &profilesv1.Source{
+							URL:    "example.com",
+							Branch: "branch",
+						},
+					},
+					Kustomize: &profilesv1.Kustomize{
+						Path: "https://not.empty",
+					},
+				}
+				builder := &kustomize.Builder{
+					Config: kustomize.Config{
+						RootDir:                rootDir,
+						GitRepositoryNamespace: gitRepositoryNamespace,
+						GitRepositoryName:      gitRepositoryName,
+					},
+				}
+				_, err := builder.Build(a, pSub, pDef)
+				Expect(err).To(MatchError(ContainSubstring("validation failed for artifact test: expected exactly one, got both: kustomize, profile")))
+			})
+		})
+		When("chart and kustomize", func() {
+			It("errors", func() {
+				a := profilesv1.Artifact{
+					Name: "test",
+					Chart: &profilesv1.Chart{
+						Name: "chart",
+					},
+					Kustomize: &profilesv1.Kustomize{
+						Path: "https://not.empty",
+					},
+				}
+				builder := &kustomize.Builder{
+					Config: kustomize.Config{
+						RootDir:                rootDir,
+						GitRepositoryNamespace: gitRepositoryNamespace,
+						GitRepositoryName:      gitRepositoryName,
+					},
+				}
+				_, err := builder.Build(a, pSub, pDef)
+				Expect(err).To(MatchError(ContainSubstring("validation failed for artifact test: expected exactly one, got both: chart, kustomize")))
+			})
+		})
 	})
 })

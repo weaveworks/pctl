@@ -10,6 +10,7 @@ import (
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"knative.dev/pkg/apis"
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
 )
@@ -28,6 +29,9 @@ type Builder struct {
 
 // Build a single artifact from a profile artifact and installation.
 func (c *Builder) Build(att profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]artifact.Artifact, error) {
+	if err := validateArtifact(att); err != nil {
+		return nil, fmt.Errorf("validation failed for artifact %s: %w", att.Name, err)
+	}
 	a := artifact.Artifact{Name: att.Name}
 	helmRelease := c.makeHelmRelease(att, installation, definition.Name)
 	a.Objects = append(a.Objects, helmRelease)
@@ -50,6 +54,20 @@ func (c *Builder) Build(att profilesv1.Artifact, installation profilesv1.Profile
 		a.Objects = append(a.Objects, helmRepository)
 	}
 	return []artifact.Artifact{a}, nil
+}
+
+// validateArtifact validates that the artifact has valid chart properties.
+func validateArtifact(in profilesv1.Artifact) error {
+	if in.Profile != nil {
+		return apis.ErrMultipleOneOf("chart", "profile")
+	}
+	if in.Kustomize != nil {
+		return apis.ErrMultipleOneOf("chart", "kustomize")
+	}
+	if in.Chart.Path != "" && in.Chart.URL != "" {
+		return apis.ErrMultipleOneOf("chart.path", "chart.url")
+	}
+	return nil
 }
 
 func (c *Builder) makeHelmRelease(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string) *helmv2.HelmRelease {
