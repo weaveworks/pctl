@@ -30,6 +30,10 @@ type Git interface {
 	HasChanges() (bool, error)
 	// Push will push to a remote.
 	Push() error
+	// Clone will take a repo location and clone it into a given folder.
+	Clone(repo, branch, location string) error
+	// SparseClone will take a repo location and clone it into a given folder.
+	SparseClone(repo, branch, location, path string) error
 }
 
 // CLIGitConfig defines configuration options for CLIGit.
@@ -57,6 +61,23 @@ func NewCLIGit(cfg CLIGitConfig, r runner.Runner) *CLIGit {
 // Make sure CLIGit implements all the required methods.
 var _ Git = &CLIGit{}
 
+// Clone will take a repo location and clone it into a given folder.
+func (g *CLIGit) Clone(repo, branch, location string) error {
+	args := []string{
+		"clone",
+		"--branch",
+		branch,
+		"--depth",
+		"1",
+		repo,
+		location,
+	}
+	if err := g.runGitCmd(args...); err != nil {
+		return fmt.Errorf("failed to run clone: %w", err)
+	}
+	return nil
+}
+
 // Commit all changes.
 func (g *CLIGit) Commit() error {
 	hasChanges, err := g.HasChanges()
@@ -75,6 +96,43 @@ func (g *CLIGit) Commit() error {
 	}
 	if err := g.runGitCmd(args...); err != nil {
 		return fmt.Errorf("failed to run commit: %w", err)
+	}
+	return nil
+}
+
+// SparseClone will take a repo location and clone it into a given folder using sparse clone.
+// This might take a bit longer initially, but is much more performant in case of a mono profiles repository.
+func (g *CLIGit) SparseClone(repo, branch, location, path string) error {
+	// in case the profile data is in root, we have a single profile / repository.
+	// clone everything.
+	if path == "." || path == "" {
+		return g.Clone(repo, branch, location)
+	}
+	// otherwise, we do a sparse checkout to optimize for a single folder.
+	args := []string{
+		"clone",
+		"--branch",
+		branch,
+		"--depth",
+		"1",
+		"--sparse",
+		"--filter",
+		"blob:none",
+		repo,
+		location,
+	}
+	if err := g.runGitCmd(args...); err != nil {
+		return fmt.Errorf("failed to run clone: %w", err)
+	}
+	args = []string{
+		"--git-dir", filepath.Join(location, ".git"),
+		"--work-tree", location,
+		"sparse-checkout",
+		"set",
+		path,
+	}
+	if err := g.runGitCmd(args...); err != nil {
+		return fmt.Errorf("failed to run sparse checkout: %w", err)
 	}
 	return nil
 }

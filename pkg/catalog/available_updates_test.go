@@ -12,7 +12,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
 )
 
-var _ = Describe("Search", func() {
+var _ = Describe("GetAvailableUpdates", func() {
 	var (
 		fakeCatalogClient *fakes.FakeCatalogClient
 	)
@@ -21,42 +21,44 @@ var _ = Describe("Search", func() {
 		fakeCatalogClient = new(fakes.FakeCatalogClient)
 	})
 
-	When("profiles matching the search exist", func() {
-		It("returns all profiles matching the name description of the profile", func() {
+	When("profiles are available with higher version than the installed one", func() {
+		It("returns all those profiles", func() {
 			httpBody := []byte(`
 [
     {
-      "name": "nginx-1",
-      "description": "nginx 1"
+      	"name": "nginx-1",
+      	"description": "nginx 1",
+     	"tag": "v0.0.2"
     },
     {
-      "name": "nginx-2",
-      "description": "nginx 2"
+      	"name": "nginx-1",
+      	"description": "nginx 1",
+	  	"tag": "v0.0.3"
     }
 ]
 		  `)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
-			resp, err := catalog.Search(fakeCatalogClient, "nginx")
+			resp, err := catalog.GetAvailableUpdates(fakeCatalogClient, "catalog", "weaveworks-nginx", "v0.0.1")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeCatalogClient.DoRequestCallCount()).To(Equal(1))
 			path, query := fakeCatalogClient.DoRequestArgsForCall(0)
-			Expect(path).To(Equal("/profiles"))
-			Expect(query).To(Equal(map[string]string{
-				"name": "nginx",
-			}))
+			Expect(path).To(Equal("/profiles/catalog/weaveworks-nginx/v0.0.1/available_updates"))
+			Expect(query).To(BeNil())
 			Expect(resp).To(ConsistOf(
 				profilesv1.ProfileCatalogEntry{
 					ProfileDescription: profilesv1.ProfileDescription{
 						Name:        "nginx-1",
 						Description: "nginx 1",
 					},
+					Tag: "v0.0.2",
 				},
 				profilesv1.ProfileCatalogEntry{
 					ProfileDescription: profilesv1.ProfileDescription{
-						Name:        "nginx-2",
-						Description: "nginx 2",
+						Name:        "nginx-1",
+						Description: "nginx 1",
 					},
+					Tag: "v0.0.3",
 				},
 			))
 		})

@@ -1,50 +1,52 @@
 package catalog
 
 import (
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
+	"strings"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
-	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/profile"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
+
+	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/pctl/pkg/profile"
 )
 
-// InstallConfig defines parameters for the installation call.
-type InstallConfig struct {
-	CatalogClient CatalogClient
-	ProfileBranch string
+// Clients contains a set of clients which are used by install.
+type Clients struct {
+	CatalogClient  CatalogClient
+	ArtifactsMaker profile.ArtifactsMaker
+}
+
+// ProfileConfig contains configuration for profiles ie. catalogName, profilesName, etc.
+type ProfileConfig struct {
 	CatalogName   string
 	ConfigMap     string
 	Namespace     string
 	ProfileName   string
 	SubName       string
 	Version       string
-	Directory     string
+	ProfileBranch string
 	URL           string
 	Path          string
 }
 
-//MakeArtifacts returns artifacts for a subscription
-type MakeArtifacts func(sub profilesv1.ProfileSubscription) ([]profile.Artifact, error)
+// InstallConfig defines parameters for the installation call.
+type InstallConfig struct {
+	Clients
+	ProfileConfig
+}
 
-var makeArtifacts = profile.MakeArtifacts
-
-// Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile subscription
+// Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile installation
 // and its artifacts
 func Install(cfg InstallConfig) error {
 	pSpec, err := getProfileSpec(cfg)
 	if err != nil {
 		return err
 	}
-	subscription := profilesv1.ProfileSubscription{
+	installation := profilesv1.ProfileInstallation{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "ProfileSubscription",
+			Kind:       "ProfileInstallation",
 			APIVersion: "weave.works/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -54,7 +56,7 @@ func Install(cfg InstallConfig) error {
 		Spec: pSpec,
 	}
 	if cfg.ConfigMap != "" {
-		subscription.Spec.ValuesFrom = []helmv2.ValuesReference{
+		installation.Spec.ValuesFrom = []helmv2.ValuesReference{
 			{
 				Kind:      "ConfigMap",
 				Name:      cfg.SubName + "-values",
@@ -62,70 +64,44 @@ func Install(cfg InstallConfig) error {
 			},
 		}
 	}
-	artifacts, err := makeArtifacts(subscription)
-	if err != nil {
-		return fmt.Errorf("failed to generate artifacts: %w", err)
+	if err := cfg.ArtifactsMaker.Make(installation); err != nil {
+		return fmt.Errorf("failed to make artifacts: %w", err)
 	}
-
-	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
-	generateOutput := func(filename string, o runtime.Object) error {
-		f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
-		if err != nil {
-			return err
-		}
-		defer func(f *os.File) {
-			if err := f.Close(); err != nil {
-				fmt.Printf("Failed to properly close file %s\n", f.Name())
-			}
-		}(f)
-		if err := e.Encode(o, f); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	profileRootdir := filepath.Join(cfg.Directory, cfg.ProfileName)
-	artifactsRootDir := filepath.Join(profileRootdir, "artifacts")
-
-	for _, artifact := range artifacts {
-		artifactDir := filepath.Join(artifactsRootDir, artifact.Name)
-		if err = os.MkdirAll(artifactDir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory")
-		}
-		for _, obj := range artifact.Objects {
-			filename := filepath.Join(artifactDir, fmt.Sprintf("%s.%s", obj.GetObjectKind().GroupVersionKind().Kind, "yaml"))
-			if err := generateOutput(filename, obj); err != nil {
-				return err
-			}
-		}
-	}
-
-	return generateOutput(filepath.Join(profileRootdir, "profile.yaml"), &subscription)
+	return nil
 }
 
 // getProfileSpec generates a spec based on configured properties.
-func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileSubscriptionSpec, error) {
+func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileInstallationSpec, error) {
 	if cfg.URL != "" {
-		if cfg.Path == "" {
-			return profilesv1.ProfileSubscriptionSpec{}, errors.New("path must be provided with url")
-		}
-		return profilesv1.ProfileSubscriptionSpec{
-			ProfileURL: cfg.URL,
-			Branch:     cfg.ProfileBranch,
-			Path:       cfg.Path,
+		return profilesv1.ProfileInstallationSpec{
+			Source: &profilesv1.Source{
+				URL:    cfg.URL,
+				Branch: cfg.ProfileBranch,
+				Path:   cfg.Path,
+			},
 		}, nil
 	}
 	p, err := Show(cfg.CatalogClient, cfg.CatalogName, cfg.ProfileName, cfg.Version)
 	if err != nil {
-		return profilesv1.ProfileSubscriptionSpec{}, fmt.Errorf("failed to get profile %q in catalog %q: %w", cfg.ProfileName, cfg.CatalogName, err)
+		return profilesv1.ProfileInstallationSpec{}, fmt.Errorf("failed to get profile %q in catalog %q: %w", cfg.ProfileName, cfg.CatalogName, err)
 	}
 
-	return profilesv1.ProfileSubscriptionSpec{
-		ProfileURL: p.URL,
-		Version:    filepath.Join(p.Name, p.Version),
-		ProfileCatalogDescription: &profilesv1.ProfileCatalogDescription{
+	//tag could be <semver> or <name/semver>
+	path := "."
+	splitTag := strings.Split(p.Tag, "/")
+	if len(splitTag) > 1 {
+		path = splitTag[0]
+	}
+
+	return profilesv1.ProfileInstallationSpec{
+		Source: &profilesv1.Source{
+			URL:  p.URL,
+			Tag:  p.Tag,
+			Path: path,
+		},
+		Catalog: &profilesv1.Catalog{
 			Catalog: cfg.CatalogName,
-			Version: p.Version,
+			Version: profilesv1.GetVersionFromTag(p.Tag),
 			Profile: p.Name,
 		},
 	}, nil

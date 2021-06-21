@@ -27,7 +27,7 @@ var _ = Describe("Show", func() {
 {
 	"name": "nginx-1",
 	"description": "nginx 1",
-	"version": "0.0.1",
+	"tag": "0.0.1",
 	"catalog": "weaveworks (https://github.com/weaveworks/profiles)",
 	"url": "https://github.com/weaveworks/nginx-profile",
 	"prerequisites": ["Kubernetes 1.18+"],
@@ -43,14 +43,16 @@ var _ = Describe("Show", func() {
 			Expect(path).To(Equal("/profiles/foo/weaveworks-nginx"))
 			Expect(query).To(BeEmpty())
 			Expect(resp).To(Equal(
-				profilesv1.ProfileDescription{
-					Name:          "nginx-1",
-					Description:   "nginx 1",
-					Version:       "0.0.1",
+				profilesv1.ProfileCatalogEntry{
+					ProfileDescription: profilesv1.ProfileDescription{
+						Name:          "nginx-1",
+						Description:   "nginx 1",
+						Prerequisites: []string{"Kubernetes 1.18+"},
+						Maintainer:    "WeaveWorks <gitops@weave.works>",
+					},
+					Tag:           "0.0.1",
 					CatalogSource: "weaveworks (https://github.com/weaveworks/profiles)",
 					URL:           "https://github.com/weaveworks/nginx-profile",
-					Prerequisites: []string{"Kubernetes 1.18+"},
-					Maintainer:    "WeaveWorks <gitops@weave.works>",
 				},
 			))
 		})
@@ -62,7 +64,7 @@ var _ = Describe("Show", func() {
 {
 	"name": "nginx-1",
 	"description": "nginx 1",
-	"version": "v0.1.0",
+	"tag": "v0.1.0",
 	"catalog": "weaveworks (https://github.com/weaveworks/profiles)",
 	"url": "https://github.com/weaveworks/profile-examples",
 	"prerequisites": ["Kubernetes 1.18+"],
@@ -78,14 +80,16 @@ var _ = Describe("Show", func() {
 			Expect(path).To(Equal("/profiles/foo/weaveworks-nginx/v0.1.0"))
 			Expect(query).To(BeEmpty())
 			Expect(resp).To(Equal(
-				profilesv1.ProfileDescription{
-					Name:          "nginx-1",
-					Description:   "nginx 1",
-					Version:       "v0.1.0",
+				profilesv1.ProfileCatalogEntry{
+					ProfileDescription: profilesv1.ProfileDescription{
+						Name:          "nginx-1",
+						Description:   "nginx 1",
+						Prerequisites: []string{"Kubernetes 1.18+"},
+						Maintainer:    "WeaveWorks <gitops@weave.works>",
+					},
+					Tag:           "v0.1.0",
 					CatalogSource: "weaveworks (https://github.com/weaveworks/profiles)",
 					URL:           "https://github.com/weaveworks/profile-examples",
-					Prerequisites: []string{"Kubernetes 1.18+"},
-					Maintainer:    "WeaveWorks <gitops@weave.works>",
 				},
 			))
 		})

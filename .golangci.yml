@@ -2,11 +2,7 @@
 run:
   skip-dirs:
     - fakes
-linters-settings:
-  golint:
-    min-confidence: 0.9
 linters:
   enable:
-    - golint
     - gofmt
     - goimports

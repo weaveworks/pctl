@@ -1,4 +1,4 @@
-package subscription
+package installation
 
 import (
 	"context"
@@ -6,13 +6,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Manager manages getting and list profile subscriptions
+// Manager manages getting and list profile installations
 type Manager struct {
 	kClient client.Client
 	ctx     context.Context
 }
 
-// NewManager returns a SubscriptionManager
+// NewManager returns a installationManager
 func NewManager(kClient client.Client) *Manager {
 	return &Manager{
 		kClient: kClient,

@@ -70,13 +70,13 @@ func showCmd() *cli.Command {
 	}
 }
 
-func showDataFunc(profile profilesv1.ProfileDescription) func() interface{} {
+func showDataFunc(profile profilesv1.ProfileCatalogEntry) func() interface{} {
 	return func() interface{} {
 		return formatter.TableContents{
 			Data: [][]string{
 				{"Catalog", profile.CatalogSource},
 				{"Name", profile.Name},
-				{"Version", profile.Version},
+				{"Version", profilesv1.GetVersionFromTag(profile.Tag)},
 				{"Description", profile.Description},
 				{"URL", profile.URL},
 				{"Maintainer", profile.Maintainer},

@@ -148,14 +148,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: profilesubscriptions.weave.works
+  name: profileinstallations.weave.works
 spec:
   group: weave.works
   names:
-    kind: ProfileSubscription
-    listKind: ProfileSubscriptionList
-    plural: profilesubscriptions
-    singular: profilesubscription
+    kind: Profileinstallation
+    listKind: ProfileinstallationList
+    plural: profileinstallations
+    singular: profileinstallation
   scope: Namespaced
   versions:
     - additionalPrinterColumns:
@@ -171,7 +171,7 @@ spec:
       name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: ProfileSubscription is the Schema for the profilesubscriptions API
+          description: Profileinstallation is the Schema for the profilesubscriptions API
           properties:
             apiVersion:
               description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
@@ -182,7 +182,7 @@ spec:
             metadata:
               type: object
             spec:
-              description: ProfileSubscriptionSpec defines the desired state of a ProfileSubscription
+              description: ProfileinstallationSpec defines the desired state of a ProfileSubscription
               properties:
                 branch:
                   default: main
@@ -226,10 +226,10 @@ spec:
                   type: array
               type: object
             status:
-              description: ProfileSubscriptionStatus defines the observed state of ProfileSubscription
+              description: ProfileinstallationStatus defines the observed state of ProfileSubscription
               properties:
                 conditions:
-                  description: Conditions holds the conditions for the ProfileSubscription
+                  description: Conditions holds the conditions for the Profileinstallation
                   items:
                     description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, type FooStatus struct{     // Represents the observations of a foo's current state.     // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\"     // +patchMergeKey=type     // +patchStrategy=merge     // +listType=map     // +listMapKey=type     Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n     // other fields }"
                     properties:
@@ -420,7 +420,7 @@ rules:
   - apiGroups:
       - weave.works
     resources:
-      - profilesubscriptions
+      - profileinstallations
     verbs:
       - create
       - delete
@@ -432,13 +432,13 @@ rules:
   - apiGroups:
       - weave.works
     resources:
-      - profilesubscriptions/finalizers
+      - profileinstallations/finalizers
     verbs:
       - update
   - apiGroups:
       - weave.works
     resources:
-      - profilesubscriptions/status
+      - profileinstallations/status
     verbs:
       - get
       - patch

@@ -65,7 +65,7 @@ func searchCmd() *cli.Command {
 	}
 }
 
-func searchDataFunc(profiles []profilesv1.ProfileDescription) func() interface{} {
+func searchDataFunc(profiles []profilesv1.ProfileCatalogEntry) func() interface{} {
 	return func() interface{} {
 		tc := formatter.TableContents{
 			Headers: []string{"Catalog/Profile", "Version", "Description"},
@@ -73,7 +73,7 @@ func searchDataFunc(profiles []profilesv1.ProfileDescription) func() interface{}
 		for _, profile := range profiles {
 			tc.Data = append(tc.Data, []string{
 				fmt.Sprintf("%s/%s", profile.CatalogSource, profile.Name),
-				profile.Version,
+				profilesv1.GetVersionFromTag(profile.Tag),
 				profile.Description,
 			})
 		}
