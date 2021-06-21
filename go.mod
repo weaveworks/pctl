@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/fluxcd/helm-controller/api v0.11.0
-	github.com/fluxcd/kustomize-controller/api v0.12.2
+	github.com/fluxcd/kustomize-controller/api v0.13.0
 	github.com/fluxcd/source-controller/api v0.14.0
 	github.com/google/uuid v1.2.0
 	github.com/jenkins-x/go-scm v1.9.2
