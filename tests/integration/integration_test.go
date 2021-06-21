@@ -679,7 +679,7 @@ status: {}
 			_ = kClient.Delete(context.Background(), &nsp)
 		})
 		It("generates valid artifacts to the local directory", func() {
-			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--config-secret", "values.yaml", "nginx-catalog/nginx/v2.0.0")
+			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--config-secret", "values.yaml", "nginx-catalog/nginx/v2.0.1")
 			cmd.Dir = temp
 			session, err := cmd.CombinedOutput()
 			if err != nil {
@@ -699,10 +699,10 @@ status: {}
 
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
-				"artifacts/bitnami-nginx/ConfigMap.yaml",
-				"profile-installation.yaml",
-				"artifacts/bitnami-nginx/HelmRelease.yaml",
-				"artifacts/bitnami-nginx/HelmRepository.yaml",
+				"nginx/artifacts/bitnami-nginx/ConfigMap.yaml",
+				"nginx/artifacts/bitnami-nginx/HelmRelease.yaml",
+				"nginx/artifacts/bitnami-nginx/HelmRepository.yaml",
+				"nginx/profile-installation.yaml",
 			))
 
 			filename := filepath.Join(temp, "nginx", "nginx", "profile-installation.yaml")
@@ -718,10 +718,10 @@ spec:
   catalog:
     catalog: nginx-catalog
     profile: nginx
-    version: v2.0.0
+    version: v2.0.1
   source:
     path: .
-    tag: v2.0.0
+    tag: v2.0.1
     url: https://github.com/weaveworks/nginx-profile
   valuesFrom:
   - kind: ConfigMap
