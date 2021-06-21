@@ -33,8 +33,6 @@ func searchCmd() *cli.Command {
 		},
 		Action: func(c *cli.Context) error {
 			var profiles []profilesv1.ProfileCatalogEntry
-			outFormat := c.String("output")
-
 			if c.Bool("all") {
 				catalogClient, err := getClient(c)
 				if err != nil {
@@ -57,12 +55,8 @@ func searchCmd() *cli.Command {
 				}
 			}
 
-			outErr := outputFormatter(profiles, outFormat)
-			if outErr != nil {
-				return outErr
-			}
-
-			return nil
+			outFormat := c.String("output")
+			return formatOutput(profiles, outFormat)
 		},
 	}
 }
@@ -83,7 +77,7 @@ func searchDataFunc(profiles []profilesv1.ProfileCatalogEntry) func() interface{
 	}
 }
 
-func outputFormatter(profiles []profilesv1.ProfileCatalogEntry, outFormat string) error {
+func formatOutput(profiles []profilesv1.ProfileCatalogEntry, outFormat string) error {
 	if len(profiles) == 0 {
 		fmt.Printf("No profiles found")
 		return nil

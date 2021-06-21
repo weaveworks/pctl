@@ -101,11 +101,7 @@ func getClient(c *cli.Context) (*client.Client, error) {
 		ServicePort:    c.String("catalog-service-port"),
 	}
 
-	client, err := client.NewFromOptions(options)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
+	return client.NewFromOptions(options)
 }
 
 func buildK8sClient(kubeconfig string) (runtimeclient.Client, error) {
