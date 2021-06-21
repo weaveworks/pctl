@@ -42,6 +42,16 @@ nginx-catalog-1/weaveworks-nginx        0.0.1   This installs nginx.
 nginx-catalog-1/some-other-nginx        1.0.1   This installs some other nginx.
 ```
 
+pctl search also lists all available profiles with `--all` option, example:
+```sh
+$ pctl search --all
+CATALOG/PROFILE                                   VERSION DESCRIPTION
+nginx-catalog-1/weaveworks-nginx                  0.0.1   This installs nginx.
+nginx-catalog-1/bitnami-nginx                     1.0.1   This installs bitnami nginx.
+nginx-catalog-1/some-other-nginx                  1.0.1   This installs some other nginx.
+prometheus-catalog-1/weaveworks-prometheus        0.0.4   This installs prometheus.
+```
+
 ### Show
 
 pctl can be used to get more information about a specific profile, example:
