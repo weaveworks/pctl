@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/otiai10/copy"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
@@ -69,9 +68,6 @@ var _ = Describe("Profile", func() {
 					URL:    profileURL,
 					Branch: branch,
 					Path:   profileName1,
-				},
-				Values: &apiextensionsv1.JSON{
-					Raw: []byte(`{"replicaCount": 3,"service":{"port":8081}}`),
 				},
 				ValuesFrom: []helmv2.ValuesReference{
 					{
@@ -207,10 +203,6 @@ spec:
     branch: main
     path: weaveworks-nginx
     url: https://github.com/org/repo-name
-  values:
-    replicaCount: 3
-    service:
-      port: 8081
   valuesFrom:
   - kind: Secret
     name: nginx-values
@@ -237,10 +229,6 @@ spec:
         name: git-repo-name
         namespace: git-repo-namespace
   interval: 0s
-  values:
-    replicaCount: 3
-    service:
-      port: 8081
   valuesFrom:
   - kind: Secret
     name: nginx-values
@@ -291,10 +279,6 @@ spec:
         namespace: default
       version: 11.1.6
   interval: 0s
-  values:
-    replicaCount: 3
-    service:
-      port: 8081
   valuesFrom:
   - kind: Secret
     name: nginx-values
@@ -314,6 +298,83 @@ spec:
   url: https://charts.bitnami.com/bitnami
 status: {}
 `))
+			})
+		})
+
+		When("the Helm chart artifact has default values set", func() {
+			It("will apply those values to the profile installation", func() {
+				pDef.Spec.Artifacts[2].Chart.DefaultValues = `{"foo": "bar", "service": {"port": 1234}}`
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGitClient,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
+				Expect(maker.Make(pSub)).To(Succeed())
+
+				files := make(map[string]string)
+				err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+					if !info.IsDir() {
+						files[fmt.Sprintf("%s/%s", filepath.Base(filepath.Dir(path)), filepath.Base(path))] = path
+					}
+					return nil
+				})
+				Expect(err).NotTo(HaveOccurred())
+				consistsOf := []string{
+					filepath.Join(rootDir, "artifacts", "bitnami-nginx", "nginx-server", "HelmRelease.yaml"),
+					filepath.Join(rootDir, "artifacts", "bitnami-nginx", "nginx-server", "nginx", "chart", "Chart.yaml"),
+					filepath.Join(rootDir, "artifacts", "dokuwiki", "ConfigMap.yaml"),
+					filepath.Join(rootDir, "artifacts", "dokuwiki", "HelmRelease.yaml"),
+					filepath.Join(rootDir, "artifacts", "nginx-deployment", "Kustomization.yaml"),
+					filepath.Join(rootDir, "artifacts", "nginx-deployment", "nginx", "deployment", "deployment.yaml"),
+					filepath.Join(rootDir, "profile-installation.yaml"),
+					filepath.Join(rootDir, "artifacts", "dokuwiki", "HelmRepository.yaml"),
+				}
+				Expect(files).To(ConsistOf(consistsOf))
+
+				By("generating the default values configmap", func() {
+					content, err := ioutil.ReadFile(files["dokuwiki/ConfigMap.yaml"])
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(content)).To(Equal(`apiVersion: v1
+data:
+  default-values.yaml: '{"foo": "bar", "service": {"port": 1234}}'
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: mySub-dokuwiki-defaultvalues
+  namespace: default
+`))
+				})
+
+				By("adding that configmap to the start of the ValuesFrom array of the helm release", func() {
+					content, err := ioutil.ReadFile(files["dokuwiki/HelmRelease.yaml"])
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(content)).To(Equal(`apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  creationTimestamp: null
+  name: mySub-weaveworks-nginx-dokuwiki
+  namespace: default
+spec:
+  chart:
+    spec:
+      chart: dokuwiki
+      sourceRef:
+        kind: HelmRepository
+        name: mySub-repo-name-dokuwiki
+        namespace: default
+      version: 11.1.6
+  interval: 0s
+  valuesFrom:
+  - kind: ConfigMap
+    name: mySub-dokuwiki-defaultvalues
+    valuesKey: default-values.yaml
+  - kind: Secret
+    name: nginx-values
+    optional: true
+status: {}
+`))
+				})
 			})
 		})
 

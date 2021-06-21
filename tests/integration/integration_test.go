@@ -699,9 +699,10 @@ status: {}
 
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
-				"nginx/profile-installation.yaml",
-				"nginx/artifacts/bitnami-nginx/HelmRelease.yaml",
-				"nginx/artifacts/bitnami-nginx/HelmRepository.yaml",
+				"artifacts/bitnami-nginx/ConfigMap.yaml",
+				"profile-installation.yaml",
+				"artifacts/bitnami-nginx/HelmRelease.yaml",
+				"artifacts/bitnami-nginx/HelmRepository.yaml",
 			))
 
 			filename := filepath.Join(temp, "nginx", "nginx", "profile-installation.yaml")
