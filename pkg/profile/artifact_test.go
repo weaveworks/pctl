@@ -9,52 +9,29 @@ import (
 	"strconv"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
+	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/otiai10/copy"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/weaveworks/pctl/pkg/git"
 	fakegit "github.com/weaveworks/pctl/pkg/git/fakes"
 	"github.com/weaveworks/pctl/pkg/profile"
-	"github.com/weaveworks/pctl/pkg/profile/fakes"
-)
-
-const (
-	branch               = "main"
-	chartName1           = "nginx-server"
-	gitRepoName          = "git-repo-name"
-	gitRepoNamespace     = "git-repo-namespace"
-	helmChartChart1      = "helmChartChartName1"
-	helmChartName1       = "helmChartArtifactName1"
-	helmChartURL1        = "https://org.github.io/chart"
-	helmChartVersion1    = "8.8.1"
-	installationName     = "mySub"
-	namespace            = "default"
-	profileName1         = "weaveworks-nginx"
-	profileName2         = "bitnami-nginx"
-	profileSubAPIVersion = "weave.works/v1alpha1"
-	profileSubKind       = "ProfileInstallation"
-	profileURL           = "https://github.com/org/repo-name"
-)
-
-var (
-	profileTypeMeta = metav1.TypeMeta{
-		Kind:       profileSubKind,
-		APIVersion: profileSubAPIVersion,
-	}
+	"github.com/weaveworks/pctl/pkg/profile/artifact"
 )
 
 var _ = Describe("Profile", func() {
 	var (
-		pSub          profilesv1.ProfileInstallation
-		pDef          profilesv1.ProfileDefinition
-		pNestedDef    profilesv1.ProfileDefinition
-		pNestedDefURL = "https://github.com/org/repo-name-nested"
-		fakeGitClient *fakegit.FakeGit
-		rootDir       string
+		pSub                   profilesv1.ProfileInstallation
+		pDef                   profilesv1.ProfileDefinition
+		fakeGitClient          *fakegit.FakeGit
+		rootDir                string
+		gitRepositoryNamespace string
+		gitRepositoryName      string
 	)
 
 	BeforeEach(func() {
@@ -82,75 +59,9 @@ var _ = Describe("Profile", func() {
 				},
 			},
 		}
-
-		pNestedDef = profilesv1.ProfileDefinition{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: profileName2,
-			},
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Profile",
-				APIVersion: "packages.weave.works.io/profilesv1",
-			},
-			Spec: profilesv1.ProfileDefinitionSpec{
-				ProfileDescription: profilesv1.ProfileDescription{
-					Description: "foo",
-				},
-				Artifacts: []profilesv1.Artifact{
-					{
-						Name: chartName1,
-						Chart: &profilesv1.Chart{
-							Path: "nginx/chart",
-						},
-					},
-				},
-			},
-		}
-
-		pDef = profilesv1.ProfileDefinition{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: profileName1,
-			},
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Profile",
-				APIVersion: "packages.weave.works/profilesv1",
-			},
-			Spec: profilesv1.ProfileDefinitionSpec{
-				ProfileDescription: profilesv1.ProfileDescription{
-					Description: "foo",
-				},
-				Artifacts: []profilesv1.Artifact{
-					{
-						Name: profileName2,
-						Profile: &profilesv1.Profile{
-							Source: &profilesv1.Source{
-								URL: pNestedDefURL,
-								Tag: "bitnami-nginx/v0.0.1",
-							},
-						},
-					},
-					{
-						Name: "nginx-deployment",
-						Kustomize: &profilesv1.Kustomize{
-							Path: "nginx/deployment",
-						},
-					},
-					{
-						Name: "dokuwiki",
-						Chart: &profilesv1.Chart{
-							URL:     "https://charts.bitnami.com/bitnami",
-							Name:    "dokuwiki",
-							Version: "11.1.6",
-						},
-					},
-				},
-			},
-		}
 		fakeGitClient = &fakegit.FakeGit{}
 		profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
-			if path == "weaveworks-nginx" {
-				return pDef, nil
-			}
-			return pNestedDef, nil
+			return pDef, nil
 		})
 		fakeGitClient.SparseCloneStub = func(url string, branch string, dir string, p string) error {
 			from := filepath.Join("testdata", "simple_with_nested", p)
@@ -161,6 +72,84 @@ var _ = Describe("Profile", func() {
 		var err error
 		rootDir, err = ioutil.TempDir("", "test_make_artifacts")
 		Expect(err).NotTo(HaveOccurred())
+		gitRepositoryName = "git-repo-name"
+		gitRepositoryNamespace = "git-repo-namespace"
+		artifacts := []artifact.Artifact{
+			{
+				Objects: []runtime.Object{&helmv2.HelmRelease{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "HelmRelease",
+						APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-profile-weaveworks-nginx-dokuwiki",
+						Namespace: "default",
+					},
+					Spec: helmv2.HelmReleaseSpec{
+						Chart: helmv2.HelmChartTemplate{
+							Spec: helmv2.HelmChartTemplateSpec{
+								Chart:   "dokuwiki",
+								Version: "11.1.6",
+								SourceRef: helmv2.CrossNamespaceObjectReference{
+									Kind:      "HelmRepository",
+									Name:      "test-profile-profiles-examples-dokuwiki",
+									Namespace: "default",
+								},
+							},
+						},
+						Values: &apiextensionsv1.JSON{
+							Raw: []byte(`{"replicaCount": 3,"service":{"port":8081}}`),
+						},
+						ValuesFrom: []helmv2.ValuesReference{
+							{
+								Name:     "nginx-values",
+								Kind:     "Secret",
+								Optional: true,
+							},
+						},
+					},
+				}},
+				Name:         "test-artifact-1",
+				RepoURL:      "https://repo-url.com",
+				PathsToCopy:  []string{"nginx/chart"},
+				SparseFolder: "bitnami-nginx",
+				Branch:       "",
+			},
+			{
+				Objects: []runtime.Object{&kustomizev1.Kustomization{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Kustomization",
+						APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-profile-weaveworks-nginx-kustomize",
+						Namespace: "default",
+					},
+					Spec: kustomizev1.KustomizationSpec{
+						Path: "root-dir/artifacts/kustomize/nginx/deployment",
+						SourceRef: kustomizev1.CrossNamespaceSourceReference{
+							Kind:      "GitRepository",
+							Namespace: gitRepositoryNamespace,
+							Name:      gitRepositoryName,
+						},
+						Interval:        metav1.Duration{Duration: 300000000000},
+						Prune:           true,
+						TargetNamespace: "default",
+					},
+				}},
+				Name:         "test-artifact-2",
+				RepoURL:      "https://repo-url.com",
+				PathsToCopy:  []string{"nginx/deployment"},
+				SparseFolder: "weaveworks-nginx",
+				Branch:       "",
+			},
+		}
+		profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
+			return artifacts, nil
+		})
+	})
+	AfterEach(func() {
+		Expect(os.RemoveAll(rootDir)).To(Succeed())
 	})
 
 	Context("Make", func() {
@@ -183,12 +172,10 @@ var _ = Describe("Profile", func() {
 			Expect(err).NotTo(HaveOccurred())
 			consistsOf := []string{
 				filepath.Join(rootDir, "profile-installation.yaml"),
-				filepath.Join(rootDir, "artifacts", "nginx-deployment", "Kustomization.yaml"),
-				filepath.Join(rootDir, "artifacts", "nginx-deployment", "nginx", "deployment", "deployment.yaml"),
-				filepath.Join(rootDir, "artifacts", "bitnami-nginx", "nginx-server", "HelmRelease.yaml"),
-				filepath.Join(rootDir, "artifacts", "bitnami-nginx", "nginx-server", "nginx", "chart.yaml"),
-				filepath.Join(rootDir, "artifacts", "dokuwiki", "HelmRelease.yaml"),
-				filepath.Join(rootDir, "artifacts", "dokuwiki", "HelmRepository.yaml"),
+				filepath.Join(rootDir, "artifacts", "test-artifact-1", "HelmRelease.yaml"),
+				filepath.Join(rootDir, "artifacts", "test-artifact-1", "nginx", "chart.yaml"),
+				filepath.Join(rootDir, "artifacts", "test-artifact-2", "Kustomization.yaml"),
+				filepath.Join(rootDir, "artifacts", "test-artifact-2", "nginx", "deployment", "deployment.yaml"),
 			}
 			Expect(files).To(ConsistOf(consistsOf))
 
@@ -219,49 +206,18 @@ status: {}
 `))
 			})
 
-			By("generating the nested profile artifact", func() {
-				content, err := ioutil.ReadFile(files["nginx-server/HelmRelease.yaml"])
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: helm.toolkit.fluxcd.io/v2beta1
-kind: HelmRelease
-metadata:
-  creationTimestamp: null
-  name: mySub-bitnami-nginx-nginx-server
-  namespace: default
-spec:
-  chart:
-    spec:
-      chart: %s/artifacts/bitnami-nginx/nginx-server/nginx/chart
-      sourceRef:
-        kind: GitRepository
-        name: git-repo-name
-        namespace: git-repo-namespace
-  interval: 0s
-  values:
-    replicaCount: 3
-    service:
-      port: 8081
-  valuesFrom:
-  - kind: Secret
-    name: nginx-values
-    optional: true
-status: {}
-`, rootDir)))
-
-			})
-
 			By("generating the path based kustomization artifact", func() {
-				content, err := ioutil.ReadFile(files["nginx-deployment/Kustomization.yaml"])
+				content, err := ioutil.ReadFile(files["test-artifact-2/Kustomization.yaml"])
 				Expect(err).ToNot(HaveOccurred())
-				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+				Expect(string(content)).To(Equal(`apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
 kind: Kustomization
 metadata:
   creationTimestamp: null
-  name: mySub-weaveworks-nginx-nginx-deployment
+  name: test-profile-weaveworks-nginx-kustomize
   namespace: default
 spec:
   interval: 5m0s
-  path: %s/artifacts/nginx-deployment/nginx/deployment
+  path: root-dir/artifacts/kustomize/nginx/deployment
   prune: true
   sourceRef:
     kind: GitRepository
@@ -269,17 +225,17 @@ spec:
     namespace: git-repo-namespace
   targetNamespace: default
 status: {}
-`, rootDir)))
+`))
 			})
 
 			By("generating a remote helm chart", func() {
-				content, err := ioutil.ReadFile(files["dokuwiki/HelmRelease.yaml"])
+				content, err := ioutil.ReadFile(files["test-artifact-1/HelmRelease.yaml"])
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(content)).To(Equal(`apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
   creationTimestamp: null
-  name: mySub-weaveworks-nginx-dokuwiki
+  name: test-profile-weaveworks-nginx-dokuwiki
   namespace: default
 spec:
   chart:
@@ -287,7 +243,7 @@ spec:
       chart: dokuwiki
       sourceRef:
         kind: HelmRepository
-        name: mySub-repo-name-dokuwiki
+        name: test-profile-profiles-examples-dokuwiki
         namespace: default
       version: 11.1.6
   interval: 0s
@@ -301,42 +257,13 @@ spec:
     optional: true
 status: {}
 `))
-				content, err = ioutil.ReadFile(files["dokuwiki/HelmRepository.yaml"])
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(content)).To(Equal(`apiVersion: source.toolkit.fluxcd.io/v1beta1
-kind: HelmRepository
-metadata:
-  creationTimestamp: null
-  name: mySub-repo-name-dokuwiki
-  namespace: default
-spec:
-  interval: 0s
-  url: https://charts.bitnami.com/bitnami
-status: {}
-`))
 			})
 		})
-
-		When("fetching the nested profile definition fails", func() {
+		When("the profiles maker fails", func() {
 			It("returns an error", func() {
-				profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
-					return profilesv1.ProfileDefinition{}, fmt.Errorf("foo")
+				profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
+					return nil, errors.New("nope")
 				})
-				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
-					GitClient:        fakeGitClient,
-					RootDir:          rootDir,
-					GitRepoNamespace: gitRepoNamespace,
-					GitRepoName:      gitRepoName,
-				})
-				err := maker.Make(pSub)
-				Expect(err).To(MatchError(ContainSubstring("failed to get profile definition: foo")))
-			})
-		})
-
-		When("the builder fails", func() {
-			It("returns an error", func() {
-				fakeBuilder := &fakes.FakeBuilder{}
-				fakeBuilder.BuildReturns(nil, errors.New("nope"))
 				maker := profile.ProfilesArtifactsMaker{
 					MakerConfig: profile.MakerConfig{
 						GitClient:        fakeGitClient,
@@ -344,119 +271,59 @@ status: {}
 						GitRepoNamespace: gitRepoNamespace,
 						GitRepoName:      gitRepoName,
 					},
-					Builders: map[int]profile.Builder{
-						profile.KUSTOMIZE: fakeBuilder,
-						profile.CHART:     fakeBuilder,
-					},
 				}
 				err := maker.Make(pSub)
 				Expect(err).To(MatchError("failed to build artifact: nope"))
 			})
 		})
 
-		When("configured with an invalid artifact", func() {
-			When("the Kind of artifact is unknown", func() {
-				BeforeEach(func() {
-					pDef.Spec.Artifacts[0] = profilesv1.Artifact{}
-				})
-
-				It("errors", func() {
-					maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
-						GitClient:        fakeGitClient,
-						RootDir:          rootDir,
-						GitRepoNamespace: gitRepoNamespace,
-						GitRepoName:      gitRepoName,
-					})
-					err := maker.Make(pSub)
-					Expect(err).To(MatchError(ContainSubstring("no artifact set")))
-				})
-			})
-			When("the nested profile is invalid", func() {
-				BeforeEach(func() {
-					pNestedDef.Spec.Artifacts[0] = profilesv1.Artifact{}
-				})
-
-				It("errors", func() {
-					maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
-						GitClient:        fakeGitClient,
-						RootDir:          rootDir,
-						GitRepoNamespace: gitRepoNamespace,
-						GitRepoName:      gitRepoName,
-					})
-					err := maker.Make(pSub)
-					Expect(err).To(MatchError(ContainSubstring("no artifact set")))
-				})
-			})
-
-			When("profile artifact pointing to itself", func() {
-				var (
-					pNestedDef2    profilesv1.ProfileDefinition
-					pNestedDef2URL = "example.com/nested"
-				)
-				BeforeEach(func() {
-					pNestedDef2 = profilesv1.ProfileDefinition{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: profileName2,
-						},
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Profile",
-							APIVersion: "packages.weave.works/profilesv1",
-						},
-						Spec: profilesv1.ProfileDefinitionSpec{
-							ProfileDescription: profilesv1.ProfileDescription{
-								Description: "foo",
+		When("there is a single profile repository", func() {
+			It("creates files for all artifacts", func() {
+				artifacts := []artifact.Artifact{
+					{
+						Objects: []runtime.Object{&helmv2.HelmRelease{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "HelmRelease",
+								APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
 							},
-							Artifacts: []profilesv1.Artifact{
-								{
-									Name: "recursive",
-									Profile: &profilesv1.Profile{
-										Source: &profilesv1.Source{
-											URL:    profileURL,
-											Branch: branch,
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test-profile-weaveworks-nginx-dokuwiki",
+								Namespace: "default",
+							},
+							Spec: helmv2.HelmReleaseSpec{
+								Chart: helmv2.HelmChartTemplate{
+									Spec: helmv2.HelmChartTemplateSpec{
+										Chart:   "dokuwiki",
+										Version: "11.1.6",
+										SourceRef: helmv2.CrossNamespaceObjectReference{
+											Kind:      "HelmRepository",
+											Name:      "test-profile-profiles-examples-dokuwiki",
+											Namespace: "default",
 										},
 									},
 								},
-							},
-						},
-					}
-					pNestedDef.Spec.Artifacts = []profilesv1.Artifact{
-						{
-							Name: "recursive",
-							Profile: &profilesv1.Profile{
-								Source: &profilesv1.Source{
-									URL:    pNestedDef2URL,
-									Branch: branch,
+								Values: &apiextensionsv1.JSON{
+									Raw: []byte(`{"replicaCount": 3,"service":{"port":8081}}`),
+								},
+								ValuesFrom: []helmv2.ValuesReference{
+									{
+										Name:     "nginx-values",
+										Kind:     "Secret",
+										Optional: true,
+									},
 								},
 							},
-						},
-					}
-
-					profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
-						if repoURL == profileURL {
-							return pDef, nil
-						}
-						if repoURL == pNestedDef2URL {
-							return pNestedDef2, nil
-						}
-						return pNestedDef, nil
-					})
+						}},
+						Name:         "test-artifact-1",
+						RepoURL:      "https://repo-url.com",
+						PathsToCopy:  []string{"nginx/chart"},
+						SparseFolder: "bitnami-nginx",
+						Branch:       "",
+					},
+				}
+				profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
+					return artifacts, nil
 				})
-
-				It("errors", func() {
-					maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
-						GitClient:        fakeGitClient,
-						RootDir:          rootDir,
-						GitRepoNamespace: gitRepoNamespace,
-						GitRepoName:      gitRepoName,
-					})
-					err := maker.Make(pSub)
-					Expect(err).To(MatchError(ContainSubstring("recursive artifact detected: profile example.com/nested on branch main contains an artifact that points recursively back at itself")))
-				})
-			})
-		})
-
-		When("there is a single profile repository", func() {
-			It("creates files for all artifacts", func() {
 				pSub := profilesv1.ProfileInstallation{
 					TypeMeta: profileTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -519,13 +386,10 @@ status: {}
 				Expect(err).NotTo(HaveOccurred())
 
 				profileFile := filepath.Join(tempDir, "generate-test", "profile-installation.yaml")
-				artifactHelmRelease := filepath.Join(tempDir, "generate-test", "artifacts", "bitnami-nginx", "HelmRelease.yaml")
-				artifactHelmRepository := filepath.Join(tempDir, "generate-test", "artifacts", "bitnami-nginx", "HelmRepository.yaml")
-				Expect(files).To(ConsistOf(artifactHelmRepository, artifactHelmRelease, profileFile))
+				artifactHelmRelease := filepath.Join(tempDir, "generate-test", "artifacts", "test-artifact-1", "HelmRelease.yaml")
 
 				Expect(hasCorrectFilePerms(profileFile)).To(BeTrue())
 				Expect(hasCorrectFilePerms(artifactHelmRelease)).To(BeTrue())
-				Expect(hasCorrectFilePerms(artifactHelmRepository)).To(BeTrue())
 
 				content, err := ioutil.ReadFile(profileFile)
 				Expect(err).NotTo(HaveOccurred())
@@ -548,18 +412,26 @@ status: {}
 kind: HelmRelease
 metadata:
   creationTimestamp: null
-  name: mySub-nginx-bitnami-nginx
+  name: test-profile-weaveworks-nginx-dokuwiki
   namespace: default
 spec:
   chart:
     spec:
-      chart: nginx
+      chart: dokuwiki
       sourceRef:
         kind: HelmRepository
-        name: mySub-nginx-profile-nginx
+        name: test-profile-profiles-examples-dokuwiki
         namespace: default
-      version: 8.9.1
+      version: 11.1.6
   interval: 0s
+  values:
+    replicaCount: 3
+    service:
+      port: 8081
+  valuesFrom:
+  - kind: Secret
+    name: nginx-values
+    optional: true
 status: {}
 `))
 			})

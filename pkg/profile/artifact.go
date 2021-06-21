@@ -1,7 +1,6 @@
 package profile
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -70,9 +69,9 @@ func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
 
 // Make generates artifacts without owners for manual applying to a personal cluster.
 func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallation) error {
-	artifacts, err := pa.makeArtifacts(installation)
+	artifacts, err := profilesArtifactsMaker(pa, installation)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to build artifact: %w", err)
 	}
 	profileRootdir := filepath.Join(pa.RootDir, pa.ProfileName)
 	artifactsRootDir := filepath.Join(profileRootdir, "artifacts")
@@ -95,56 +94,6 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 	}
 
 	return pa.generateOutput(filepath.Join(profileRootdir, "profile-installation.yaml"), &installation)
-}
-
-// makeArtifacts creates artifacts. This is a separate function from the main Make function in order to handle
-// nested profiles recursively.
-func (pa *ProfilesArtifactsMaker) makeArtifacts(installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
-	path := installation.Spec.Source.Path
-	branchOrTag := installation.Spec.Source.Tag
-	if installation.Spec.Source.Tag == "" {
-		branchOrTag = installation.Spec.Source.Branch
-	}
-	definition, err := getProfileDefinition(installation.Spec.Source.URL, branchOrTag, path, pa.GitClient)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get profile definition: %w", err)
-	}
-	var artifacts []artifact.Artifact
-
-	for _, artifact := range definition.Spec.Artifacts {
-		if pa.nestedName != "" {
-			artifact.Name = filepath.Join(pa.nestedName, artifact.Name)
-		}
-
-		var builder Builder
-		if artifact.Profile != nil {
-			profileRepoName := profileRepo(installation)
-			if containsKey(pa.profileRepos, profileRepoName) {
-				return nil, fmt.Errorf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", artifact.Profile.Source.URL, artifact.Profile.Source.Branch)
-			}
-			pa.profileRepos = append(pa.profileRepos, profileRepoName)
-			nestedArtifacts, err := pa.createNestedProfileArtifacts(artifact, installation)
-			if err != nil {
-				return nil, err
-			}
-			artifacts = append(artifacts, nestedArtifacts...)
-			pa.nestedName = ""
-			pa.profileRepos = nil
-			continue
-		} else if artifact.Kustomize != nil {
-			builder = pa.Builders[KUSTOMIZE]
-		} else if artifact.Chart != nil {
-			builder = pa.Builders[CHART]
-		} else {
-			return nil, errors.New("no artifact set")
-		}
-		arts, err := builder.Build(artifact, installation, definition)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build artifact: %w", err)
-		}
-		artifacts = append(artifacts, arts...)
-	}
-	return artifacts, nil
 }
 
 // getRepositoryLocalArtifacts clones all repository local artifacts so they can be copied over to the flux repository.
@@ -197,25 +146,6 @@ func (pa *ProfilesArtifactsMaker) generateOutput(filename string, o runtime.Obje
 	}
 	return nil
 
-}
-
-// createNestedProfileArtifacts takes care of creating nested profile configuration.
-func (pa *ProfilesArtifactsMaker) createNestedProfileArtifacts(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
-	nestedProfile := installation.DeepCopyObject().(*profilesv1.ProfileInstallation)
-	nestedProfile.Spec.Source.URL = artifact.Profile.Source.URL
-	nestedProfile.Spec.Source.Branch = artifact.Profile.Source.Branch
-	nestedProfile.Spec.Source.Tag = artifact.Profile.Source.Tag
-	nestedProfile.Spec.Source.Path = artifact.Profile.Source.Path
-	if artifact.Profile.Source.Tag != "" {
-		path := "."
-		splitTag := strings.Split(artifact.Profile.Source.Tag, "/")
-		if len(splitTag) > 1 {
-			path = splitTag[0]
-		}
-		nestedProfile.Spec.Source.Path = path
-	}
-	pa.nestedName = artifact.Name
-	return pa.makeArtifacts(*nestedProfile)
 }
 
 func profileRepo(installation profilesv1.ProfileInstallation) string {
