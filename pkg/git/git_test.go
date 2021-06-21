@@ -246,30 +246,34 @@ var _ = Describe("git", func() {
 			})
 		})
 		When("normal flow operations", func() {
+			var tmp string
+			BeforeEach(func() {
+				var err error
+				tmp, err = ioutil.TempDir("", "detect_git_repo")
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				Expect(os.RemoveAll(tmp)).To(Succeed())
+			})
+
 			It("detects git repositories", func() {
-				tmp, err := ioutil.TempDir("", "detect_git_repo_01")
-				Expect(err).NotTo(HaveOccurred())
-				err = os.Mkdir(filepath.Join(tmp, ".git"), os.ModeDir)
-				Expect(err).NotTo(HaveOccurred())
+				Expect(os.Mkdir(filepath.Join(tmp, ".git"), os.ModeDir)).To(Succeed())
 				g := git.NewCLIGit(git.CLIGitConfig{
 					Directory: tmp,
 					Branch:    "main",
 					Remote:    "origin",
 				}, runner)
-				err = g.IsRepository()
-				Expect(err).NotTo(HaveOccurred())
+				Expect(g.IsRepository()).To(Succeed())
 				Expect(runner.RunCallCount()).To(Equal(0))
 			})
 			It("returns an error when the folder is not a git repository", func() {
-				tmp, err := ioutil.TempDir("", "detect_git_repo_02")
-				Expect(err).NotTo(HaveOccurred())
 				g := git.NewCLIGit(git.CLIGitConfig{
 					Directory: tmp,
 					Branch:    "main",
 					Remote:    "origin",
 				}, runner)
-				err = g.IsRepository()
-				Expect(err).To(HaveOccurred())
+				Expect(g.IsRepository()).NotTo(Succeed())
 				Expect(runner.RunCallCount()).To(Equal(0))
 			})
 		})

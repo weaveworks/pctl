@@ -31,12 +31,21 @@ var _ = Describe("prepare", func() {
 		waiter          *fakes.FakeWaiter
 		applyRunner     *runnerfake.FakeRunner
 		preflightRunner *runnerfake.FakeRunner
+		tempDir         string
 	)
 
 	BeforeEach(func() {
 		waiter = &fakes.FakeWaiter{}
 		applyRunner = &runnerfake.FakeRunner{}
 		preflightRunner = &runnerfake.FakeRunner{}
+
+		var err error
+		tempDir, err = ioutil.TempDir("", "prepare-tests")
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(tempDir)).To(Succeed())
 	})
 
 	When("dry run is set", func() {
@@ -52,11 +61,9 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			tmp, err := ioutil.TempDir("", "prepare_01")
-			Expect(err).NotTo(HaveOccurred())
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
-					Location: tmp,
+					Location: tempDir,
 					DryRun:   true,
 				},
 				Fetcher: &cluster.Fetcher{
@@ -75,7 +82,7 @@ var _ = Describe("prepare", func() {
 			Expect(applyRunner.RunCallCount()).To(Equal(1))
 			arg, args := applyRunner.RunArgsForCall(0)
 			Expect(arg).To(Equal("kubectl"))
-			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "prepare.yaml"), "--dry-run=client", "--output=yaml"}))
+			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tempDir, "prepare.yaml"), "--dry-run=client", "--output=yaml"}))
 			Expect(waiter.WaitCallCount()).To(Equal(0))
 		})
 	})
@@ -92,12 +99,10 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			tmp, err := ioutil.TempDir("", "prepare_02")
-			Expect(err).NotTo(HaveOccurred())
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL:  "https://github.com/weaveworks/profiles/releases",
-					Location: tmp,
+					Location: tempDir,
 				},
 				Fetcher: &cluster.Fetcher{
 					Client: client,
@@ -114,7 +119,7 @@ var _ = Describe("prepare", func() {
 			Expect(applyRunner.RunCallCount()).To(Equal(1))
 			arg, args := applyRunner.RunArgsForCall(0)
 			Expect(arg).To(Equal("kubectl"))
-			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "prepare.yaml")}))
+			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tempDir, "prepare.yaml")}))
 			Expect(waiter.WaitCallCount()).To(Equal(1))
 			args = waiter.WaitArgsForCall(0)
 			Expect(args).To(Equal([]string{"profiles-controller-manager"}))
@@ -133,12 +138,10 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			tmp, err := ioutil.TempDir("", "prepare_02")
-			Expect(err).NotTo(HaveOccurred())
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL:     "https://github.com/weaveworks/profiles/releases",
-					Location:    tmp,
+					Location:    tempDir,
 					KubeContext: "context",
 					KubeConfig:  "kubeconfig",
 				},
@@ -156,7 +159,7 @@ var _ = Describe("prepare", func() {
 			Expect(applyRunner.RunCallCount()).To(Equal(1))
 			arg, args := applyRunner.RunArgsForCall(0)
 			Expect(arg).To(Equal("kubectl"))
-			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tmp, "prepare.yaml"), "--context=context", "--kubeconfig=kubeconfig"}))
+			Expect(args).To(Equal([]string{"apply", "-f", filepath.Join(tempDir, "prepare.yaml"), "--context=context", "--kubeconfig=kubeconfig"}))
 			Expect(waiter.WaitCallCount()).To(Equal(1))
 			args = waiter.WaitArgsForCall(0)
 			Expect(args).To(Equal([]string{"profiles-controller-manager"}))
@@ -176,14 +179,12 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			tmp, err := ioutil.TempDir("", "specific_version_01")
-			Expect(err).NotTo(HaveOccurred())
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL:     "https://github.com/weaveworks/profiles/releases",
 					KubeContext: "context",
 					KubeConfig:  "kubeconfig",
-					Location:    tmp,
+					Location:    tempDir,
 				},
 				Fetcher: &cluster.Fetcher{
 					Client: client,
@@ -203,8 +204,6 @@ var _ = Describe("prepare", func() {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				Expect(r.URL.String()).To(Equal("/download/v0.0.1/prepare.yaml"))
 			}))
-			tmp, err := ioutil.TempDir("", "specific_version_01")
-			Expect(err).NotTo(HaveOccurred())
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
@@ -212,7 +211,7 @@ var _ = Describe("prepare", func() {
 					Version:     "v0.0.1",
 					KubeContext: "context",
 					KubeConfig:  "kubeconfig",
-					Location:    tmp,
+					Location:    tempDir,
 				},
 				Fetcher: &cluster.Fetcher{
 					Client: server.Client(),
@@ -238,11 +237,9 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			tmp, err := ioutil.TempDir("", "prepare_change_version_01")
-			Expect(err).NotTo(HaveOccurred())
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
-					Location: tmp,
+					Location: tempDir,
 					DryRun:   true,
 					Keep:     true,
 					Version:  "v0.0.1",
@@ -258,7 +255,7 @@ var _ = Describe("prepare", func() {
 			}
 			err = p.Prepare()
 			Expect(err).NotTo(HaveOccurred())
-			content, err = ioutil.ReadFile(filepath.Join(tmp, "prepare.yaml"))
+			content, err = ioutil.ReadFile(filepath.Join(tempDir, "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(content)).To(ContainSubstring("weaveworks/profiles-controller:v0.0.1"))
 			Expect(waiter.WaitCallCount()).To(Equal(0))
@@ -268,8 +265,6 @@ var _ = Describe("prepare", func() {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				Expect(r.URL.String()).To(Equal("/latest/download/prepare.yaml"))
 			}))
-			tmp, err := ioutil.TempDir("", "specific_version_01")
-			Expect(err).NotTo(HaveOccurred())
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
@@ -277,7 +272,7 @@ var _ = Describe("prepare", func() {
 					Version:     "0.0.1",
 					KubeContext: "context",
 					KubeConfig:  "kubeconfig",
-					Location:    tmp,
+					Location:    tempDir,
 				},
 				Fetcher: &cluster.Fetcher{
 					Client: server.Client(),
@@ -331,7 +326,7 @@ var _ = Describe("prepare", func() {
 			Expect(err.Error()).To(ContainSubstring("unsupported protocol scheme"))
 		})
 	})
-	When("the user decided to keep the downloaded file(s)", func() {
+	When("the user wants to keep the downloaded file(s)", func() {
 		It("will not delete the downloaded file(s)", func() {
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
@@ -344,12 +339,10 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			tmp, err := ioutil.TempDir("", "prepare_should_keep_things")
-			Expect(err).NotTo(HaveOccurred())
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL:  "https://github.com/weaveworks/profiles/releases",
-					Location: tmp,
+					Location: tempDir,
 					Keep:     true,
 				},
 				Fetcher: &cluster.Fetcher{
@@ -363,7 +356,7 @@ var _ = Describe("prepare", func() {
 			}
 			err = p.Prepare()
 			Expect(err).NotTo(HaveOccurred())
-			downloadedContent, err := ioutil.ReadFile(filepath.Join(tmp, "prepare.yaml"))
+			downloadedContent, err := ioutil.ReadFile(filepath.Join(tempDir, "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(downloadedContent).To(Equal(content))
 		})
@@ -381,12 +374,10 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			tmp, err := ioutil.TempDir("", "prepare_should_be_deleted_01")
-			Expect(err).NotTo(HaveOccurred())
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL:  "https://github.com/weaveworks/profiles/releases",
-					Location: tmp,
+					Location: tempDir,
 				},
 				Fetcher: &cluster.Fetcher{
 					Client: client,
@@ -399,7 +390,7 @@ var _ = Describe("prepare", func() {
 			}
 			err = p.Prepare()
 			Expect(err).NotTo(HaveOccurred())
-			_, err = os.Stat(tmp)
+			_, err = os.Stat(tempDir)
 			Expect(os.IsNotExist(err)).To(BeTrue())
 		})
 	})
@@ -417,12 +408,10 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			tmp, err := ioutil.TempDir("", "prepare_should_be_deleted_01")
-			Expect(err).NotTo(HaveOccurred())
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL:  "https://github.com/weaveworks/profiles/releases",
-					Location: tmp,
+					Location: tempDir,
 				},
 				Fetcher: &cluster.Fetcher{
 					Client: client,
@@ -441,8 +430,6 @@ var _ = Describe("prepare", func() {
 	When("prepare is executed", func() {
 		It("runs a preflight check which will determine if prepare can run", func() {
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
-			tmp, err := ioutil.TempDir("", "prepare_preflight_check_01")
-			Expect(err).NotTo(HaveOccurred())
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
@@ -456,7 +443,7 @@ var _ = Describe("prepare", func() {
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL:       "https://github.com/weaveworks/profiles/releases",
-					Location:      tmp,
+					Location:      tempDir,
 					FluxNamespace: "flux",
 				},
 				Fetcher: &cluster.Fetcher{
@@ -483,8 +470,6 @@ var _ = Describe("prepare", func() {
 	When("the flux namespace is not there", func() {
 		It("will run nothing else until that is resolved", func() {
 			preflightRunner.RunReturns(nil, errors.New("nope"))
-			tmp, err := ioutil.TempDir("", "prepare_preflight_check_02")
-			Expect(err).NotTo(HaveOccurred())
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
@@ -498,7 +483,7 @@ var _ = Describe("prepare", func() {
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL:       "https://github.com/weaveworks/profiles/releases",
-					Location:      tmp,
+					Location:      tempDir,
 					FluxNamespace: "flux",
 				},
 				Fetcher: &cluster.Fetcher{
@@ -518,8 +503,6 @@ var _ = Describe("prepare", func() {
 	When("one of the flux crds is missing", func() {
 		It("will run nothing else until that is resolved", func() {
 			preflightRunner.RunReturnsOnCall(2, nil, errors.New("nope"))
-			tmp, err := ioutil.TempDir("", "prepare_preflight_check_02")
-			Expect(err).NotTo(HaveOccurred())
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
@@ -533,7 +516,7 @@ var _ = Describe("prepare", func() {
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL:       "https://github.com/weaveworks/profiles/releases",
-					Location:      tmp,
+					Location:      tempDir,
 					FluxNamespace: "flux",
 				},
 				Fetcher: &cluster.Fetcher{
@@ -553,8 +536,6 @@ var _ = Describe("prepare", func() {
 	When("the user decides to ignore preflight-check errors", func() {
 		It("will output them as a warning but will not stop execution", func() {
 			preflightRunner.RunReturns(nil, errors.New("nope"))
-			tmp, err := ioutil.TempDir("", "prepare_preflight_check_02")
-			Expect(err).NotTo(HaveOccurred())
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
 			client := &http.Client{
@@ -568,7 +549,7 @@ var _ = Describe("prepare", func() {
 			p := &cluster.Preparer{
 				PrepConfig: cluster.PrepConfig{
 					BaseURL:               "https://github.com/weaveworks/profiles/releases",
-					Location:              tmp,
+					Location:              tempDir,
 					FluxNamespace:         "flux",
 					IgnorePreflightErrors: true,
 				},
