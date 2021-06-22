@@ -76,31 +76,30 @@ func globalFlags() []cli.Flag {
 }
 
 func parseArgs(c *cli.Context) (string, *client.Client, error) {
-	options := client.ServiceOptions{
-		KubeconfigPath: c.String("kubeconfig"),
-		Namespace:      c.String("catalog-service-namespace"),
-		ServiceName:    c.String("catalog-service-name"),
-		ServicePort:    c.String("catalog-service-port"),
-	}
-
 	if c.Args().Len() < 1 {
 		return "", nil, fmt.Errorf("argument must be provided")
 	}
-	client, err := client.NewFromOptions(options)
+	client, err := buildCatalogClient(c)
 	if err != nil {
 		return "", nil, err
 	}
 	return c.Args().First(), client, nil
 }
 
-func getClient(c *cli.Context) (*client.Client, error) {
+func getCatalogClient(c *cli.Context) (*client.Client, error) {
+	if c.Args().Len() > 0 {
+		return nil, fmt.Errorf("argument must not be provided")
+	}
+	return buildCatalogClient(c)
+}
+
+func buildCatalogClient(c *cli.Context) (*client.Client, error) {
 	options := client.ServiceOptions{
 		KubeconfigPath: c.String("kubeconfig"),
 		Namespace:      c.String("catalog-service-namespace"),
 		ServiceName:    c.String("catalog-service-name"),
 		ServicePort:    c.String("catalog-service-port"),
 	}
-
 	return client.NewFromOptions(options)
 }
 

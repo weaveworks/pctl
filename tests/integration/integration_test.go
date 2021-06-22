@@ -119,6 +119,15 @@ var _ = Describe("PCTL", func() {
 			})
 		})
 
+		When("a search string is provided with all option", func() {
+			It("returns a useful error", func() {
+				cmd := exec.Command(binaryPath, "search", "-all", "nginx")
+				session, err := cmd.CombinedOutput()
+				Expect(err).To(HaveOccurred())
+				Expect(string(session)).To(ContainSubstring("argument must not be provided"))
+			})
+		})
+
 		It("returns all the profiles with search all option", func() {
 			cmd := exec.Command(binaryPath, "search", "--all")
 			session, err := cmd.CombinedOutput()
@@ -127,14 +136,14 @@ var _ = Describe("PCTL", func() {
 				"nginx-catalog/weaveworks-nginx	v0.1.0 	This installs nginx.           \t\n" +
 				"nginx-catalog/weaveworks-nginx	v0.1.1 	This installs nginx.           \t\n" +
 				"nginx-catalog/bitnami-nginx   	v0.0.1 	This installs nginx.           \t\n" +
-				"nginx-catalog/nginx           	v2.0.0 	This installs nginx.           \t\n" +
+				"nginx-catalog/nginx           	v2.0.1 	This installs nginx.           \t\n" +
 				"nginx-catalog/some-other-nginx	       	This installs some other nginx.\t\n\n"
 			Expect(string(session)).To(ContainSubstring(expected))
 		})
 
 		When("-o is set to json with search all", func() {
 			It("returns the matching profiles in json", func() {
-				cmd := exec.Command(binaryPath, "search", "-a -o", "json")
+				cmd := exec.Command(binaryPath, "search", "-a", "-o", "json")
 				session, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(session)).To(ContainSubstring(`{
@@ -171,7 +180,7 @@ var _ = Describe("PCTL", func() {
     ]
   },
   {
-    "tag": "v2.0.0",
+    "tag": "v2.0.1",
     "catalog": "nginx-catalog",
     "url": "https://github.com/weaveworks/nginx-profile",
     "name": "nginx",

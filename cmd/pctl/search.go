@@ -34,7 +34,7 @@ func searchCmd() *cli.Command {
 		Action: func(c *cli.Context) error {
 			var profiles []profilesv1.ProfileCatalogEntry
 			if c.Bool("all") {
-				catalogClient, err := getClient(c)
+				catalogClient, err := getCatalogClient(c)
 				if err != nil {
 					_ = cli.ShowCommandHelp(c, "search")
 					return err
