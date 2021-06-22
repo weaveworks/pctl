@@ -337,6 +337,19 @@ var _ = Describe("PCTL", func() {
 			output, err = cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create source git failed: %s", string(output)))
 
+			configMapName := subName + "-values"
+			configMap := v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapName,
+					Namespace: namespace,
+				},
+				Data: map[string]string{
+					"nginx-server": `replicas: 2`,
+					"nginx-chart":  `replicas: 2`,
+				},
+			}
+			Expect(kClient.Create(context.Background(), &configMap)).To(Succeed())
+
 			cmd = exec.Command(
 				binaryPath,
 				"install",
@@ -346,7 +359,8 @@ var _ = Describe("PCTL", func() {
 				"--profile-branch",
 				profileBranch,
 				"--profile-url", "https://github.com/weaveworks/profiles-examples",
-				"--profile-path", "weaveworks-nginx")
+				"--profile-path", "weaveworks-nginx",
+				"--config-secret", fmt.Sprintf("%s/%s", namespace, configMapName))
 			cmd.Dir = temp
 			output, err = cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed: %s", string(output)))
@@ -461,6 +475,13 @@ status: {}
 				return false
 			}, 2*time.Minute, 5*time.Second).Should(BeTrue())
 
+			Expect(helmRelease.Spec.ValuesFrom).To(HaveLen(1))
+			Expect(helmRelease.Spec.ValuesFrom[0]).To(Equal(helmv2.ValuesReference{
+				Kind:      "ConfigMap",
+				Name:      configMapName,
+				ValuesKey: "nginx-chart",
+			}))
+
 			By("successfully deploying the nested helmrelease resource")
 			helmReleaseName = fmt.Sprintf("%s-%s-%s", subName, "bitnami-nginx", "nginx-server")
 			Eventually(func() bool {
@@ -476,6 +497,13 @@ status: {}
 				}
 				return false
 			}, 2*time.Minute, 5*time.Second).Should(BeTrue())
+
+			Expect(helmRelease.Spec.ValuesFrom).To(HaveLen(1))
+			Expect(helmRelease.Spec.ValuesFrom[0]).To(Equal(helmv2.ValuesReference{
+				Kind:      "ConfigMap",
+				Name:      configMapName,
+				ValuesKey: "nginx-server",
+			}))
 		})
 
 		When("a url is provided with a branch and path", func() {
