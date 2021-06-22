@@ -1,5 +1,9 @@
 package profile
 
-func (p *Profile) SetProfileGetter(profileGetter ProfileGetter) {
+func SetProfileGetter(profileGetter ProfileGetter) {
 	getProfileDefinition = profileGetter
+}
+
+func SetProfileMakeArtifacts(makeArtifacts MakeArtifactsFunc) {
+	profilesArtifactsMaker = makeArtifacts
 }
