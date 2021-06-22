@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/kustomize/api/types"
 
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/profile"
@@ -144,6 +145,9 @@ var _ = Describe("MakeArtifactsFunc", func() {
 			Expect(nestedProfile.SparseFolder).To(Equal("bitnami-nginx"))
 			Expect(nestedProfile.Branch).To(Equal("bitnami-nginx/v0.0.1"))
 			Expect(nestedProfile.Objects).To(HaveLen(1)) // we test the object's generation in their respective builder tests
+			Expect(*nestedProfile.Kustomize).To(Equal(types.Kustomization{
+				Resources: []string{"HelmRelease.yaml"},
+			}))
 
 			weaveworksNginx := artifacts[1]
 			Expect(weaveworksNginx.Name).To(Equal("nginx-deployment"))

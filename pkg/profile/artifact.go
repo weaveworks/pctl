@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/otiai10/copy"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/runtime"
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 
@@ -88,6 +89,17 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 		for _, obj := range artifact.Objects {
 			filename := filepath.Join(artifactDir, fmt.Sprintf("%s.%s", obj.GetObjectKind().GroupVersionKind().Kind, "yaml"))
 			if err := pa.generateOutput(filename, obj); err != nil {
+				return err
+			}
+		}
+		if artifact.Kustomize != nil {
+			data, err := yaml.Marshal(artifact.Kustomize)
+			if err != nil {
+				return err
+			}
+			filename := filepath.Join(artifactDir, "kustomization.yaml")
+			err = os.WriteFile(filename, data, 0644)
+			if err != nil {
 				return err
 			}
 		}

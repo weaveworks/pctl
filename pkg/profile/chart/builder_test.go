@@ -1,6 +1,8 @@
 package chart_test
 
 import (
+	"path/filepath"
+
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	. "github.com/onsi/ginkgo"
@@ -9,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/kustomize/api/types"
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
 	"github.com/weaveworks/pctl/pkg/profile/chart"
@@ -91,65 +94,130 @@ var _ = Describe("Builder", func() {
 	})
 
 	Context("Build", func() {
-		It("creates an artifact from an install and a profile definition", func() {
-			chartBuilder := &chart.Builder{
-				Config: chart.Config{
-					GitRepositoryName:      gitRepositoryName,
-					GitRepositoryNamespace: gitRepositoryNamespace,
-					RootDir:                rootDir,
-				},
-			}
-			artifacts, err := chartBuilder.Build(partifact, pSub, pDef)
-			Expect(err).NotTo(HaveOccurred())
-			helmRelease := &helmv2.HelmRelease{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "HelmRelease",
-					APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-profile-weaveworks-nginx-dokuwiki",
-					Namespace: "default",
-				},
-				Spec: helmv2.HelmReleaseSpec{
-					Chart: helmv2.HelmChartTemplate{
-						Spec: helmv2.HelmChartTemplateSpec{
-							Chart:   "dokuwiki",
-							Version: "11.1.6",
-							SourceRef: helmv2.CrossNamespaceObjectReference{
-								Kind:      "HelmRepository",
-								Name:      "test-profile-profiles-examples-dokuwiki",
-								Namespace: "default",
+		When("a remote chart is configured", func() {
+			It("creates an artifact from an install and a profile definition", func() {
+				chartBuilder := &chart.Builder{
+					Config: chart.Config{
+						GitRepositoryName:      gitRepositoryName,
+						GitRepositoryNamespace: gitRepositoryNamespace,
+						RootDir:                rootDir,
+					},
+				}
+				artifacts, err := chartBuilder.Build(partifact, pSub, pDef)
+				Expect(err).NotTo(HaveOccurred())
+				helmRelease := &helmv2.HelmRelease{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "HelmRelease",
+						APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-profile-weaveworks-nginx-dokuwiki",
+						Namespace: "default",
+					},
+					Spec: helmv2.HelmReleaseSpec{
+						Chart: helmv2.HelmChartTemplate{
+							Spec: helmv2.HelmChartTemplateSpec{
+								Chart:   "dokuwiki",
+								Version: "11.1.6",
+								SourceRef: helmv2.CrossNamespaceObjectReference{
+									Kind:      "HelmRepository",
+									Name:      "test-profile-profiles-examples-dokuwiki",
+									Namespace: "default",
+								},
+							},
+						},
+						ValuesFrom: []helmv2.ValuesReference{
+							{
+								Name:     "nginx-values",
+								Kind:     "Secret",
+								Optional: true,
 							},
 						},
 					},
-					ValuesFrom: []helmv2.ValuesReference{
-						{
-							Name:     "nginx-values",
-							Kind:     "Secret",
-							Optional: true,
+				}
+				helmRepository := &sourcev1.HelmRepository{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "HelmRepository",
+						APIVersion: "source.toolkit.fluxcd.io/v1beta1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-profile-profiles-examples-dokuwiki",
+						Namespace: "default",
+					},
+					Spec: sourcev1.HelmRepositorySpec{
+						URL: "https://charts.bitnami.com/bitnami",
+					},
+				}
+				expected := artifact.Artifact{
+					Objects: []runtime.Object{helmRelease, helmRepository},
+					Name:    "dokuwiki",
+				}
+				Expect(artifacts).To(ConsistOf(expected))
+			})
+		})
+
+		When("a path based chart is configured", func() {
+			BeforeEach(func() {
+
+				partifact = profilesv1.Artifact{
+					Name: "dokuwiki",
+					Chart: &profilesv1.Chart{
+						Path: "my/chart",
+					},
+				}
+			})
+			It("creates an artifact from an install and a profile definition", func() {
+				chartBuilder := &chart.Builder{
+					Config: chart.Config{
+						GitRepositoryName:      gitRepositoryName,
+						GitRepositoryNamespace: gitRepositoryNamespace,
+						RootDir:                rootDir,
+					},
+				}
+				artifacts, err := chartBuilder.Build(partifact, pSub, pDef)
+				Expect(err).NotTo(HaveOccurred())
+				helmRelease := &helmv2.HelmRelease{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "HelmRelease",
+						APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-profile-weaveworks-nginx-dokuwiki",
+						Namespace: "default",
+					},
+					Spec: helmv2.HelmReleaseSpec{
+						Chart: helmv2.HelmChartTemplate{
+							Spec: helmv2.HelmChartTemplateSpec{
+								Chart: filepath.Join(rootDir, "artifacts", "dokuwiki", "my/chart"),
+								SourceRef: helmv2.CrossNamespaceObjectReference{
+									Kind:      "GitRepository",
+									Name:      gitRepositoryName,
+									Namespace: gitRepositoryNamespace,
+								},
+							},
+						},
+						ValuesFrom: []helmv2.ValuesReference{
+							{
+								Name:     "nginx-values",
+								Kind:     "Secret",
+								Optional: true,
+							},
 						},
 					},
-				},
-			}
-			helmRepository := &sourcev1.HelmRepository{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "HelmRepository",
-					APIVersion: "source.toolkit.fluxcd.io/v1beta1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-profile-profiles-examples-dokuwiki",
-					Namespace: "default",
-				},
-				Spec: sourcev1.HelmRepositorySpec{
-					URL: "https://charts.bitnami.com/bitnami",
-				},
-			}
-			expected := artifact.Artifact{
-				Objects: []runtime.Object{helmRelease, helmRepository},
-				Name:    "dokuwiki",
-			}
-			Expect(artifacts).To(ConsistOf(expected))
+				}
+				Expect(artifacts).To(HaveLen(1))
+				Expect(artifacts[0].Name).To(Equal("dokuwiki"))
+				Expect(artifacts[0].RepoURL).To(Equal(profileURL))
+				Expect(artifacts[0].SparseFolder).To(Equal(profileName1))
+				Expect(artifacts[0].Branch).To(Equal("main"))
+				Expect(artifacts[0].PathsToCopy).To(ConsistOf("my/chart"))
+				Expect(*artifacts[0].Kustomize).To(Equal(types.Kustomization{
+					Resources: []string{"HelmRelease.yaml"},
+				}))
+				Expect(artifacts[0].Objects).To(ConsistOf(helmRelease))
+			})
 		})
+
 		When("git-repository-name and git-repository-namespace aren't defined", func() {
 			It("returns an error", func() {
 				chartBuilder := &chart.Builder{
@@ -182,6 +250,7 @@ var _ = Describe("Builder", func() {
 				Expect(err).To(MatchError("in case of local resources, the flux gitrepository object's details must be provided"))
 			})
 		})
+
 		When("helmRepository and path", func() {
 			It("errors", func() {
 
