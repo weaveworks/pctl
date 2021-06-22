@@ -316,7 +316,7 @@ var _ = Describe("PCTL", func() {
 				Skip("Skipping this tests as it requires credentials")
 			}
 
-			profileBranch := "local_clone_test"
+			profileBranch := "main"
 			subName := "pctl-profile"
 			gitRepoName := "pctl-repo"
 
@@ -366,6 +366,9 @@ var _ = Describe("PCTL", func() {
 				"profile-installation.yaml",
 				"artifacts/nginx-deployment/Kustomization.yaml",
 				"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
+				"artifacts/nginx-chart/HelmRelease.yaml",
+				"artifacts/nginx-chart/HelmRepository.yaml",
+				"artifacts/nested-profile/nginx-server/HelmRelease.yaml",
 			))
 
 			filename := filepath.Join(temp, "profile-installation.yaml")
@@ -379,7 +382,7 @@ metadata:
   namespace: %s
 spec:
   source:
-    branch: local_clone_test
+    branch: main
     path: weaveworks-nginx
     url: https://github.com/weaveworks/profiles-examples
 status: {}
@@ -440,6 +443,39 @@ status: {}
 			}, 2*time.Minute, 5*time.Second).Should(Equal(v1.PodPhase("Running")))
 
 			Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("nginx:1.14.2"))
+
+			By("successfully deploying the helmrelease resource")
+			helmReleaseName := fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "nginx-chart")
+			var helmRelease *helmv2.HelmRelease
+			Eventually(func() bool {
+				helmRelease = &helmv2.HelmRelease{}
+				err := kClient.Get(context.Background(), client.ObjectKey{Name: helmReleaseName, Namespace: namespace}, helmRelease)
+				if err != nil {
+					return false
+				}
+				for _, condition := range helmRelease.Status.Conditions {
+					if condition.Type == "Ready" && condition.Status == "True" {
+						return true
+					}
+				}
+				return false
+			}, 2*time.Minute, 5*time.Second).Should(BeTrue())
+
+			By("successfully deploying the nested helmrelease resource")
+			helmReleaseName = fmt.Sprintf("%s-%s-%s", subName, "bitnami-nginx", "nginx-server")
+			Eventually(func() bool {
+				helmRelease = &helmv2.HelmRelease{}
+				err := kClient.Get(context.Background(), client.ObjectKey{Name: helmReleaseName, Namespace: namespace}, helmRelease)
+				if err != nil {
+					return false
+				}
+				for _, condition := range helmRelease.Status.Conditions {
+					if condition.Type == "Ready" && condition.Status == "True" {
+						return true
+					}
+				}
+				return false
+			}, 2*time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		When("a url is provided with a branch and path", func() {

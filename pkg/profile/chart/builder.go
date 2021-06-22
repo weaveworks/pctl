@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
+	"sigs.k8s.io/kustomize/api/types"
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
 )
@@ -54,6 +55,9 @@ func (c *Builder) Build(att profilesv1.Artifact, installation profilesv1.Profile
 		a.SparseFolder = definition.Name
 		a.Branch = branch
 		a.PathsToCopy = append(a.PathsToCopy, att.Chart.Path)
+		a.Kustomize = &types.Kustomization{
+			Resources: []string{"HelmRelease.yaml"},
+		}
 	}
 	if att.Chart.URL != "" {
 		helmRepository := c.makeHelmRepository(att.Chart.URL, att.Chart.Name, installation)

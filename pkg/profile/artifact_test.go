@@ -17,6 +17,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/kustomize/api/types"
 
 	"github.com/weaveworks/pctl/pkg/git"
 	fakegit "github.com/weaveworks/pctl/pkg/git/fakes"
@@ -104,6 +105,9 @@ var _ = Describe("Profile", func() {
 				PathsToCopy:  []string{"nginx/chart"},
 				SparseFolder: "bitnami-nginx",
 				Branch:       "",
+				Kustomize: &types.Kustomization{
+					Resources: []string{"HelmRelease.yaml"},
+				},
 			},
 			{
 				Objects: []runtime.Object{&kustomizev1.Kustomization{
@@ -164,6 +168,7 @@ var _ = Describe("Profile", func() {
 			consistsOf := []string{
 				filepath.Join(rootDir, "profile-installation.yaml"),
 				filepath.Join(rootDir, "artifacts", "test-artifact-1", "HelmRelease.yaml"),
+				filepath.Join(rootDir, "artifacts", "test-artifact-1", "kustomization.yaml"),
 				filepath.Join(rootDir, "artifacts", "test-artifact-1", "nginx", "chart.yaml"),
 				filepath.Join(rootDir, "artifacts", "test-artifact-2", "Kustomization.yaml"),
 				filepath.Join(rootDir, "artifacts", "test-artifact-2", "nginx", "deployment", "deployment.yaml"),
