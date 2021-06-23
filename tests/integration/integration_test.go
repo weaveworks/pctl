@@ -360,7 +360,7 @@ var _ = Describe("PCTL", func() {
 				profileBranch,
 				"--profile-url", "https://github.com/weaveworks/profiles-examples",
 				"--profile-path", "weaveworks-nginx",
-				"--config-secret", fmt.Sprintf("%s/%s", namespace, configMapName))
+				"--config-map", configMapName)
 			cmd.Dir = temp
 			output, err = cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed: %s", string(output)))
@@ -395,12 +395,13 @@ metadata:
   name: pctl-profile
   namespace: %s
 spec:
+  configMap: %s
   source:
     branch: main
     path: weaveworks-nginx
     url: https://github.com/weaveworks/profiles-examples
 status: {}
-`, namespace)))
+`, namespace, configMapName)))
 
 			By("the artifacts being deployable")
 			// Generate the resources into the flux repo, and push them up the repo?
@@ -475,12 +476,19 @@ status: {}
 				return false
 			}, 2*time.Minute, 5*time.Second).Should(BeTrue())
 
-			Expect(helmRelease.Spec.ValuesFrom).To(HaveLen(1))
-			Expect(helmRelease.Spec.ValuesFrom[0]).To(Equal(helmv2.ValuesReference{
-				Kind:      "ConfigMap",
-				Name:      configMapName,
-				ValuesKey: "nginx-chart",
-			}))
+			Expect(helmRelease.Spec.ValuesFrom).To(HaveLen(2))
+			Expect(helmRelease.Spec.ValuesFrom).To(ConsistOf(
+				helmv2.ValuesReference{
+					Kind:      "ConfigMap",
+					Name:      "pctl-profile-nginx-chart-defaultvalues",
+					ValuesKey: "default-values.yaml",
+				},
+				helmv2.ValuesReference{
+					Kind:      "ConfigMap",
+					Name:      configMapName,
+					ValuesKey: "nginx-chart",
+				},
+			))
 
 			By("successfully deploying the nested helmrelease resource")
 			helmReleaseName = fmt.Sprintf("%s-%s-%s", subName, "bitnami-nginx", "nginx-server")
@@ -496,7 +504,7 @@ status: {}
 					}
 				}
 				return false
-			}, 2*time.Minute, 5*time.Second).Should(BeTrue())
+			}, 5*time.Minute, 5*time.Second).Should(BeTrue())
 
 			Expect(helmRelease.Spec.ValuesFrom).To(HaveLen(1))
 			Expect(helmRelease.Spec.ValuesFrom[0]).To(Equal(helmv2.ValuesReference{
@@ -756,8 +764,9 @@ status: {}
 			}
 			_ = kClient.Delete(context.Background(), &nsp)
 		})
+
 		It("generates valid artifacts to the local directory", func() {
-			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--config-secret", "values.yaml", "nginx-catalog/nginx/v2.0.1")
+			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "nginx-catalog/nginx/v2.0.1")
 			cmd.Dir = temp
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
@@ -798,12 +807,8 @@ spec:
     path: .
     tag: v2.0.1
     url: https://github.com/weaveworks/nginx-profile
-  valuesFrom:
-  - kind: ConfigMap
-    name: %s
-    valuesKey: values.yaml
 status: {}
-`, namespace, subName+"-values")))
+`, namespace)))
 
 			By("the artifacts being deployable")
 

@@ -94,13 +94,20 @@ func (c *Builder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installat
 	if artifact.Chart.DefaultValues != "" {
 		cfgMap = c.makeDefaultValuesCfgMap(artifact.Name, artifact.Chart.DefaultValues, installation)
 		// the default values always need to be at index 0
-		values = []helmv2.ValuesReference{{
+		values = append(values, helmv2.ValuesReference{
 			Kind:      "ConfigMap",
 			Name:      cfgMap.Name,
 			ValuesKey: defaultValuesKey,
-		}}
+		})
 	}
-	values = append(values, installation.Spec.ValuesFrom...)
+	if installation.Spec.ConfigMap != "" {
+		artifactNameParts := strings.Split(artifact.Name, "/")
+		values = append(values, helmv2.ValuesReference{
+			Kind:      "ConfigMap",
+			Name:      installation.Spec.ConfigMap,
+			ValuesKey: artifactNameParts[len(artifactNameParts)-1],
+		})
+	}
 	helmRelease := &helmv2.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      makeArtifactName(artifact.Name, installation.Name, definitionName),
