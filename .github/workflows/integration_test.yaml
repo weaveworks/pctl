@@ -49,13 +49,14 @@ jobs:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-          ssh-add - <<< "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}"
           ssh-add - <<< "${{ secrets.PROFILES_EXAMPLES_PRIVATE_WEAVEWORKS_PCTL_BOT_DEPLOY_KEY }}"
+          ssh-add - <<< "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}"
       - name: Test
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
           GIT_TOKEN: ${{secrets.GIT_TOKEN}}
         run: |
+          ssh-add -l
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
           PATH=$PATH:$(go env GOPATH)/bin make integration
