@@ -8,6 +8,10 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
+type rpcResponse struct {
+	Items []profilesv1.ProfileCatalogEntry
+}
+
 // Search queries the catalog at catalogURL for profiles matching the provided searchName.
 func Search(catalogClient CatalogClient, searchName string) ([]profilesv1.ProfileCatalogEntry, error) {
 	q := map[string]string{
@@ -21,10 +25,10 @@ func Search(catalogClient CatalogClient, searchName string) ([]profilesv1.Profil
 	if statusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch profile from catalog, status code %d", statusCode)
 	}
-	var profiles []profilesv1.ProfileCatalogEntry
+	var profiles rpcResponse
 	if err := json.Unmarshal(data, &profiles); err != nil {
 		return nil, fmt.Errorf("failed to parse catalog: %w", err)
 	}
 
-	return profiles, nil
+	return profiles.Items, nil
 }
