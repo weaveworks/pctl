@@ -47,13 +47,6 @@ var _ = Describe("Profile", func() {
 					Branch: branch,
 					Path:   profileName1,
 				},
-				ValuesFrom: []helmv2.ValuesReference{
-					{
-						Name:     "nginx-values",
-						Kind:     "Secret",
-						Optional: true,
-					},
-				},
 			},
 		}
 		fakeGitClient = &fakegit.FakeGit{}
@@ -190,10 +183,6 @@ spec:
     branch: main
     path: weaveworks-nginx
     url: https://github.com/org/repo-name
-  valuesFrom:
-  - kind: Secret
-    name: nginx-values
-    optional: true
 status: {}
 `))
 			})

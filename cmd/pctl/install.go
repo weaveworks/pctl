@@ -20,7 +20,7 @@ func installCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "install",
 		Usage: "generate a profile installation",
-		UsageText: "To install from a profile catalog entry: pctl --catalog-url <URL> install --name pctl-profile --namespace default --profile-branch main --config-secret configmap-name <CATALOG>/<PROFILE>[/<VERSION>]\n   " +
+		UsageText: "To install from a profile catalog entry: pctl --catalog-url <URL> install --name pctl-profile --namespace default --profile-branch main --config-map configmap-name <CATALOG>/<PROFILE>[/<VERSION>]\n   " +
 			"To install directly from a profile repository: pctl install --name pctl-profile --namespace default --profile-branch development --profile-url https://github.com/weaveworks/profiles-examples --profile-path bitnami-nginx",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -42,7 +42,7 @@ func installCmd() *cli.Command {
 				Usage:       "The branch to use on the repository in which the profile is.",
 			},
 			&cli.StringFlag{
-				Name:  "config-secret",
+				Name:  "config-map",
 				Value: "",
 				Usage: "The name of the ConfigMap which contains values for this profile.",
 			},
@@ -148,7 +148,7 @@ func install(c *cli.Context) error {
 	branch := c.String("profile-branch")
 	subName := c.String("name")
 	namespace := c.String("namespace")
-	configValues := c.String("config-secret")
+	configMap := c.String("config-map")
 	dir := c.String("out")
 	path := c.String("profile-path")
 	gitRepository := c.String("git-repository")
@@ -188,7 +188,7 @@ func install(c *cli.Context) error {
 		},
 		ProfileConfig: catalog.ProfileConfig{
 			CatalogName:   catalogName,
-			ConfigMap:     configValues,
+			ConfigMap:     configMap,
 			Namespace:     namespace,
 			Path:          path,
 			ProfileBranch: branch,
