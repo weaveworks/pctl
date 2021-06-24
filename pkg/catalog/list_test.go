@@ -66,7 +66,7 @@ var _ = Describe("List", func() {
 	})
 
 	It("lists installed profiles and checks for updates to profiles", func() {
-		httpBody := []byte(`[
+		httpBody := []byte(`{"items":[
   {
     "name": "weaveworks-nginx",
     "description": "This installs the next version nginx.",
@@ -78,7 +78,7 @@ var _ = Describe("List", func() {
       "Kubernetes 1.18+"
     ]
   }
-]
+]}
 `)
 		fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 		out, err := catalog.List(fakeRuntimeClient, fakeCatalogClient)
@@ -112,7 +112,7 @@ var _ = Describe("List", func() {
 	})
 	When("there are no updates for a profile", func() {
 		It("returns the profile without any version updates", func() {
-			httpBody := []byte(`[]`)
+			httpBody := []byte(`{"items":[]}`)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 			out, err := catalog.List(fakeRuntimeClient, fakeCatalogClient)
 			Expect(err).NotTo(HaveOccurred())
@@ -194,7 +194,7 @@ var _ = Describe("List", func() {
 			}
 			Expect(fakeRuntimeClient.Create(context.TODO(), pSub2)).To(Succeed())
 			Expect(fakeRuntimeClient.Create(context.TODO(), pSub3)).To(Succeed())
-			return1 := []byte(`[
+			return1 := []byte(`{"items":[
   {
     "name": "weaveworks-nginx",
     "description": "This installs the next version nginx.",
@@ -206,11 +206,11 @@ var _ = Describe("List", func() {
       "Kubernetes 1.18+"
     ]
   }
-]
+]}
 `)
 
-			return2 := []byte("[]")
-			return3 := []byte(`[
+			return2 := []byte(`{"items":[]}`)
+			return3 := []byte(`{"items":[
   {
     "name": "weaveworks-nginx-3",
     "description": "This installs nginx.",
@@ -222,7 +222,7 @@ var _ = Describe("List", func() {
       "Kubernetes 1.18+"
     ]
   }
-]
+]}
 `)
 			fakeCatalogClient.DoRequestReturnsOnCall(0, return1, 200, nil)
 			fakeCatalogClient.DoRequestReturnsOnCall(1, return2, 200, nil)

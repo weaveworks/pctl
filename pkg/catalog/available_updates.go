@@ -31,10 +31,10 @@ func GetAvailableUpdates(catalogClient CatalogClient, catalogName, profileName, 
 		}
 		return nil, fmt.Errorf("failed to fetch available updates for profile, status code %d", statusCode)
 	}
-	var profiles []profilesv1.ProfileCatalogEntry
+	var profiles grpcProfileCatalogEntryList
 	if err := json.Unmarshal(data, &profiles); err != nil {
 		return nil, fmt.Errorf("failed to parse catalog: %w", err)
 	}
 
-	return profiles, nil
+	return profiles.Items, nil
 }

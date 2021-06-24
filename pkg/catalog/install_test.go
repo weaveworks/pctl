@@ -36,7 +36,7 @@ var _ = Describe("Install", func() {
 		var err error
 		tempDir, err = ioutil.TempDir("", "catalog-install")
 		Expect(err).NotTo(HaveOccurred())
-		httpBody = []byte(`
+		httpBody = []byte(`{"item":
 {
 	"name": "nginx-1",
 	"description": "nginx 1",
@@ -46,7 +46,7 @@ var _ = Describe("Install", func() {
 	"url": "https://github.com/weaveworks/nginx-profile",
 	"prerequisites": ["Kubernetes 1.18+"],
 	"maintainer": "WeaveWorks <gitops@weave.works>"
-}
+}}
 `)
 		fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 		cfg = catalog.InstallConfig{

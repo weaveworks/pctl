@@ -23,7 +23,7 @@ var _ = Describe("GetAvailableUpdates", func() {
 
 	When("profiles are available with higher version than the installed one", func() {
 		It("returns all those profiles", func() {
-			httpBody := []byte(`
+			httpBody := []byte(`{"items":
 [
     {
       	"name": "nginx-1",
@@ -35,7 +35,7 @@ var _ = Describe("GetAvailableUpdates", func() {
       	"description": "nginx 1",
 	  	"tag": "v0.0.3"
     }
-]
+]}
 		  `)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 

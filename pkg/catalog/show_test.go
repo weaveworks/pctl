@@ -23,16 +23,16 @@ var _ = Describe("Show", func() {
 
 	When("the profile exists in the catalog", func() {
 		It("returns all information about the profile", func() {
-			httpBody := []byte(`
+			httpBody := []byte(`{"item":
 {
 	"name": "nginx-1",
 	"description": "nginx 1",
 	"tag": "0.0.1",
-	"catalog": "weaveworks (https://github.com/weaveworks/profiles)",
+	"catalogSource": "weaveworks (https://github.com/weaveworks/profiles)",
 	"url": "https://github.com/weaveworks/nginx-profile",
 	"prerequisites": ["Kubernetes 1.18+"],
 	"maintainer": "WeaveWorks <gitops@weave.works>"
-}
+}}
 		  `)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
@@ -60,16 +60,16 @@ var _ = Describe("Show", func() {
 
 	When("using a catalog name, profile and a version to show details", func() {
 		It("returns all information about the right profile", func() {
-			httpBody := []byte(`
+			httpBody := []byte(`{"item":
 {
 	"name": "nginx-1",
 	"description": "nginx 1",
 	"tag": "v0.1.0",
-	"catalog": "weaveworks (https://github.com/weaveworks/profiles)",
+	"catalogSource": "weaveworks (https://github.com/weaveworks/profiles)",
 	"url": "https://github.com/weaveworks/profile-examples",
 	"prerequisites": ["Kubernetes 1.18+"],
 	"maintainer": "WeaveWorks <gitops@weave.works>"
-}
+}}
 		  `)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 

@@ -31,10 +31,10 @@ func Show(catalogClient CatalogClient, catalogName, profileName, profileVersion 
 		return profilesv1.ProfileCatalogEntry{}, fmt.Errorf("failed to fetch profile from catalog, status code %d", code)
 	}
 
-	var profile profilesv1.ProfileCatalogEntry
+	var profile grpcProfileCatalogEntry
 	if err := json.Unmarshal(data, &profile); err != nil {
 		return profilesv1.ProfileCatalogEntry{}, fmt.Errorf("failed to parse profile: %w", err)
 	}
 
-	return profile, nil
+	return profile.Item, nil
 }
