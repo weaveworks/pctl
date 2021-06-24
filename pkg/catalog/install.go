@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -55,15 +54,6 @@ func Install(cfg InstallConfig) error {
 		},
 		Spec: pSpec,
 	}
-	if cfg.ConfigMap != "" {
-		installation.Spec.ValuesFrom = []helmv2.ValuesReference{
-			{
-				Kind:      "ConfigMap",
-				Name:      cfg.SubName + "-values",
-				ValuesKey: cfg.ConfigMap,
-			},
-		}
-	}
 	if err := cfg.ArtifactsMaker.Make(installation); err != nil {
 		return fmt.Errorf("failed to make artifacts: %w", err)
 	}
@@ -79,6 +69,7 @@ func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileInstallationSpec, erro
 				Branch: cfg.ProfileBranch,
 				Path:   cfg.Path,
 			},
+			ConfigMap: cfg.ConfigMap,
 		}, nil
 	}
 	p, err := Show(cfg.CatalogClient, cfg.CatalogName, cfg.ProfileName, cfg.Version)
@@ -104,6 +95,7 @@ func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileInstallationSpec, erro
 			Version: profilesv1.GetVersionFromTag(p.Tag),
 			Profile: p.Name,
 		},
+		ConfigMap: cfg.ConfigMap,
 	}, nil
 }
 

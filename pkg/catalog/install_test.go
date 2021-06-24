@@ -57,6 +57,7 @@ var _ = Describe("Install", func() {
 				ProfileName:   "nginx-1",
 				SubName:       "mysub",
 				Version:       "v0.0.1",
+				ConfigMap:     "config-map",
 			},
 			Clients: catalog.Clients{
 				CatalogClient:  fakeCatalogClient,
@@ -70,34 +71,81 @@ var _ = Describe("Install", func() {
 	})
 
 	Describe("install", func() {
-		It("generates the artifacts", func() {
-			err := catalog.Install(cfg)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(fakeMakeArtifacts.MakeCallCount()).To(Equal(1))
-			arg := fakeMakeArtifacts.MakeArgsForCall(0)
-			Expect(arg).To(Equal(profilesv1.ProfileInstallation{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ProfileInstallation",
-					APIVersion: "weave.works/v1alpha1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "mysub",
-					Namespace: "default",
-				},
-				Spec: profilesv1.ProfileInstallationSpec{
-					Source: &profilesv1.Source{
-						URL:    "https://github.com/weaveworks/nginx-profile",
-						Branch: "",
-						Path:   "nginx-1",
-						Tag:    "nginx-1/v0.0.1",
+		When("installing from a catalog entry", func() {
+			It("generates the artifacts", func() {
+				err := catalog.Install(cfg)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeMakeArtifacts.MakeCallCount()).To(Equal(1))
+				arg := fakeMakeArtifacts.MakeArgsForCall(0)
+				Expect(arg).To(Equal(profilesv1.ProfileInstallation{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ProfileInstallation",
+						APIVersion: "weave.works/v1alpha1",
 					},
-					Catalog: &profilesv1.Catalog{
-						Version: "v0.0.1",
-						Catalog: "nginx",
-						Profile: "nginx-1",
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "mysub",
+						Namespace: "default",
 					},
-				},
-			}))
+					Spec: profilesv1.ProfileInstallationSpec{
+						ConfigMap: "config-map",
+						Source: &profilesv1.Source{
+							URL:    "https://github.com/weaveworks/nginx-profile",
+							Branch: "",
+							Path:   "nginx-1",
+							Tag:    "nginx-1/v0.0.1",
+						},
+						Catalog: &profilesv1.Catalog{
+							Version: "v0.0.1",
+							Catalog: "nginx",
+							Profile: "nginx-1",
+						},
+					},
+				}))
+			})
+		})
+
+		When("installing from a url", func() {
+			BeforeEach(func() {
+				cfg = catalog.InstallConfig{
+					ProfileConfig: catalog.ProfileConfig{
+						Namespace:     "default",
+						ProfileBranch: "main",
+						Path:          "nginx-1",
+						URL:           "https://github.com/weaveworks/nginx-profile",
+						SubName:       "mysub",
+						Version:       "v0.0.1",
+						ConfigMap:     "config-map",
+					},
+					Clients: catalog.Clients{
+						CatalogClient:  fakeCatalogClient,
+						ArtifactsMaker: fakeMakeArtifacts,
+					},
+				}
+			})
+			It("generates the artifacts", func() {
+				err := catalog.Install(cfg)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeMakeArtifacts.MakeCallCount()).To(Equal(1))
+				arg := fakeMakeArtifacts.MakeArgsForCall(0)
+				Expect(arg).To(Equal(profilesv1.ProfileInstallation{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ProfileInstallation",
+						APIVersion: "weave.works/v1alpha1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "mysub",
+						Namespace: "default",
+					},
+					Spec: profilesv1.ProfileInstallationSpec{
+						ConfigMap: "config-map",
+						Source: &profilesv1.Source{
+							URL:    "https://github.com/weaveworks/nginx-profile",
+							Branch: "main",
+							Path:   "nginx-1",
+						},
+					},
+				}))
+			})
 		})
 
 		When("getting the artifacts fails", func() {
