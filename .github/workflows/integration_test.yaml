@@ -49,9 +49,14 @@ jobs:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-          echo "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}" > ~/.ssh/pctl-test-key
-          echo "${{ secrets.PROFILES_EXAMPLES_PRIVATE_WEAVEWORKS_PCTL_BOT_DEPLOY_KEY }}" > ~/.ssh/private-examples-key
+          echo "$PCTL_KEY" > ~/.ssh/pctl-test-key
+          chmod 600 ~/.ssh/pctl-test-key
+          echo "$EXAMPLES_KEY" > ~/.ssh/private-examples-key
+          chmod 600 ~/.ssh/private-examples-key
           cp .github/workflows/ssh.config ~/.ssh/config
+        env:
+          PCTL_KEY: ${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}
+          EXAMPLES_KEY: ${{ secrets.PROFILES_EXAMPLES_PRIVATE_WEAVEWORKS_PCTL_BOT_DEPLOY_KEY }}
       - name: Test
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
