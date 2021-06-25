@@ -42,7 +42,7 @@ var _ = Describe("Install", func() {
 	"description": "nginx 1",
 	"version": "v0.0.1",
 	"tag": "nginx-1/v0.0.1",
-	"catalog": "weaveworks (https://github.com/weaveworks/profiles)",
+	"catalogSource": "weaveworks (https://github.com/weaveworks/profiles)",
 	"url": "https://github.com/weaveworks/nginx-profile",
 	"prerequisites": ["Kubernetes 1.18+"],
 	"maintainer": "WeaveWorks <gitops@weave.works>"

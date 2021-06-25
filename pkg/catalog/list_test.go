@@ -71,7 +71,7 @@ var _ = Describe("List", func() {
     "name": "weaveworks-nginx",
     "description": "This installs the next version nginx.",
     "tag": "v0.1.1",
-    "catalog": "nginx-catalog",
+    "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
     "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
     "prerequisites": [
@@ -199,7 +199,7 @@ var _ = Describe("List", func() {
     "name": "weaveworks-nginx",
     "description": "This installs the next version nginx.",
     "tag": "v0.1.1",
-    "catalog": "nginx-catalog",
+    "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
     "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
     "prerequisites": [
@@ -215,7 +215,7 @@ var _ = Describe("List", func() {
     "name": "weaveworks-nginx-3",
     "description": "This installs nginx.",
     "tag": "v0.1.5",
-    "catalog": "nginx-catalog",
+    "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
     "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
     "prerequisites": [

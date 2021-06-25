@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"context"
-
 	"crypto/rand"
 	"fmt"
 	"io/ioutil"
@@ -51,7 +50,7 @@ var _ = Describe("PCTL", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(session)).To(ContainSubstring(`{
     "tag": "weaveworks-nginx/v0.1.0",
-    "catalog": "nginx-catalog",
+    "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
     "name": "weaveworks-nginx",
     "description": "This installs nginx.",
@@ -62,7 +61,7 @@ var _ = Describe("PCTL", func() {
   },
   {
     "tag": "weaveworks-nginx/v0.1.1",
-    "catalog": "nginx-catalog",
+    "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
     "name": "weaveworks-nginx",
     "description": "This installs nginx.",
@@ -73,7 +72,7 @@ var _ = Describe("PCTL", func() {
   },
   {
     "tag": "bitnami-nginx/v0.0.1",
-    "catalog": "nginx-catalog",
+    "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
     "name": "bitnami-nginx",
     "description": "This installs nginx.",
@@ -84,7 +83,7 @@ var _ = Describe("PCTL", func() {
   },
   {
     "tag": "v2.0.1",
-    "catalog": "nginx-catalog",
+    "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/nginx-profile",
     "name": "nginx",
     "description": "This installs nginx.",
@@ -94,7 +93,7 @@ var _ = Describe("PCTL", func() {
     ]
   },
   {
-    "catalog": "nginx-catalog",
+    "catalogSource": "nginx-catalog",
     "name": "some-other-nginx",
     "description": "This installs some other nginx."
   }`))
@@ -148,7 +147,7 @@ var _ = Describe("PCTL", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(session)).To(ContainSubstring(`{
     "tag": "weaveworks-nginx/v0.1.0",
-    "catalog": "nginx-catalog",
+    "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
     "name": "weaveworks-nginx",
     "description": "This installs nginx.",
@@ -159,7 +158,7 @@ var _ = Describe("PCTL", func() {
   },
   {
     "tag": "weaveworks-nginx/v0.1.1",
-    "catalog": "nginx-catalog",
+    "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
     "name": "weaveworks-nginx",
     "description": "This installs nginx.",
@@ -170,7 +169,7 @@ var _ = Describe("PCTL", func() {
   },
   {
     "tag": "bitnami-nginx/v0.0.1",
-    "catalog": "nginx-catalog",
+    "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
     "name": "bitnami-nginx",
     "description": "This installs nginx.",
@@ -181,7 +180,7 @@ var _ = Describe("PCTL", func() {
   },
   {
     "tag": "v2.0.1",
-    "catalog": "nginx-catalog",
+    "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/nginx-profile",
     "name": "nginx",
     "description": "This installs nginx.",
@@ -191,7 +190,7 @@ var _ = Describe("PCTL", func() {
     ]
   },
   {
-    "catalog": "nginx-catalog",
+    "catalogSource": "nginx-catalog",
     "name": "some-other-nginx",
     "description": "This installs some other nginx."
   }`))
@@ -235,7 +234,7 @@ var _ = Describe("PCTL", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(session)).To(ContainSubstring(`{
   "tag": "weaveworks-nginx/v0.1.0",
-  "catalog": "nginx-catalog",
+  "catalogSource": "nginx-catalog",
   "url": "https://github.com/weaveworks/profiles-examples",
   "name": "weaveworks-nginx",
   "description": "This installs nginx.",
