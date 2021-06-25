@@ -4,8 +4,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/weaveworks/pctl/pkg/formatter"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
+	"github.com/weaveworks/pctl/pkg/formatter"
 )
 
 var _ = Describe("JsonFormater", func() {
@@ -17,7 +18,7 @@ var _ = Describe("JsonFormater", func() {
 		out, err := jsonFormatter.Format(dataFunc)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).To(Equal(`{
-  "catalog": "bar",
+  "catalogSource": "bar",
   "name": "foo"
 }`))
 	})
