@@ -56,13 +56,7 @@ var _ = Describe("Builder", func() {
 					Branch: "main",
 					Path:   profilePath,
 				},
-				ValuesFrom: []helmv2.ValuesReference{
-					{
-						Name:     "nginx-values",
-						Kind:     "Secret",
-						Optional: true,
-					},
-				},
+				ConfigMap: "nginx-values",
 			},
 		}
 		partifact = profilesv1.Artifact{
@@ -115,6 +109,13 @@ var _ = Describe("Builder", func() {
 						Namespace: "default",
 					},
 					Spec: helmv2.HelmReleaseSpec{
+						ValuesFrom: []helmv2.ValuesReference{
+							{
+								Kind:      "ConfigMap",
+								Name:      "nginx-values",
+								ValuesKey: "dokuwiki",
+							},
+						},
 						Chart: helmv2.HelmChartTemplate{
 							Spec: helmv2.HelmChartTemplateSpec{
 								Chart:   "dokuwiki",
@@ -124,13 +125,6 @@ var _ = Describe("Builder", func() {
 									Name:      "test-profile-profiles-examples-dokuwiki",
 									Namespace: "default",
 								},
-							},
-						},
-						ValuesFrom: []helmv2.ValuesReference{
-							{
-								Name:     "nginx-values",
-								Kind:     "Secret",
-								Optional: true,
 							},
 						},
 					},
@@ -186,6 +180,13 @@ var _ = Describe("Builder", func() {
 						Namespace: "default",
 					},
 					Spec: helmv2.HelmReleaseSpec{
+						ValuesFrom: []helmv2.ValuesReference{
+							{
+								Kind:      "ConfigMap",
+								Name:      "nginx-values",
+								ValuesKey: "dokuwiki",
+							},
+						},
 						Chart: helmv2.HelmChartTemplate{
 							Spec: helmv2.HelmChartTemplateSpec{
 								Chart: filepath.Join(rootDir, "artifacts", "dokuwiki", "my/chart"),
@@ -194,13 +195,6 @@ var _ = Describe("Builder", func() {
 									Name:      gitRepositoryName,
 									Namespace: gitRepositoryNamespace,
 								},
-							},
-						},
-						ValuesFrom: []helmv2.ValuesReference{
-							{
-								Name:     "nginx-values",
-								Kind:     "Secret",
-								Optional: true,
 							},
 						},
 					},
@@ -392,9 +386,9 @@ var _ = Describe("Builder", func() {
 								ValuesKey: "default-values.yaml",
 							},
 							{
-								Name:     "nginx-values",
-								Kind:     "Secret",
-								Optional: true,
+								Kind:      "ConfigMap",
+								Name:      "nginx-values",
+								ValuesKey: "dokuwiki",
 							},
 						},
 					},

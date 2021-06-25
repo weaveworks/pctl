@@ -15,7 +15,7 @@ func searchCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "search",
 		Usage: "search for a profile",
-		UsageText: "pctl search [--output table|json] <QUERY>\n\n" +
+		UsageText: "pctl search [--all --output table|json <QUERY>] \n\n" +
 			"   example: pctl search nginx",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -25,42 +25,38 @@ func searchCmd() *cli.Command {
 				Value:       "table",
 				Usage:       "Output format. json|table",
 			},
+			&cli.BoolFlag{
+				Name:    "all",
+				Aliases: []string{"a"},
+				Usage:   "Search all available profiles",
+			},
 		},
 		Action: func(c *cli.Context) error {
-			searchName, catalogClient, err := parseArgs(c)
-			if err != nil {
-				_ = cli.ShowCommandHelp(c, "search")
-				return err
-			}
-
-			profiles, err := catalog.Search(catalogClient, searchName)
-			if err != nil {
-				return err
-			}
-			outFormat := c.String("output")
-			if outFormat == "table" {
-				if len(profiles) == 0 {
-					fmt.Printf("No profiles found matching: '%s'\n", searchName)
-					return nil
+			var profiles []profilesv1.ProfileCatalogEntry
+			if c.Bool("all") {
+				catalogClient, err := getCatalogClient(c)
+				if err != nil {
+					_ = cli.ShowCommandHelp(c, "search")
+					return err
+				}
+				profiles, err = catalog.Search(catalogClient, "")
+				if err != nil {
+					return err
+				}
+			} else {
+				searchName, catalogClient, err := parseArgs(c)
+				if err != nil {
+					_ = cli.ShowCommandHelp(c, "search")
+					return err
+				}
+				profiles, err = catalog.Search(catalogClient, searchName)
+				if err != nil {
+					return err
 				}
 			}
 
-			var f formatter.Formatter
-			f = formatter.NewTableFormatter()
-			getter := searchDataFunc(profiles)
-
-			if outFormat == "json" {
-				f = formatter.NewJSONFormatter()
-				getter = func() interface{} { return profiles }
-			}
-
-			out, err := f.Format(getter)
-			if err != nil {
-				return err
-			}
-
-			fmt.Println(out)
-			return nil
+			outFormat := c.String("output")
+			return formatOutput(profiles, outFormat)
 		},
 	}
 }
@@ -79,4 +75,28 @@ func searchDataFunc(profiles []profilesv1.ProfileCatalogEntry) func() interface{
 		}
 		return tc
 	}
+}
+
+func formatOutput(profiles []profilesv1.ProfileCatalogEntry, outFormat string) error {
+	if len(profiles) == 0 {
+		fmt.Printf("No profiles found")
+		return nil
+	}
+
+	var f formatter.Formatter
+	f = formatter.NewTableFormatter()
+	getter := searchDataFunc(profiles)
+
+	if outFormat == "json" {
+		f = formatter.NewJSONFormatter()
+		getter = func() interface{} { return profiles }
+	}
+
+	out, err := f.Format(getter)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(out)
+	return nil
 }

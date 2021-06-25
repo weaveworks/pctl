@@ -9,11 +9,21 @@ import (
 )
 
 // Search queries the catalog at catalogURL for profiles matching the provided searchName.
+// If no searchname is provided it returns all profiles
 func Search(catalogClient CatalogClient, searchName string) ([]profilesv1.ProfileCatalogEntry, error) {
-	q := map[string]string{
-		"name": searchName,
+	var data []byte
+	var statusCode int
+	var err error
+
+	if searchName == "" {
+		data, statusCode, err = catalogClient.DoRequest("/profiles", nil)
+	} else {
+		q := map[string]string{
+			"name": searchName,
+		}
+		data, statusCode, err = catalogClient.DoRequest("/profiles", q)
 	}
-	data, statusCode, err := catalogClient.DoRequest("/profiles", q)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch catalog: %w", err)
 	}

@@ -118,6 +118,85 @@ var _ = Describe("PCTL", func() {
 				Expect(string(session)).To(ContainSubstring("argument must be provided"))
 			})
 		})
+
+		When("a search string is provided with all option", func() {
+			It("returns a useful error", func() {
+				cmd := exec.Command(binaryPath, "search", "-all", "nginx")
+				session, err := cmd.CombinedOutput()
+				Expect(err).To(HaveOccurred())
+				Expect(string(session)).To(ContainSubstring("argument must not be provided"))
+			})
+		})
+
+		It("returns all the profiles with search all option", func() {
+			cmd := exec.Command(binaryPath, "search", "--all")
+			session, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred())
+			expected := "CATALOG/PROFILE               	VERSION	DESCRIPTION                     \n" +
+				"nginx-catalog/weaveworks-nginx	v0.1.0 	This installs nginx.           \t\n" +
+				"nginx-catalog/weaveworks-nginx	v0.1.1 	This installs nginx.           \t\n" +
+				"nginx-catalog/bitnami-nginx   	v0.0.1 	This installs nginx.           \t\n" +
+				"nginx-catalog/nginx           	v2.0.1 	This installs nginx.           \t\n" +
+				"nginx-catalog/some-other-nginx	       	This installs some other nginx.\t\n\n"
+			Expect(string(session)).To(ContainSubstring(expected))
+		})
+
+		When("-o is set to json with search all", func() {
+			It("returns the matching profiles in json", func() {
+				cmd := exec.Command(binaryPath, "search", "-a", "-o", "json")
+				session, err := cmd.CombinedOutput()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(session)).To(ContainSubstring(`{
+    "tag": "weaveworks-nginx/v0.1.0",
+    "catalog": "nginx-catalog",
+    "url": "https://github.com/weaveworks/profiles-examples",
+    "name": "weaveworks-nginx",
+    "description": "This installs nginx.",
+    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
+    "prerequisites": [
+      "Kubernetes 1.18+"
+    ]
+  },
+  {
+    "tag": "weaveworks-nginx/v0.1.1",
+    "catalog": "nginx-catalog",
+    "url": "https://github.com/weaveworks/profiles-examples",
+    "name": "weaveworks-nginx",
+    "description": "This installs nginx.",
+    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
+    "prerequisites": [
+      "Kubernetes 1.18+"
+    ]
+  },
+  {
+    "tag": "bitnami-nginx/v0.0.1",
+    "catalog": "nginx-catalog",
+    "url": "https://github.com/weaveworks/profiles-examples",
+    "name": "bitnami-nginx",
+    "description": "This installs nginx.",
+    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
+    "prerequisites": [
+      "Kubernetes 1.18+"
+    ]
+  },
+  {
+    "tag": "v2.0.1",
+    "catalog": "nginx-catalog",
+    "url": "https://github.com/weaveworks/nginx-profile",
+    "name": "nginx",
+    "description": "This installs nginx.",
+    "maintainer": "weaveworks (https://github.com/weaveworks/profiles)",
+    "prerequisites": [
+      "Kubernetes 1.18+"
+    ]
+  },
+  {
+    "catalog": "nginx-catalog",
+    "name": "some-other-nginx",
+    "description": "This installs some other nginx."
+  }`))
+			})
+		})
 	})
 
 	Context("show", func() {
@@ -337,6 +416,19 @@ var _ = Describe("PCTL", func() {
 			output, err = cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create source git failed: %s", string(output)))
 
+			configMapName := subName + "-values"
+			configMap := v1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapName,
+					Namespace: namespace,
+				},
+				Data: map[string]string{
+					"nginx-server": `replicas: 2`,
+					"nginx-chart":  `replicas: 2`,
+				},
+			}
+			Expect(kClient.Create(context.Background(), &configMap)).To(Succeed())
+
 			cmd = exec.Command(
 				binaryPath,
 				"install",
@@ -346,7 +438,8 @@ var _ = Describe("PCTL", func() {
 				"--profile-branch",
 				profileBranch,
 				"--profile-url", "https://github.com/weaveworks/profiles-examples",
-				"--profile-path", "weaveworks-nginx")
+				"--profile-path", "weaveworks-nginx",
+				"--config-map", configMapName)
 			cmd.Dir = temp
 			output, err = cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed: %s", string(output)))
@@ -381,12 +474,13 @@ metadata:
   name: pctl-profile
   namespace: %s
 spec:
+  configMap: %s
   source:
     branch: main
     path: weaveworks-nginx
     url: https://github.com/weaveworks/profiles-examples
 status: {}
-`, namespace)))
+`, namespace, configMapName)))
 
 			By("the artifacts being deployable")
 			// Generate the resources into the flux repo, and push them up the repo?
@@ -461,6 +555,20 @@ status: {}
 				return false
 			}, 2*time.Minute, 5*time.Second).Should(BeTrue())
 
+			Expect(helmRelease.Spec.ValuesFrom).To(HaveLen(2))
+			Expect(helmRelease.Spec.ValuesFrom).To(ConsistOf(
+				helmv2.ValuesReference{
+					Kind:      "ConfigMap",
+					Name:      "pctl-profile-nginx-chart-defaultvalues",
+					ValuesKey: "default-values.yaml",
+				},
+				helmv2.ValuesReference{
+					Kind:      "ConfigMap",
+					Name:      configMapName,
+					ValuesKey: "nginx-chart",
+				},
+			))
+
 			By("successfully deploying the nested helmrelease resource")
 			helmReleaseName = fmt.Sprintf("%s-%s-%s", subName, "bitnami-nginx", "nginx-server")
 			Eventually(func() bool {
@@ -475,7 +583,14 @@ status: {}
 					}
 				}
 				return false
-			}, 2*time.Minute, 5*time.Second).Should(BeTrue())
+			}, 5*time.Minute, 5*time.Second).Should(BeTrue())
+
+			Expect(helmRelease.Spec.ValuesFrom).To(HaveLen(1))
+			Expect(helmRelease.Spec.ValuesFrom[0]).To(Equal(helmv2.ValuesReference{
+				Kind:      "ConfigMap",
+				Name:      configMapName,
+				ValuesKey: "nginx-server",
+			}))
 		})
 
 		When("a url is provided with a branch and path", func() {
@@ -728,8 +843,9 @@ status: {}
 			}
 			_ = kClient.Delete(context.Background(), &nsp)
 		})
+
 		It("generates valid artifacts to the local directory", func() {
-			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "--config-secret", "values.yaml", "nginx-catalog/nginx/v2.0.1")
+			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "nginx-catalog/nginx/v2.0.1")
 			cmd.Dir = temp
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
@@ -770,12 +886,8 @@ spec:
     path: .
     tag: v2.0.1
     url: https://github.com/weaveworks/nginx-profile
-  valuesFrom:
-  - kind: ConfigMap
-    name: %s
-    valuesKey: values.yaml
 status: {}
-`, namespace, subName+"-values")))
+`, namespace)))
 
 			By("the artifacts being deployable")
 

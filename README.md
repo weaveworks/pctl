@@ -42,6 +42,16 @@ nginx-catalog-1/weaveworks-nginx        0.0.1   This installs nginx.
 nginx-catalog-1/some-other-nginx        1.0.1   This installs some other nginx.
 ```
 
+pctl search also lists all available profiles with `--all` option, example:
+```sh
+$ pctl search --all
+CATALOG/PROFILE                                   VERSION DESCRIPTION
+nginx-catalog-1/weaveworks-nginx                  0.0.1   This installs nginx.
+nginx-catalog-1/bitnami-nginx                     1.0.1   This installs bitnami nginx.
+nginx-catalog-1/some-other-nginx                  1.0.1   This installs some other nginx.
+prometheus-catalog-1/weaveworks-prometheus        0.0.4   This installs prometheus.
+```
+
 ### Show
 
 pctl can be used to get more information about a specific profile, example:
@@ -143,6 +153,29 @@ pctl install --name pctl-profile \
 
 It's the user's responsibility to make sure that the local `git` setup has access to the url provided with `profile-url`.
 It can be any form of url as long as `git clone` understands it.
+
+
+#### Configuring a profile
+You can configure a set of helm values for the charts inside your profile. For example if you install the `weaveworks-nginx` profile
+that contains two artifacts that are charts, `nginx-chart` and `nginx-server` you would configure them by creating a config map as
+follows:
+
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-profile-values
+  namespace: default
+data:
+  nginx-chart: |
+    replicaCount: 3
+  nginx-server: |
+    service:
+      type: ClusterIP
+```
+
+The key in the `data` is the name of the chart artifact, and the value is the values.yaml file you want to have provided. You can
+pass this config map into pctl install by providing the `--config-map my-profile-values` in during `pctl install`
 
 #### Cloning repository resources
 
