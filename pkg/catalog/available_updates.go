@@ -8,6 +8,7 @@ import (
 	"path"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+	"github.com/weaveworks/profiles/pkg/protos"
 )
 
 // GetAvailableUpdates queries the catalog at catalogURL for profiles which have greater versions than the current
@@ -31,7 +32,7 @@ func GetAvailableUpdates(catalogClient CatalogClient, catalogName, profileName, 
 		}
 		return nil, fmt.Errorf("failed to fetch available updates for profile, status code %d", statusCode)
 	}
-	var profiles grpcProfileCatalogEntryList
+	var profiles protos.GRPCProfileCatalogEntryList
 	if err := json.Unmarshal(data, &profiles); err != nil {
 		return nil, fmt.Errorf("failed to parse catalog: %w", err)
 	}
