@@ -23,7 +23,7 @@ var _ = Describe("Search", func() {
 
 	When("profiles matching the search exist", func() {
 		It("returns all profiles matching the name description of the profile", func() {
-			httpBody := []byte(`
+			httpBody := []byte(`{"items":
 [
     {
       "name": "nginx-1",
@@ -33,7 +33,7 @@ var _ = Describe("Search", func() {
       "name": "nginx-2",
       "description": "nginx 2"
     }
-]
+]}
 		  `)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
@@ -64,7 +64,7 @@ var _ = Describe("Search", func() {
 
 	When("user uses search all command", func() {
 		It("returns all profiles available from the catalog", func() {
-			httpBody := []byte(`
+			httpBody := []byte(`{"items":
 [
     {
       "name": "nginx-1",
@@ -78,7 +78,7 @@ var _ = Describe("Search", func() {
 	  "name": "some-new-profile",
 	  "description": "some new profile"
 	}
-]
+]}
 		  `)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 

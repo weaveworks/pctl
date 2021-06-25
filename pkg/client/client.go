@@ -4,11 +4,15 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
+	"path/filepath"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+const v1 = "/v1"
 
 // NewFromOptions creates a new Client from the supplied options
 func NewFromOptions(options ServiceOptions) (*Client, error) {
@@ -58,7 +62,12 @@ type Client struct {
 // DoRequest sends a request to the catalog service
 func (c *Client) DoRequest(path string, query map[string]string) ([]byte, int, error) {
 	o := c.serviceOptions
-	responseWrapper := c.clientset.CoreV1().Services(o.Namespace).ProxyGet("http", o.ServiceName, o.ServicePort, path, query)
+	u, err := url.Parse(path)
+	if err != nil {
+		return nil, 0, err
+	}
+	u.Path = filepath.Join(v1, u.Path)
+	responseWrapper := c.clientset.CoreV1().Services(o.Namespace).ProxyGet("http", o.ServiceName, o.ServicePort, u.String(), query)
 	data, err := responseWrapper.DoRaw(context.TODO())
 	if err != nil {
 		if se, ok := err.(*errors.StatusError); ok {

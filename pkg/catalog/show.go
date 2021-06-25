@@ -8,6 +8,7 @@ import (
 	"path"
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+	"github.com/weaveworks/profiles/pkg/protos"
 )
 
 // Show queries the catalog at catalogURL for a profile matching the provided profileName
@@ -31,10 +32,10 @@ func Show(catalogClient CatalogClient, catalogName, profileName, profileVersion 
 		return profilesv1.ProfileCatalogEntry{}, fmt.Errorf("failed to fetch profile from catalog, status code %d", code)
 	}
 
-	var profile profilesv1.ProfileCatalogEntry
+	var profile protos.GRPCProfileCatalogEntry
 	if err := json.Unmarshal(data, &profile); err != nil {
 		return profilesv1.ProfileCatalogEntry{}, fmt.Errorf("failed to parse profile: %w", err)
 	}
 
-	return profile, nil
+	return profile.Item, nil
 }
