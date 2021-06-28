@@ -652,6 +652,10 @@ status: {}
 				path := "bitnami-nginx"
 				cmd := exec.Command(binaryPath, "install", "--out", temp, "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-url", pctlPrivateProfilesRepositoryName, "--profile-branch", branch, "--profile-path", path)
 				cmd.Dir = temp
+
+				if v := os.Getenv("PRIVATE_EXAMPLES_DEPLOY_KEY"); v != "" {
+					cmd.Env = append(cmd.Env, fmt.Sprintf(`GIT_SSH_COMMAND="ssh -i %s"`, v))
+				}
 				output, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
 
