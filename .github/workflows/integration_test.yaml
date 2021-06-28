@@ -51,9 +51,12 @@ jobs:
           EXAMPLES_KEY: ${{ secrets.PROFILES_EXAMPLES_PRIVATE_WEAVEWORKS_PCTL_BOT_DEPLOY_KEY }}
         run: |
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-          echo "$PCTL_KEY" > ~/.ssh/pctl-test-key
+          ll ${SSH}
+          touch ${SSH}/pctl-test-key
+          echo "$PCTL_KEY" > ${SSH}/pctl-test-key
           chmod 600 ~/.ssh/pctl-test-key
-          echo "$EXAMPLES_KEY" > ~/.ssh/private-examples-key
+          touch ${SSH}/private-examples-key
+          echo "$EXAMPLES_KEY" > ${SSH}/private-examples-key
           chmod 600 ~/.ssh/private-examples-key
           cp .github/workflows/ssh.config ~/.ssh/config
       - name: Test
