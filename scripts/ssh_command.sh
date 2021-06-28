@@ -40,7 +40,7 @@ IDENTITY=
 if [[ $CMD_PATH == *.git ]] ;
 then
 	REPOKEY=$(echo "$CMD_PATH" | sed 's/\.git//g' | sed 's/\//-/g')
-	KEYFILE=$(echo ~/.ssh/git-keys/$REPOKEY)
+	KEYFILE=$(echo ${SSH_DIR}/git-keys/$REPOKEY)
 	if [[ -f "$KEYFILE" ]]
 	then
 		debuglog "Key '$KEYFILE' exists"
