@@ -49,8 +49,9 @@ jobs:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-          ssh-add - <<< "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}"
-          ssh-add - <<< "${{ secrets.PROFILES_EXAMPLES_PRIVATE_WEAVEWORKS_PCTL_BOT_DEPLOY_KEY }}"
+          echo "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}" > ~/.ssh/pctl-test-key
+          echo "${{ secrets.PROFILES_EXAMPLES_PRIVATE_WEAVEWORKS_PCTL_BOT_DEPLOY_KEY }}" > ~/.ssh/private-examples-key
+          cp .github/workflows/ssh.config ~/.ssh/config
       - name: Test
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
@@ -58,4 +59,4 @@ jobs:
         run: |
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
-          PATH=$PATH:$(go env GOPATH)/bin make integration
+          USE_DEPLOY_KEY=true PATH=$PATH:$(go env GOPATH)/bin make integration
