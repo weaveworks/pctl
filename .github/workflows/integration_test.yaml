@@ -51,7 +51,7 @@ jobs:
           EXAMPLES_KEY: ${{ secrets.PROFILES_EXAMPLES_PRIVATE_WEAVEWORKS_PCTL_BOT_DEPLOY_KEY }}
         run: |
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-          ll ${SSH}
+          ls ${SSH}
           touch ${SSH}/pctl-test-key
           echo "$PCTL_KEY" > ${SSH}/pctl-test-key
           chmod 600 ~/.ssh/pctl-test-key
