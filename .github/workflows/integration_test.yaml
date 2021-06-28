@@ -10,7 +10,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     env:
-      SSH: "~/.ssh"
+      SSH: "~/.ssh/git-keys/"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -43,22 +43,28 @@ jobs:
         run: |
           mkdir -p ${SSH} && chmod 700 ${SSH}
           ssh-keyscan github.com >> ${SSH}/known_hosts
-      - name: Setup SSH key
+      - name: Setup SSH key # copy the ssh keys into the right location
         shell: bash
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
           EXAMPLES_KEY: ${{ secrets.PROFILES_EXAMPLES_PRIVATE_WEAVEWORKS_PCTL_BOT_DEPLOY_KEY }}
         run: |
-          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-          ssh-add - <<< "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}"
-          touch ${SSH}/private-examples-key
-          echo "$EXAMPLES_KEY" > ${SSH}/private-examples-key
-          chmod 600 ${SSH}/private-examples-key
+#          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+#          ssh-add - <<< "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}"
+#          touch ${SSH}/private-examples-key
+#          echo "$EXAMPLES_KEY" > ${SSH}/private-examples-key
+#          chmod 600 ${SSH}/private-examples-key
+          echo "${{ secrets.PROFILES_EXAMPLES_PRIVATE_WEAVEWORKS_PCTL_BOT_DEPLOY_KEY }}" > ${SSH}/weaveworks-profiles-examples-private
+          chmod 600 ${SSH}/weaveworks-profiles-examples-private
+          echo "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}" > ${SSH}/weaveworks-pctl-test-repo
+          chmod 600 ${SSH}/weaveworks-pctl-test-repo
       - name: Test
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
           GIT_TOKEN: ${{secrets.GIT_TOKEN}}
+          GIT_SSH_COMMAND: ./scripts/ssh_command.sh
+          GIT_SSH_COMMAND_DEBUGLOG: "1"
         run: |
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
-          PRIVATE_EXAMPLES_DEPLOY_KEY=${SSH}/private-examples-key PATH=$PATH:$(go env GOPATH)/bin make integration
+          PATH=$PATH:$(go env GOPATH)/bin make integration
