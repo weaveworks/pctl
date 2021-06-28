@@ -1,15 +1,17 @@
 package profile_test
 
 import (
-	"fmt"
+	"errors"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/otiai10/copy"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/kustomize/api/types"
 
-	"github.com/weaveworks/pctl/pkg/git"
+	fakegit "github.com/weaveworks/pctl/pkg/git/fakes"
 	"github.com/weaveworks/pctl/pkg/profile"
 )
 
@@ -20,7 +22,6 @@ const (
 	installationName     = "mySub"
 	namespace            = "default"
 	profileName1         = "weaveworks-nginx"
-	profileName2         = "bitnami-nginx"
 	profileSubAPIVersion = "weave.works/v1alpha1"
 	profileSubKind       = "ProfileInstallation"
 	profileURL           = "https://github.com/org/repo-name"
@@ -35,11 +36,9 @@ var (
 
 var _ = Describe("MakeArtifactsFunc", func() {
 	var (
-		pSub          profilesv1.ProfileInstallation
-		pDef          profilesv1.ProfileDefinition
-		pNestedDef    profilesv1.ProfileDefinition
-		pNestedDefURL = "https://github.com/org/repo-name-nested"
-		rootDir       string
+		pSub    profilesv1.ProfileInstallation
+		rootDir string
+		fakeGit *fakegit.FakeGit
 	)
 
 	BeforeEach(func() {
@@ -57,79 +56,20 @@ var _ = Describe("MakeArtifactsFunc", func() {
 				},
 			},
 		}
-		pDef = profilesv1.ProfileDefinition{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: profileName1,
-			},
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Profile",
-				APIVersion: "packages.weave.works/profilesv1",
-			},
-			Spec: profilesv1.ProfileDefinitionSpec{
-				ProfileDescription: profilesv1.ProfileDescription{
-					Description: "foo",
-				},
-				Artifacts: []profilesv1.Artifact{
-					{
-						Name: profileName2,
-						Profile: &profilesv1.Profile{
-							Source: &profilesv1.Source{
-								URL: pNestedDefURL,
-								Tag: "bitnami-nginx/v0.0.1",
-							},
-						},
-					},
-					{
-						Name: "nginx-deployment",
-						Kustomize: &profilesv1.Kustomize{
-							Path: "nginx/deployment",
-						},
-					},
-					{
-						Name: "dokuwiki",
-						Chart: &profilesv1.Chart{
-							URL:     "https://charts.bitnami.com/bitnami",
-							Name:    "dokuwiki",
-							Version: "11.1.6",
-						},
-					},
-				},
-			},
+		// Make clone give back specific profile.yaml files.
+		fakeGit = &fakegit.FakeGit{}
+		fakeGit.CloneStub = func(repo string, branch string, loc string) error {
+			from := filepath.Join("testdata", "simple_with_nested")
+			err := copy.Copy(from, loc)
+			Expect(err).NotTo(HaveOccurred())
+			return nil
 		}
-
-		pNestedDef = profilesv1.ProfileDefinition{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: profileName2,
-			},
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Profile",
-				APIVersion: "packages.weave.works.io/profilesv1",
-			},
-			Spec: profilesv1.ProfileDefinitionSpec{
-				ProfileDescription: profilesv1.ProfileDescription{
-					Description: "foo",
-				},
-				Artifacts: []profilesv1.Artifact{
-					{
-						Name: "chart",
-						Chart: &profilesv1.Chart{
-							Path: "nginx/chart",
-						},
-					},
-				},
-			},
-		}
-		profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
-			if path == "weaveworks-nginx" {
-				return pDef, nil
-			}
-			return pNestedDef, nil
-		})
 	})
 
 	Context("makeArtifact", func() {
 		It("generates the artifacts", func() {
 			maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				GitClient:        fakeGit,
 				RootDir:          rootDir,
 				GitRepoNamespace: gitRepoNamespace,
 				GitRepoName:      gitRepoName,
@@ -139,8 +79,8 @@ var _ = Describe("MakeArtifactsFunc", func() {
 			Expect(artifacts).To(HaveLen(3))
 
 			nestedProfile := artifacts[0]
-			Expect(nestedProfile.Name).To(Equal("bitnami-nginx/chart"))
-			Expect(nestedProfile.RepoURL).To(Equal("https://github.com/org/repo-name-nested"))
+			Expect(nestedProfile.Name).To(Equal("nested-profile/nginx-server"))
+			Expect(nestedProfile.RepoURL).To(Equal("https://github.com/weaveworks/profiles-examples"))
 			Expect(nestedProfile.PathsToCopy).To(Equal([]string{"nginx/chart"}))
 			Expect(nestedProfile.SparseFolder).To(Equal("bitnami-nginx"))
 			Expect(nestedProfile.Branch).To(Equal("bitnami-nginx/v0.0.1"))
@@ -157,103 +97,66 @@ var _ = Describe("MakeArtifactsFunc", func() {
 			Expect(weaveworksNginx.Branch).To(Equal("main"))
 			Expect(weaveworksNginx.Objects).To(HaveLen(1)) // we test the object's generation in their respective builder tests
 
-			dokuWiki := artifacts[2]
-			Expect(dokuWiki.Name).To(Equal("dokuwiki"))
-			Expect(dokuWiki.Objects).To(HaveLen(2)) // we test the object's generation in their respective builder tests
+			nginxChart := artifacts[2]
+			Expect(nginxChart.Name).To(Equal("nginx-chart"))
+			Expect(nginxChart.Objects).To(HaveLen(3)) // we test the object's generation in their respective builder tests
 		})
 
 		When("fetching the nested profile definition fails", func() {
 			It("returns an error", func() {
 				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGit,
 					RootDir:          rootDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
 				})
-				profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
-					return profilesv1.ProfileDefinition{}, fmt.Errorf("foo")
+				fakeGit.CloneReturns(errors.New("nope"))
+				_, err := profile.MakeArtifacts(maker, pSub)
+				Expect(err).To(MatchError(ContainSubstring("failed to get profile definition: failed to clone the repo: nope")))
+			})
+		})
+		When("fetching the first profile definition fails", func() {
+			It("returns an error", func() {
+				fakeGit := &fakegit.FakeGit{}
+				fakeGit.CloneReturns(errors.New("nope"))
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGit,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
 				})
 				_, err := profile.MakeArtifacts(maker, pSub)
-				Expect(err).To(MatchError(ContainSubstring("failed to get profile definition: foo")))
+				Expect(err).To(MatchError(ContainSubstring("failed to get profile definition: failed to clone the repo: nope")))
 			})
 		})
 		When("profile artifact points to itself", func() {
 			It("returns an error", func() {
-				pDef = profilesv1.ProfileDefinition{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test",
-					},
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Profile",
-						APIVersion: "packages.weave.works/profilesv1",
-					},
-					Spec: profilesv1.ProfileDefinitionSpec{
-						ProfileDescription: profilesv1.ProfileDescription{
-							Description: "foo",
-						},
-						Artifacts: []profilesv1.Artifact{
-							{
-								Name: "test",
-								Profile: &profilesv1.Profile{
-									Source: &profilesv1.Source{
-										URL: pNestedDefURL,
-										Tag: "bitnami-nginx/v0.0.1",
-									},
-								},
-							},
-						},
-					},
+				fakeGit.CloneStub = func(repo string, branch string, loc string) error {
+					from := filepath.Join("testdata", "nested_with_self_link")
+					err := copy.Copy(from, loc)
+					Expect(err).NotTo(HaveOccurred())
+					return nil
 				}
-				profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
-					return pDef, nil
-				})
 				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGit,
 					RootDir:          rootDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
 				})
 				_, err := profile.MakeArtifacts(maker, pSub)
-				Expect(err).To(MatchError(ContainSubstring("recursive artifact detected: profile https://github.com/org/repo-name-nested on branch  contains an artifact that points recursively back at itself")))
+				Expect(err).To(MatchError(ContainSubstring("recursive artifact detected: profile https://github.com/weaveworks/profiles-examples on branch  contains an artifact that points recursively back at itself")))
 			})
 		})
 		When("the Kind of artifact is unknown", func() {
 			It("returns an error", func() {
-				pDef = profilesv1.ProfileDefinition{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test",
-					},
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Profile",
-						APIVersion: "packages.weave.works/profilesv1",
-					},
-					Spec: profilesv1.ProfileDefinitionSpec{
-						ProfileDescription: profilesv1.ProfileDescription{
-							Description: "foo",
-						},
-						Artifacts: []profilesv1.Artifact{
-							{
-								Name: "test",
-							},
-						},
-					},
+				fakeGit.CloneStub = func(repo string, branch string, loc string) error {
+					from := filepath.Join("testdata", "unknown_artifact_kind")
+					err := copy.Copy(from, loc)
+					Expect(err).NotTo(HaveOccurred())
+					return nil
 				}
-				profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
-					return pDef, nil
-				})
 				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
-					RootDir:          rootDir,
-					GitRepoNamespace: gitRepoNamespace,
-					GitRepoName:      gitRepoName,
-				})
-				_, err := profile.MakeArtifacts(maker, pSub)
-				Expect(err).To(MatchError(ContainSubstring("no artifact set")))
-			})
-		})
-		When("the nested profile is invalid", func() {
-			BeforeEach(func() {
-				pNestedDef.Spec.Artifacts[0] = profilesv1.Artifact{}
-			})
-			It("returns an error", func() {
-				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGit,
 					RootDir:          rootDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,

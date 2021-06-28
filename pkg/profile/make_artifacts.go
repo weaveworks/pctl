@@ -23,7 +23,7 @@ func MakeArtifacts(pam *ProfilesArtifactsMaker, installation profilesv1.ProfileI
 	if installation.Spec.Source.Tag == "" {
 		branchOrTag = installation.Spec.Source.Branch
 	}
-	definition, err := getProfileDefinition(installation.Spec.Source.URL, branchOrTag, path, pam.GitClient)
+	definition, err := pam.GetProfileDefinition(installation.Spec.Source.URL, branchOrTag, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get profile definition: %w", err)
 	}

@@ -42,6 +42,7 @@ type ProfilesArtifactsMaker struct {
 	Builders     map[int]Builder
 	nestedName   string
 	profileRepos []string
+	cloneCache   map[string]string
 }
 
 // NewProfilesArtifactsMaker creates a new profiles artifacts maker.
@@ -65,6 +66,7 @@ func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
 	return &ProfilesArtifactsMaker{
 		MakerConfig: cfg,
 		Builders:    builders,
+		cloneCache:  make(map[string]string),
 	}
 }
 
@@ -76,6 +78,7 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 	}
 	profileRootdir := filepath.Join(pa.RootDir, pa.ProfileName)
 	artifactsRootDir := filepath.Join(profileRootdir, "artifacts")
+	defer pa.cleanCloneCache()
 	for _, artifact := range artifacts {
 		artifactDir := filepath.Join(artifactsRootDir, artifact.Name)
 		if err := os.MkdirAll(artifactDir, 0755); err != nil {
@@ -104,42 +107,52 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 			}
 		}
 	}
-
 	return pa.generateOutput(filepath.Join(profileRootdir, "profile-installation.yaml"), &installation)
 }
 
 // getRepositoryLocalArtifacts clones all repository local artifacts so they can be copied over to the flux repository.
 func (pa *ProfilesArtifactsMaker) getRepositoryLocalArtifacts(a artifact.Artifact, artifactDir string) error {
-	u := uuid.NewString()[:6]
-	tmp, err := ioutil.TempDir("", "sparse_clone_git_repo_"+u)
-	if err != nil {
-		return fmt.Errorf("failed to create temp folder: %w", err)
-	}
-	defer func() {
-		if err := os.RemoveAll(tmp); err != nil {
-			fmt.Println("Failed to remove tmp folder: ", tmp)
+	var (
+		tmp string
+		err error
+	)
+	if v, ok := pa.cloneCache[cloneCacheKey(a.RepoURL, a.Branch)]; ok {
+		tmp = v
+	} else {
+		u := uuid.NewString()[:6]
+		tmp, err = ioutil.TempDir("", "clone_git_repo_"+u)
+		if err != nil {
+			return fmt.Errorf("failed to create temp folder: %w", err)
 		}
-	}()
-	profilePath := a.SparseFolder
-	branch := a.Branch
-	if err := pa.GitClient.SparseClone(a.RepoURL, branch, tmp, profilePath); err != nil {
-		return fmt.Errorf("failed to sparse clone folder with url: %s; branch: %s; path: %s; with error: %w",
-			a.RepoURL,
-			branch,
-			profilePath,
-			err)
+		if err := pa.GitClient.Clone(a.RepoURL, a.Branch, tmp); err != nil {
+			return fmt.Errorf("failed to sparse clone folder with url: %s; branch: %s; with error: %w",
+				a.RepoURL,
+				a.Branch,
+				err)
+		}
+		pa.cloneCache[cloneCacheKey(a.RepoURL, a.Branch)] = tmp
 	}
+
 	for _, path := range a.PathsToCopy {
 		// nginx/chart/...
 		if strings.Contains(path, string(os.PathSeparator)) {
 			path = filepath.Dir(path)
 		}
-		fullPath := filepath.Join(tmp, profilePath, path)
+		fullPath := filepath.Join(tmp, a.SparseFolder, path)
 		if err := copy.Copy(fullPath, filepath.Join(artifactDir, path)); err != nil {
 			return fmt.Errorf("failed to move folder: %w", err)
 		}
 	}
 	return nil
+}
+
+// cleanCloneCache clears all cached cloned folders if there are any.
+func (pa *ProfilesArtifactsMaker) cleanCloneCache() {
+	for _, c := range pa.cloneCache {
+		if err := os.RemoveAll(c); err != nil {
+			fmt.Printf("failed to remove %s cache, please clean by hand", c)
+		}
+	}
 }
 
 func (pa *ProfilesArtifactsMaker) generateOutput(filename string, o runtime.Object) error {
@@ -174,4 +187,8 @@ func containsKey(list []string, key string) bool {
 		}
 	}
 	return false
+}
+
+func cloneCacheKey(url, branch string) string {
+	return fmt.Sprintf("%s:%s", url, branch)
 }
