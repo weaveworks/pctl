@@ -1,23 +1,20 @@
-package repo
+package profile
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/google/uuid"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
-
-	"github.com/weaveworks/pctl/pkg/git"
 )
 
 // GetProfileDefinition returns a definition based on a url and a branch.
-func GetProfileDefinition(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
+func (pa *ProfilesArtifactsMaker) GetProfileDefinition(repoURL, branch, path string) (profilesv1.ProfileDefinition, error) {
 	// Add postfix so potential nested profiles don't clone into the same folder.
 	u, err := uuid.NewRandom()
 	if err != nil {
@@ -27,19 +24,22 @@ func GetProfileDefinition(repoURL, branch, path string, gitClient git.Git) (prof
 	if len(u.String()) < 7 {
 		return profilesv1.ProfileDefinition{}, errors.New("the generated uuid is not long enough")
 	}
-	px := u.String()[:6]
-	tmp, err := ioutil.TempDir("", "get_profile_definition_clone_"+px)
-	if err != nil {
-		return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to create temp folder for cloning repository: %w", err)
-	}
-	defer func() {
-		if err := os.RemoveAll(tmp); err != nil {
-			fmt.Println("failed to remove temp folder, please clean by hand: ", tmp)
-		}
-	}()
 
-	if err := gitClient.SparseClone(repoURL, branch, tmp, path); err != nil {
-		return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to clone the repo: %w", err)
+	var (
+		tmp string
+	)
+	if v, ok := pa.cloneCache[cloneCacheKey(repoURL, branch)]; ok {
+		tmp = v
+	} else {
+		px := u.String()[:6]
+		tmp, err = ioutil.TempDir("", "cloned_profile"+px)
+		if err != nil {
+			return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to create temp folder for cloning repository: %w", err)
+		}
+		if err := pa.GitClient.Clone(repoURL, branch, tmp); err != nil {
+			return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to clone the repo: %w", err)
+		}
+		pa.cloneCache[cloneCacheKey(repoURL, branch)] = tmp
 	}
 
 	content, err := ioutil.ReadFile(filepath.Join(tmp, path, "profile.yaml"))

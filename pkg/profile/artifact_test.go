@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/kustomize/api/types"
 
-	"github.com/weaveworks/pctl/pkg/git"
 	fakegit "github.com/weaveworks/pctl/pkg/git/fakes"
 	"github.com/weaveworks/pctl/pkg/profile"
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
@@ -251,7 +250,19 @@ status: {}
 				Expect(err).To(MatchError("failed to build artifact: nope"))
 			})
 		})
-
+		When("fetching the local repository objects fails", func() {
+			It("returns an error", func() {
+				fakeGitClient.CloneReturns(errors.New("nope"))
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGitClient,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
+				err := maker.Make(pSub)
+				Expect(err).To(MatchError("failed to get package local artifacts: failed to sparse clone folder with url: https://repo-url.com; branch: ; with error: nope"))
+			})
+		})
 		When("there is a single profile repository", func() {
 			It("creates files for all artifacts", func() {
 				artifacts := []artifact.Artifact{
@@ -312,33 +323,6 @@ status: {}
 						},
 					},
 				}
-				profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
-					return profilesv1.ProfileDefinition{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "nginx",
-						},
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Profile",
-							APIVersion: "packages.weave.works.io/profilesv1",
-						},
-						Spec: profilesv1.ProfileDefinitionSpec{
-							ProfileDescription: profilesv1.ProfileDescription{
-								Name:        "nginx",
-								Description: "foo",
-							},
-							Artifacts: []profilesv1.Artifact{
-								{
-									Name: "bitnami-nginx",
-									Chart: &profilesv1.Chart{
-										URL:     "https://charts.bitnami.com/bitnami",
-										Name:    "nginx",
-										Version: "8.9.1",
-									},
-								},
-							},
-						},
-					}, nil
-				})
 				tempDir, err := ioutil.TempDir("", "catalog-install")
 				Expect(err).NotTo(HaveOccurred())
 				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
@@ -490,33 +474,6 @@ status: {}
 						},
 					},
 				}
-				profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
-					return profilesv1.ProfileDefinition{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "nginx",
-						},
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Profile",
-							APIVersion: "packages.weave.works.io/profilesv1",
-						},
-						Spec: profilesv1.ProfileDefinitionSpec{
-							ProfileDescription: profilesv1.ProfileDescription{
-								Name:        "nginx",
-								Description: "foo",
-							},
-							Artifacts: []profilesv1.Artifact{
-								{
-									Name: "bitnami-nginx",
-									Chart: &profilesv1.Chart{
-										URL:     "https://charts.bitnami.com/bitnami",
-										Name:    "nginx",
-										Version: "8.9.1",
-									},
-								},
-							},
-						},
-					}, nil
-				})
 				fakeGitClient.CloneStub = func(url string, branch string, dir string) error {
 					from := filepath.Join("testdata", "clone_cache")
 					err := copy.Copy(from, filepath.Join(dir))

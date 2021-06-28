@@ -1,0 +1,16 @@
+apiVersion: weave.works/v1alpha1
+kind: ProfileDefinition
+metadata:
+  name: weaveworks-nginx
+spec:
+  name: weaveworks-nginx
+  description: Profile for deploying local nginx chart
+  maintainer: weaveworks
+  prerequisites:
+    - "kubernetes 1.19"
+  artifacts:
+    - name: weaveworks-nginx
+      profile:
+        source:
+          url: https://github.com/weaveworks/profiles-examples
+          tag: weaveworks-nginx/v0.0.1
