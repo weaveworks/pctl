@@ -46,9 +46,6 @@ var _ = BeforeSuite(func() {
 		skipTestsThatRequireCredentials = true
 	}
 
-	if v := os.Getenv("USE_DEPLOY_KEY"); v == "true" {
-		pctlPrivateProfilesRepositoryName = "git@deploy-key.github.com:weaveworks/profiles-examples-private.git"
-	}
 
 	scheme := runtime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
