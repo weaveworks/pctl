@@ -50,9 +50,9 @@ var _ = Describe("Profile", func() {
 			},
 		}
 		fakeGitClient = &fakegit.FakeGit{}
-		fakeGitClient.SparseCloneStub = func(url string, branch string, dir string, p string) error {
-			from := filepath.Join("testdata", "simple_with_nested", p)
-			err := copy.Copy(from, filepath.Join(dir, p))
+		fakeGitClient.CloneStub = func(url string, branch string, dir string) error {
+			from := filepath.Join("testdata", "simple_with_nested")
+			err := copy.Copy(from, filepath.Join(dir))
 			Expect(err).NotTo(HaveOccurred())
 			return nil
 		}
@@ -241,14 +241,12 @@ status: {}
 				profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
 					return nil, errors.New("nope")
 				})
-				maker := profile.ProfilesArtifactsMaker{
-					MakerConfig: profile.MakerConfig{
-						GitClient:        fakeGitClient,
-						RootDir:          rootDir,
-						GitRepoNamespace: gitRepoNamespace,
-						GitRepoName:      gitRepoName,
-					},
-				}
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGitClient,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
 				err := maker.Make(pSub)
 				Expect(err).To(MatchError("failed to build artifact: nope"))
 			})
@@ -411,6 +409,183 @@ spec:
     optional: true
 status: {}
 `))
+			})
+		})
+
+		When("there are multiple artifacts for the same repository", func() {
+			var artifacts []artifact.Artifact
+			BeforeEach(func() {
+				artifacts = []artifact.Artifact{
+					{
+						Objects: []runtime.Object{
+							&kustomizev1.Kustomization{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       "Kustomization",
+									APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test-profile-weaveworks-nginx-kustomize",
+									Namespace: "default",
+								},
+								Spec: kustomizev1.KustomizationSpec{
+									Path: "root-dir/artifacts/kustomize/nginx/deployment",
+									SourceRef: kustomizev1.CrossNamespaceSourceReference{
+										Kind:      "GitRepository",
+										Namespace: gitRepositoryNamespace,
+										Name:      gitRepositoryName,
+									},
+									Interval:        metav1.Duration{Duration: 300000000000},
+									Prune:           true,
+									TargetNamespace: "default",
+								},
+							},
+						},
+						Name:         "test-artifact-1",
+						RepoURL:      "https://repo-url.com",
+						PathsToCopy:  []string{"nginx/deployment"},
+						SparseFolder: "weaveworks-nginx-1",
+						Branch:       "main",
+					},
+					{
+						Objects: []runtime.Object{
+							&kustomizev1.Kustomization{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       "Kustomization",
+									APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test-profile-weaveworks-nginx-kustomize-2",
+									Namespace: "default",
+								},
+								Spec: kustomizev1.KustomizationSpec{
+									Path: "root-dir/artifacts/kustomize/nginx2/deployment",
+									SourceRef: kustomizev1.CrossNamespaceSourceReference{
+										Kind:      "GitRepository",
+										Namespace: gitRepositoryNamespace,
+										Name:      gitRepositoryName,
+									},
+									Interval:        metav1.Duration{Duration: 300000000000},
+									Prune:           true,
+									TargetNamespace: "default",
+								},
+							},
+						},
+						Name:         "test-artifact-2",
+						RepoURL:      "https://repo-url.com",
+						PathsToCopy:  []string{"nginx2/deployment"},
+						SparseFolder: "weaveworks-nginx-2",
+						Branch:       "main",
+					},
+				}
+				pSub = profilesv1.ProfileInstallation{
+					TypeMeta: profileTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      installationName,
+						Namespace: namespace,
+					},
+					Spec: profilesv1.ProfileInstallationSpec{
+						Source: &profilesv1.Source{
+							URL:    "https://github.com/weaveworks/nginx-profile",
+							Branch: "main",
+						},
+					},
+				}
+				profile.SetProfileGetter(func(repoURL, branch, path string, gitClient git.Git) (profilesv1.ProfileDefinition, error) {
+					return profilesv1.ProfileDefinition{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "nginx",
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Profile",
+							APIVersion: "packages.weave.works.io/profilesv1",
+						},
+						Spec: profilesv1.ProfileDefinitionSpec{
+							ProfileDescription: profilesv1.ProfileDescription{
+								Name:        "nginx",
+								Description: "foo",
+							},
+							Artifacts: []profilesv1.Artifact{
+								{
+									Name: "bitnami-nginx",
+									Chart: &profilesv1.Chart{
+										URL:     "https://charts.bitnami.com/bitnami",
+										Name:    "nginx",
+										Version: "8.9.1",
+									},
+								},
+							},
+						},
+					}, nil
+				})
+				fakeGitClient.CloneStub = func(url string, branch string, dir string) error {
+					from := filepath.Join("testdata", "clone_cache")
+					err := copy.Copy(from, filepath.Join(dir))
+					Expect(err).NotTo(HaveOccurred())
+					return nil
+				}
+			})
+
+			It("shouldn't clone as many times as there are artifacts", func() {
+				fakeGitClient.CloneStub = func(url string, branch string, dir string) error {
+					from := filepath.Join("testdata", "clone_cache")
+					err := copy.Copy(from, filepath.Join(dir))
+					Expect(err).NotTo(HaveOccurred())
+					return nil
+				}
+				profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
+					return artifacts, nil
+				})
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGitClient,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
+				err := maker.Make(pSub)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeGitClient.CloneCallCount()).To(Equal(1), "cache did not work, clone has been called more than once.")
+			})
+			It("should still clone different urls", func() {
+				fakeGitClient.CloneStub = func(url string, branch string, dir string) error {
+					from := filepath.Join("testdata", "clone_cache")
+					err := copy.Copy(from, filepath.Join(dir))
+					Expect(err).NotTo(HaveOccurred())
+					return nil
+				}
+				artifacts[0].RepoURL = "https://github.com/weaveworks/profiles-examples"
+				profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
+					return artifacts, nil
+				})
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGitClient,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
+				err := maker.Make(pSub)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeGitClient.CloneCallCount()).To(Equal(2))
+			})
+			It("should still clone same urls but with different branch", func() {
+				fakeGitClient.CloneStub = func(url string, branch string, dir string) error {
+					from := filepath.Join("testdata", "clone_cache")
+					err := copy.Copy(from, filepath.Join(dir))
+					Expect(err).NotTo(HaveOccurred())
+					return nil
+				}
+				artifacts[0].Branch = "different"
+				profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
+					return artifacts, nil
+				})
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGitClient,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
+				err := maker.Make(pSub)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeGitClient.CloneCallCount()).To(Equal(2))
 			})
 		})
 	})
