@@ -654,6 +654,7 @@ status: {}
 				cmd.Dir = temp
 
 				if v := os.Getenv("PRIVATE_EXAMPLES_DEPLOY_KEY"); v != "" {
+					cmd.Env = append(cmd.Env, os.Environ()...)
 					cmd.Env = append(cmd.Env, fmt.Sprintf(`GIT_SSH_COMMAND="ssh -i %s"`, v))
 				}
 				output, err := cmd.CombinedOutput()
