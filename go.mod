@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/jenkins-x/go-scm v1.9.2
 	github.com/mattn/go-runewidth v0.0.10 // indirect
-	github.com/olekukonko/tablewriter v0.0.4
+	github.com/olekukonko/tablewriter v0.0.5
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
 	github.com/otiai10/copy v1.6.0
