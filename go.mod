@@ -3,6 +3,7 @@ module github.com/weaveworks/pctl
 go 1.16
 
 require (
+	github.com/aws/aws-sdk-go v1.38.68
 	github.com/fluxcd/helm-controller/api v0.11.1
 	github.com/fluxcd/kustomize-controller/api v0.13.0
 	github.com/fluxcd/source-controller/api v0.15.2
@@ -20,6 +21,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.21.1
 	k8s.io/apimachinery v0.21.2
 	k8s.io/client-go v0.21.2
+	k8s.io/kubectl v0.21.1
 	knative.dev/pkg v0.0.0-20210412173742-b51994e3b312
 	sigs.k8s.io/cli-utils v0.25.1-0.20210608181808-f3974341173a
 	sigs.k8s.io/controller-runtime v0.9.0
