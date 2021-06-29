@@ -10,7 +10,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     env:
-      SSH_DIR: "~/.ssh"
+      SSH_DIR: "$HOME/.ssh"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
