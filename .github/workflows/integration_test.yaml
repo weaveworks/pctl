@@ -10,7 +10,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     env:
-      SSH_DIR: "$HOME/.ssh"
+      SSH_DIR: "${HOME}/.ssh"
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -54,7 +54,8 @@ jobs:
           chmod 600 ${SSH_DIR}/git-keys/weaveworks-profiles-examples-private
           echo "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}" > ${SSH_DIR}/git-keys/weaveworks-pctl-test-repo
           chmod 600 ${SSH_DIR}/git-keys/weaveworks-pctl-test-repo
-          cp ./scripts/ssh_command.sh ${SSH_DIR}/ssh_command
+          cp ${{ github.workspace }}/scripts/ssh_command.sh ${SSH_DIR}/ssh_command
+          ls -l $SSH_DIR}/
       - name: Test
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
@@ -62,6 +63,7 @@ jobs:
           GIT_SSH_COMMAND: ${SSH_DIR}/ssh_command
           GIT_SSH_COMMAND_DEBUGLOG: "1"
         run: |
+          ls -l ${SSH_DIR}/
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
           PATH=$PATH:$(go env GOPATH)/bin make integration
