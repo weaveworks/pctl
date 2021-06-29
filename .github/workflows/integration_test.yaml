@@ -51,9 +51,9 @@ jobs:
         run: |
           mkdir -p ${SSH_DIR}/git-keys
           echo "${{ secrets.PROFILES_EXAMPLES_PRIVATE_WEAVEWORKS_PCTL_BOT_DEPLOY_KEY }}" > ${SSH_DIR}/git-keys/weaveworks-profiles-examples-private
-          chmod 600 ${SSH_DIR}/weaveworks-profiles-examples-private
+          chmod 600 ${SSH_DIR}/git-keys/weaveworks-profiles-examples-private
           echo "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}" > ${SSH_DIR}/git-keys/weaveworks-pctl-test-repo
-          chmod 600 ${SSH_DIR}/weaveworks-pctl-test-repo
+          chmod 600 ${SSH_DIR}/git-keys/weaveworks-pctl-test-repo
       - name: Test
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
