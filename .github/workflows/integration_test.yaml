@@ -43,11 +43,14 @@ jobs:
         run: |
           mkdir -p ${SSH_DIR} && chmod 700 ${SSH_DIR}
           ssh-keyscan github.com >> ${SSH_DIR}/known_hosts
-      - name: Setup SSH key
+      - name: Run integration tests
         shell: bash
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
           EXAMPLES_KEY: ${{ secrets.PROFILES_EXAMPLES_PRIVATE_WEAVEWORKS_PCTL_BOT_DEPLOY_KEY }}
+          GIT_TOKEN: ${{secrets.GIT_TOKEN}}
+          GIT_SSH_COMMAND: ${SSH_DIR}/ssh_command
+          GIT_SSH_COMMAND_DEBUGLOG: "1"
         run: |
           mkdir -p ${SSH_DIR}/git-keys
           echo "${{ secrets.PROFILES_EXAMPLES_PRIVATE_WEAVEWORKS_PCTL_BOT_DEPLOY_KEY }}" > ${SSH_DIR}/git-keys/weaveworks-profiles-examples-private
@@ -55,14 +58,6 @@ jobs:
           echo "${{ secrets.PCTL_BOT_PCTL_TEST_REPO_DEPLOY_KEY }}" > ${SSH_DIR}/git-keys/weaveworks-pctl-test-repo
           chmod 600 ${SSH_DIR}/git-keys/weaveworks-pctl-test-repo
           cp ${{ github.workspace }}/scripts/ssh_command.sh ${SSH_DIR}/ssh_command
-          ls -l $SSH_DIR}/
-      - name: Test
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-          GIT_TOKEN: ${{secrets.GIT_TOKEN}}
-          GIT_SSH_COMMAND: ${SSH_DIR}/ssh_command
-          GIT_SSH_COMMAND_DEBUGLOG: "1"
-        run: |
           ls -l ${SSH_DIR}/
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
