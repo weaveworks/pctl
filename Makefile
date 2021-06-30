@@ -1,11 +1,11 @@
 ##@ Test
 
-test: lint unit integration docs ## Lint, run all tests and update the docs
+test: lint unit acceptance docs ## Lint, run all tests and update the docs
 
 unit: ## Run the unit tests
 	ginkgo -r ./pkg
 
-integration: build test-env ## Run the integration tests
+acceptance: build test-env ## Run the acceptance tests
 	ginkgo -r ./tests/...
 
 test-env: submodule ## Create an environment for tests
