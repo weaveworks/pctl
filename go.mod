@@ -16,6 +16,7 @@ require (
 	github.com/otiai10/copy v1.6.0
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/weaveworks/profiles v0.0.11
+	gopkg.in/evanphx/json-patch.v4 v4.11.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.21.2
 	k8s.io/apiextensions-apiserver v0.21.1
@@ -26,6 +27,7 @@ require (
 	sigs.k8s.io/cli-utils v0.25.1-0.20210608181808-f3974341173a
 	sigs.k8s.io/controller-runtime v0.9.0
 	sigs.k8s.io/kustomize/api v0.8.10
+	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
 // pin kustomize to v4.1.3
