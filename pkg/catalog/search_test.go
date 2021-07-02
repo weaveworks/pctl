@@ -48,15 +48,15 @@ var _ = Describe("Search", func() {
 			Expect(resp).To(ConsistOf(
 				profilesv1.ProfileCatalogEntry{
 					ProfileDescription: profilesv1.ProfileDescription{
-						Name:        "nginx-1",
 						Description: "nginx 1",
 					},
+					Name: "nginx-1",
 				},
 				profilesv1.ProfileCatalogEntry{
 					ProfileDescription: profilesv1.ProfileDescription{
-						Name:        "nginx-2",
 						Description: "nginx 2",
 					},
+					Name: "nginx-2",
 				},
 			))
 		})
@@ -90,21 +90,21 @@ var _ = Describe("Search", func() {
 			Expect(resp).To(ConsistOf(
 				profilesv1.ProfileCatalogEntry{
 					ProfileDescription: profilesv1.ProfileDescription{
-						Name:        "nginx-1",
 						Description: "nginx 1",
 					},
+					Name: "nginx-1",
 				},
 				profilesv1.ProfileCatalogEntry{
 					ProfileDescription: profilesv1.ProfileDescription{
-						Name:        "nginx-2",
 						Description: "nginx 2",
 					},
+					Name: "nginx-2",
 				},
 				profilesv1.ProfileCatalogEntry{
 					ProfileDescription: profilesv1.ProfileDescription{
-						Name:        "some-new-profile",
 						Description: "some new profile",
 					},
+					Name: "some-new-profile",
 				},
 			))
 		})

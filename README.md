@@ -13,6 +13,7 @@ and run: mdtoc -inplace README.md
   - [Install](#install)
     - [Install via Catalog](#install-via-catalog)
     - [Install via URL](#install-via-url)
+    - [Configuring a profile](#configuring-a-profile)
     - [Cloning repository resources](#cloning-repository-resources)
     - [Architecture](#architecture)
   - [List](#list)
