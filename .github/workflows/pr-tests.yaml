@@ -26,9 +26,6 @@ jobs:
         run: |
           sudo curl -sSLo /usr/local/bin/kind https://github.com/kubernetes-sigs/kind/releases/download/v0.10.0/kind-linux-amd64
           sudo chmod +x /usr/local/bin/kind
-      - name: Setup Kubectl
-        uses: azure/setup-kubectl@v1
-        id: install
       - name: Setup Flux v2 CLI
         uses: fluxcd/flux2/action@main
       - name: Setup Ginkgo
