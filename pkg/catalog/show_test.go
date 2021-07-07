@@ -45,11 +45,11 @@ var _ = Describe("Show", func() {
 			Expect(resp).To(Equal(
 				profilesv1.ProfileCatalogEntry{
 					ProfileDescription: profilesv1.ProfileDescription{
-						Name:          "nginx-1",
 						Description:   "nginx 1",
 						Prerequisites: []string{"Kubernetes 1.18+"},
 						Maintainer:    "WeaveWorks <gitops@weave.works>",
 					},
+					Name:          "nginx-1",
 					Tag:           "0.0.1",
 					CatalogSource: "weaveworks (https://github.com/weaveworks/profiles)",
 					URL:           "https://github.com/weaveworks/nginx-profile",
@@ -82,11 +82,11 @@ var _ = Describe("Show", func() {
 			Expect(resp).To(Equal(
 				profilesv1.ProfileCatalogEntry{
 					ProfileDescription: profilesv1.ProfileDescription{
-						Name:          "nginx-1",
 						Description:   "nginx 1",
 						Prerequisites: []string{"Kubernetes 1.18+"},
 						Maintainer:    "WeaveWorks <gitops@weave.works>",
 					},
+					Name:          "nginx-1",
 					Tag:           "v0.1.0",
 					CatalogSource: "weaveworks (https://github.com/weaveworks/profiles)",
 					URL:           "https://github.com/weaveworks/profile-examples",
