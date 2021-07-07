@@ -10,7 +10,7 @@ integration: build test-env ## Run the integration tests
 
 test-env: submodule ## Create an environment for tests
 	cd dependencies/profiles && make docker-build-local kind-up docker-push-local
-	flux install --components="source-controller,helm-controller,kustomize-controller"
+	flux install --components="source-controller,helm-controller,kustomize-controller" || kubectl get pods -n flux-system -o yaml
 
 ##@ Build
 
