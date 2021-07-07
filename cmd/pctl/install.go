@@ -153,13 +153,16 @@ func install(c *cli.Context) error {
 	path := c.String("profile-path")
 	gitRepository := c.String("git-repository")
 
-	var name string
-	if url != "" {
-		name = fmt.Sprintf("%s/%s", path, branch)
+	var source string
+	if url != "" && path != "" {
+		source = fmt.Sprintf("repository %s, path: %s and branch %s", url, path, branch)
+	} else if url != "" && path == "" {
+		source = fmt.Sprintf("repository %s and branch %s", url, branch)
 	} else {
-		name = fmt.Sprintf("%s/%s", catalogName, profileName)
+		source = fmt.Sprintf("catalog entry %s/%s/%s", catalogName, profileName, version)
 	}
-	fmt.Printf("generating installation for profile %s:\n\n", name)
+
+	fmt.Printf("generating profile installation from source: %s\n\n", source)
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{}, r)
 	var (
