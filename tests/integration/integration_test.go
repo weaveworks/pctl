@@ -25,8 +25,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-var pctlTestRepositoryName = "git@github.com:weaveworks/pctl-test-repo.git"
-var pctlPrivateProfilesRepositoryName = "git@github.com:weaveworks/profiles-examples-private.git"
+const (
+	profileExamplesURL                = "https://github.com/weaveworks/profiles-examples"
+	pctlPrivateProfilesRepositoryName = "git@github.com:weaveworks/profiles-examples-private.git"
+)
 
 var _ = Describe("PCTL", func() {
 	Context("search", func() {
@@ -436,12 +438,15 @@ var _ = Describe("PCTL", func() {
 				"--namespace", namespace,
 				"--profile-branch",
 				profileBranch,
-				"--profile-url", "https://github.com/weaveworks/profiles-examples",
+				"--profile-url", profileExamplesURL,
 				"--profile-path", "weaveworks-nginx",
 				"--config-map", configMapName)
 			cmd.Dir = temp
 			output, err = cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed: %s", string(output)))
+			Expect(string(output)).To(ContainSubstring(
+				fmt.Sprintf("generating profile installation from source: repository %s, path: %s and branch %s", profileExamplesURL, "weaveworks-nginx", profileBranch),
+			))
 
 			var files []string
 			profilesDir := filepath.Join(temp)
@@ -853,6 +858,7 @@ status: {}
 			cmd.Dir = temp
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
+			Expect(string(output)).To(ContainSubstring("generating profile installation from source: catalog entry nginx-catalog/nginx/v2.0.1"))
 
 			var files []string
 			profilesDir := filepath.Join(temp, "nginx")

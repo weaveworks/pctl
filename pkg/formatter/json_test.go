@@ -13,7 +13,7 @@ var _ = Describe("JsonFormater", func() {
 	It("formats output as json", func() {
 		jsonFormatter := formatter.NewJSONFormatter()
 		dataFunc := func() interface{} {
-			return profilesv1.ProfileCatalogEntry{ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}, CatalogSource: "bar"}
+			return profilesv1.ProfileCatalogEntry{Name: "foo", CatalogSource: "bar"}
 		}
 		out, err := jsonFormatter.Format(dataFunc)
 		Expect(err).NotTo(HaveOccurred())

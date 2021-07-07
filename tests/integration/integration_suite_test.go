@@ -23,14 +23,14 @@ import (
 var (
 	binaryPath                      string
 	skipTestsThatRequireCredentials bool
+	pctlTestRepositoryName          = "git@github.com:weaveworks/pctl-test-repo.git"
+	kClient                         client.Client
 )
 
 func TestIntegration(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Integration Suite")
 }
-
-var kClient client.Client
 
 var _ = BeforeSuite(func() {
 	var err error
