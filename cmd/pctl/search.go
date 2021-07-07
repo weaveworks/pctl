@@ -79,7 +79,7 @@ func searchDataFunc(profiles []profilesv1.ProfileCatalogEntry) func() interface{
 
 func formatOutput(profiles []profilesv1.ProfileCatalogEntry, outFormat string) error {
 	if len(profiles) == 0 {
-		fmt.Printf("No profiles found")
+		fmt.Println("No profiles found")
 		return nil
 	}
 
