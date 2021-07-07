@@ -48,17 +48,17 @@ var _ = Describe("GetAvailableUpdates", func() {
 			Expect(resp).To(ConsistOf(
 				profilesv1.ProfileCatalogEntry{
 					ProfileDescription: profilesv1.ProfileDescription{
-						Name:        "nginx-1",
 						Description: "nginx 1",
 					},
-					Tag: "v0.0.2",
+					Name: "nginx-1",
+					Tag:  "v0.0.2",
 				},
 				profilesv1.ProfileCatalogEntry{
 					ProfileDescription: profilesv1.ProfileDescription{
-						Name:        "nginx-1",
 						Description: "nginx 1",
 					},
-					Tag: "v0.0.3",
+					Name: "nginx-1",
+					Tag:  "v0.0.3",
 				},
 			))
 		})
