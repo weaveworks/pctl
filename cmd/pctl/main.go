@@ -28,6 +28,7 @@ func main() {
 			installCmd(),
 			listCmd(),
 			prepareCmd(),
+			docgenCmd(),
 		},
 	}
 
