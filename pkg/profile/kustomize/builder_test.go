@@ -2,6 +2,7 @@ package kustomize_test
 
 import (
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
+	"github.com/fluxcd/pkg/runtime/dependency"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
@@ -255,6 +256,66 @@ var _ = Describe("Builder", func() {
 				}
 				_, err := builder.Build(a, pSub, pDef)
 				Expect(err).To(MatchError(ContainSubstring("validation failed for artifact test: expected exactly one, got both: chart, kustomize")))
+			})
+		})
+		When("depends on is defined for an artifact", func() {
+			It("creates a kustomize object with DependsOn set correctly", func() {
+				builder := &kustomize.Builder{
+					Config: kustomize.Config{
+						GitRepositoryName:      gitRepositoryName,
+						GitRepositoryNamespace: gitRepositoryNamespace,
+						RootDir:                rootDir,
+					},
+				}
+				partifact = profilesv1.Artifact{
+					Name: "kustomize",
+					Kustomize: &profilesv1.Kustomize{
+						Path: "nginx/deployment",
+					},
+					DependsOn: []profilesv1.DependsOn{
+						{
+							Name: "depends-on",
+						},
+					},
+				}
+				artifacts, err := builder.Build(partifact, pSub, pDef)
+				Expect(err).NotTo(HaveOccurred())
+				kustomization := &kustomizev1.Kustomization{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Kustomization",
+						APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-profile-weaveworks-nginx-kustomize",
+						Namespace: "default",
+					},
+					Spec: kustomizev1.KustomizationSpec{
+						Path: "root-dir/artifacts/kustomize/nginx/deployment",
+						SourceRef: kustomizev1.CrossNamespaceSourceReference{
+							Kind:      "GitRepository",
+							Namespace: gitRepositoryNamespace,
+							Name:      gitRepositoryName,
+						},
+						Interval:        metav1.Duration{Duration: 300000000000},
+						Prune:           true,
+						TargetNamespace: "default",
+						DependsOn: []dependency.CrossNamespaceDependencyReference{
+							{
+								Namespace: "default",
+								Name:      "test-profile-weaveworks-nginx-depends-on",
+							},
+						},
+					},
+				}
+				expected := artifact.Artifact{
+					Objects:      []runtime.Object{kustomization},
+					Name:         "kustomize",
+					RepoURL:      "https://github.com/weaveworks/profiles-examples",
+					PathsToCopy:  []string{"nginx/deployment"},
+					SparseFolder: "weaveworks-nginx",
+					Branch:       "weaveworks-nginx/v0.0.1",
+				}
+				Expect(artifacts).To(ConsistOf(expected))
 			})
 		})
 	})

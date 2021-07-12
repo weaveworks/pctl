@@ -167,8 +167,10 @@ var _ = Describe("Builder", func() {
 						Name:    "dokuwiki",
 						Version: "11.1.6",
 					},
-					DependsOn: &profilesv1.DependsOn{
-						Name: "depends-on-name",
+					DependsOn: []profilesv1.DependsOn{
+						{
+							Name: "depends-on-name",
+						},
 					},
 				}
 				artifacts, err := chartBuilder.Build(partifact, pSub, pDef)

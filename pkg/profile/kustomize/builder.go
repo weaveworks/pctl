@@ -7,6 +7,7 @@ import (
 	"time"
 
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
+	"github.com/fluxcd/pkg/runtime/dependency"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,6 +62,13 @@ func validateArtifact(in profilesv1.Artifact) error {
 }
 
 func (k *Builder) makeKustomization(artifact profilesv1.Artifact, repoPath string, installation profilesv1.ProfileInstallation, definitionName string) *kustomizev1.Kustomization {
+	var dependsOn []dependency.CrossNamespaceDependencyReference
+	for _, dep := range artifact.DependsOn {
+		dependsOn = append(dependsOn, dependency.CrossNamespaceDependencyReference{
+			Name:      makeArtifactName(dep.Name, installation.Name, definitionName),
+			Namespace: installation.Namespace,
+		})
+	}
 	return &kustomizev1.Kustomization{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      makeArtifactName(artifact.Name, installation.Name, definitionName),
@@ -80,6 +88,7 @@ func (k *Builder) makeKustomization(artifact profilesv1.Artifact, repoPath strin
 				Name:      k.GitRepositoryName,
 				Namespace: k.GitRepositoryNamespace,
 			},
+			DependsOn: dependsOn,
 		},
 	}
 }

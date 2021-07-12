@@ -115,14 +115,14 @@ func (c *Builder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installat
 		},
 		ValuesFrom: values,
 	}
-	if dep := artifact.DependsOn; dep != nil {
-		spec.DependsOn = []dependency.CrossNamespaceDependencyReference{
-			{
-				Name:      makeArtifactName(dep.Name, installation.Name, definitionName),
-				Namespace: installation.ObjectMeta.Namespace,
-			},
-		}
+	var d []dependency.CrossNamespaceDependencyReference
+	for _, dep := range artifact.DependsOn {
+		d = append(d, dependency.CrossNamespaceDependencyReference{
+			Name:      makeArtifactName(dep.Name, installation.Name, definitionName),
+			Namespace: installation.ObjectMeta.Namespace,
+		})
 	}
+	spec.DependsOn = d
 	helmRelease := &helmv2.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      makeArtifactName(artifact.Name, installation.Name, definitionName),
