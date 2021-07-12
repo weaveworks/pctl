@@ -602,7 +602,20 @@ status: {}
 				namespace := uuid.New().String()
 				branch := "main"
 				path := "bitnami-nginx"
-				cmd := exec.Command(binaryPath, "install", "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-url", "https://github.com/weaveworks/profiles-examples", "--profile-branch", branch, "--profile-path", path)
+				cmd := exec.Command(
+					binaryPath,
+					"install",
+					"--git-repository",
+					namespace+"/git-repo-name",
+					"--namespace",
+					namespace,
+					"--profile-url",
+					"https://github.com/weaveworks/profiles-examples",
+					"--profile-branch",
+					branch,
+					"--profile-path",
+					path,
+				)
 				cmd.Dir = temp
 				output, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
@@ -713,7 +726,21 @@ status: {}
 				//subName := "pctl-profile"
 				branch := "branch-and-url"
 				path := "branch-nginx"
-				cmd := exec.Command(binaryPath, "install", "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-url", "https://github.com/weaveworks/profiles-examples", "--profile-branch", branch, "--profile-path", path, "catalog/profile/v0.0.1")
+				cmd := exec.Command(
+					binaryPath,
+					"install",
+					"--git-repository",
+					namespace+"/git-repo-name",
+					"--namespace",
+					namespace,
+					"--profile-url",
+					"https://github.com/weaveworks/profiles-examples",
+					"--profile-branch",
+					branch,
+					"--profile-path",
+					path,
+					"catalog/profile/v0.0.1",
+				)
 				cmd.Dir = temp
 				session, err := cmd.CombinedOutput()
 				Expect(err).To(HaveOccurred())
@@ -939,6 +966,136 @@ status: {}
 			}, 2*time.Minute, 5*time.Second).Should(Equal(v1.PodPhase("Running")))
 
 			Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("docker.io/bitnami/nginx:1.19.10-debian-10-r35"))
+		})
+		When("there is a depending chart", func() {
+			It("generates artifacts which contain a depends on flag", func() {
+				cmd := exec.Command(
+					binaryPath,
+					"install",
+					"--git-repository",
+					namespace+"/git-repo-name",
+					"--namespace",
+					namespace,
+					"--profile-url",
+					"https://github.com/weaveworks/profiles-examples",
+					"--profile-branch",
+					"dependson",
+					"--profile-path",
+					"dependson-nginx",
+				)
+				cmd.Dir = temp
+				output, err := cmd.CombinedOutput()
+				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
+				Expect(string(output)).To(ContainSubstring("generating profile installation from source: repository https://github.com/weaveworks/profiles-examples, path: dependson-nginx and branch dependson"))
+
+				var files []string
+				profilesDir := filepath.Join(temp)
+				err = filepath.Walk(profilesDir, func(path string, info os.FileInfo, err error) error {
+					if !info.IsDir() {
+						files = append(files, strings.TrimPrefix(path, profilesDir+"/"))
+					}
+					return nil
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				By("creating the artifacts")
+				Expect(files).To(ContainElements(
+					"artifacts/dependon/ConfigMap.yaml",
+					"artifacts/dependon/HelmRelease.yaml",
+					"artifacts/dependon/HelmRepository.yaml",
+					"artifacts/nginx-chart/ConfigMap.yaml",
+					"artifacts/nginx-chart/HelmRelease.yaml",
+					"artifacts/nginx-chart/HelmRepository.yaml",
+					"profile-installation.yaml",
+				))
+
+				filename := filepath.Join(temp, "profile-installation.yaml")
+				content, err := ioutil.ReadFile(filename)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
+kind: ProfileInstallation
+metadata:
+  creationTimestamp: null
+  name: pctl-profile
+  namespace: %s
+spec:
+  source:
+    branch: dependson
+    path: dependson-nginx
+    url: https://github.com/weaveworks/profiles-examples
+status: {}
+`, namespace)))
+
+				By("verify that dependsOn has been added to the helm release")
+				filename = filepath.Join(temp, "artifacts", "nginx-chart", "HelmRelease.yaml")
+				content, err = ioutil.ReadFile(filename)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  creationTimestamp: null
+  name: pctl-profile-dependson-nginx-nginx-chart
+  namespace: %s
+spec:
+  chart:
+    spec:
+      chart: nginx
+      sourceRef:
+        kind: HelmRepository
+        name: pctl-profile-profiles-examples-nginx
+        namespace: %s
+      version: 9.3.0
+  dependsOn:
+  - name: pctl-profile-dependson-nginx-dependon
+    namespace: %s
+  interval: 0s
+  valuesFrom:
+  - kind: ConfigMap
+    name: pctl-profile-nginx-chart-defaultvalues
+    valuesKey: default-values.yaml
+status: {}
+`, namespace, namespace, namespace)))
+
+				By("the artifacts being deployable")
+
+				cmd = exec.Command("kubectl", "apply", "-R", "-f", profilesDir)
+				cmd.Dir = temp
+				output, err = cmd.CombinedOutput()
+				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("kubectl apply failed : %s", string(output)))
+
+				By("successfully deploying the chart resource")
+				helmReleaseName := fmt.Sprintf("%s-%s-%s", subName, "dependson-nginx", "nginx-chart")
+				var helmRelease *helmv2.HelmRelease
+				Eventually(func() bool {
+					helmRelease = &helmv2.HelmRelease{}
+					err := kClient.Get(context.Background(), client.ObjectKey{Name: helmReleaseName, Namespace: namespace}, helmRelease)
+					if err != nil {
+						return false
+					}
+					for _, condition := range helmRelease.Status.Conditions {
+						if condition.Type == "Ready" && condition.Status == "True" {
+							return true
+						}
+					}
+					return false
+				}, 5*time.Minute, 5*time.Second).Should(BeTrue())
+				// it's enough to verify the nginx installation because it wouldn't start up if redis wouldn't be running.
+				helmReleaseOpts := []client.ListOption{
+					client.InNamespace(namespace),
+					client.MatchingLabels{"helm.sh/chart": "nginx-9.3.0"},
+				}
+				podList := &v1.PodList{}
+				Eventually(func() v1.PodPhase {
+					podList = &v1.PodList{}
+					err := kClient.List(context.Background(), podList, helmReleaseOpts...)
+					Expect(err).NotTo(HaveOccurred())
+					if len(podList.Items) == 0 {
+						return v1.PodPhase("no pods found")
+					}
+					return podList.Items[0].Status.Phase
+				}, 2*time.Minute, 5*time.Second).Should(Equal(v1.PodPhase("Running")))
+				Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("docker.io/bitnami/nginx:1.21.0-debian-10-r0"))
+			})
 		})
 	})
 

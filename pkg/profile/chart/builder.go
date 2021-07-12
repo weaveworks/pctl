@@ -118,7 +118,7 @@ func (c *Builder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installat
 	if dep := artifact.DependsOn; dep != nil {
 		spec.DependsOn = []dependency.CrossNamespaceDependencyReference{
 			{
-				Name:      dep.Name,
+				Name:      makeArtifactName(dep.Name, installation.Name, definitionName),
 				Namespace: installation.ObjectMeta.Namespace,
 			},
 		}

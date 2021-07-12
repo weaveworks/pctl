@@ -1,6 +1,7 @@
 package chart_test
 
 import (
+	"fmt"
 	"path/filepath"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
@@ -167,7 +168,7 @@ var _ = Describe("Builder", func() {
 						Version: "11.1.6",
 					},
 					DependsOn: &profilesv1.DependsOn{
-						Name: "depends_on_name",
+						Name: "depends-on-name",
 					},
 				}
 				artifacts, err := chartBuilder.Build(partifact, pSub, pDef)
@@ -202,7 +203,7 @@ var _ = Describe("Builder", func() {
 						},
 						DependsOn: []dependency.CrossNamespaceDependencyReference{
 							{
-								Name:      "depends_on_name",
+								Name:      fmt.Sprintf("%s-%s-%s", profileName, "weaveworks-nginx", "depends-on-name"),
 								Namespace: "default",
 							},
 						},
