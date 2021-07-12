@@ -1,3 +1,7 @@
+version_pkg := github.com/weaveworks/pctl/pkg/version
+build_date := $(shell date +%Y-%m-%dT%H:%M:%SZ)
+git_commit = $(shell git rev-parse --short HEAD)
+
 ##@ Test
 
 test: lint unit integration docs ## Lint, run all tests and update the docs
@@ -18,7 +22,7 @@ lint: ## Run the linter
 	golangci-lint run --exclude-use-default=false --timeout=5m0s
 
 build: ## Build the pctl binary to ./pctl
-	go build -o pctl ./cmd/pctl
+	CGO_ENABLED=0 go build -ldflags "-X $(version_pkg).gitCommit=$(git_commit) -X $(version_pkg).buildDate=$(build_date)" -o pctl ./cmd/pctl
 
 local-env: submodule ## Create local environment
 	cd dependencies/profiles && make local-env

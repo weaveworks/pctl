@@ -3,6 +3,8 @@ module github.com/weaveworks/pctl
 go 1.16
 
 require (
+	github.com/blang/semver v3.5.1+incompatible
+	github.com/dave/jennifer v1.4.1
 	github.com/fluxcd/helm-controller/api v0.11.1
 	github.com/fluxcd/kustomize-controller/api v0.13.2
 	github.com/fluxcd/source-controller/api v0.15.3
@@ -13,6 +15,7 @@ require (
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.14.0
 	github.com/otiai10/copy v1.6.0
+	github.com/pkg/errors v0.9.1
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/weaveworks/profiles v0.0.13
 	gopkg.in/yaml.v2 v2.4.0
