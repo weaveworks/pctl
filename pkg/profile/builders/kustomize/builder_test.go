@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
-	"github.com/weaveworks/pctl/pkg/profile/kustomize"
+	kustomize2 "github.com/weaveworks/pctl/pkg/profile/builders/kustomize"
 )
 
 var _ = Describe("Builder", func() {
@@ -82,14 +82,14 @@ var _ = Describe("Builder", func() {
 
 	Context("Build", func() {
 		It("creates an partifact from an install and a profile definition", func() {
-			builder := &kustomize.Builder{
-				Config: kustomize.Config{
+			builder := &kustomize2.Builder{
+				Config: kustomize2.Config{
 					GitRepositoryName:      gitRepositoryName,
 					GitRepositoryNamespace: gitRepositoryNamespace,
 					RootDir:                rootDir,
 				},
 			}
-			artifacts, err := builder.Build(partifact, pSub, pDef)
+			artifacts, err := builder.Build(partifact, pSub, pDef, nil)
 			Expect(err).NotTo(HaveOccurred())
 			kustomization := &kustomizev1.Kustomization{
 				TypeMeta: metav1.TypeMeta{
@@ -138,14 +138,14 @@ var _ = Describe("Builder", func() {
 						},
 					},
 				}
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &kustomize2.Builder{
+					Config: kustomize2.Config{
 						GitRepositoryName:      gitRepositoryName,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						RootDir:                rootDir,
 					},
 				}
-				artifacts, err := builder.Build(partifact, pSub, pDef)
+				artifacts, err := builder.Build(partifact, pSub, pDef, nil)
 				Expect(err).NotTo(HaveOccurred())
 				kustomization := &kustomizev1.Kustomization{
 					TypeMeta: metav1.TypeMeta{
@@ -181,8 +181,8 @@ var _ = Describe("Builder", func() {
 		})
 		When("git-repository-name and git-repository-namespace aren't defined", func() {
 			It("returns an error", func() {
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &kustomize2.Builder{
+					Config: kustomize2.Config{
 						RootDir: rootDir,
 					},
 				}
@@ -207,7 +207,7 @@ var _ = Describe("Builder", func() {
 						Artifacts: []profilesv1.Artifact{partifact},
 					},
 				}
-				_, err := builder.Build(partifact, pSub, pDef)
+				_, err := builder.Build(partifact, pSub, pDef, nil)
 				Expect(err).To(MatchError("in case of local resources, the flux gitrepository object's details must be provided"))
 			})
 		})
@@ -225,14 +225,14 @@ var _ = Describe("Builder", func() {
 						Path: "https://not.empty",
 					},
 				}
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &kustomize2.Builder{
+					Config: kustomize2.Config{
 						RootDir:                rootDir,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						GitRepositoryName:      gitRepositoryName,
 					},
 				}
-				_, err := builder.Build(a, pSub, pDef)
+				_, err := builder.Build(a, pSub, pDef, nil)
 				Expect(err).To(MatchError(ContainSubstring("validation failed for artifact test: expected exactly one, got both: kustomize, profile")))
 			})
 		})
@@ -247,21 +247,21 @@ var _ = Describe("Builder", func() {
 						Path: "https://not.empty",
 					},
 				}
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &kustomize2.Builder{
+					Config: kustomize2.Config{
 						RootDir:                rootDir,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						GitRepositoryName:      gitRepositoryName,
 					},
 				}
-				_, err := builder.Build(a, pSub, pDef)
+				_, err := builder.Build(a, pSub, pDef, nil)
 				Expect(err).To(MatchError(ContainSubstring("validation failed for artifact test: expected exactly one, got both: chart, kustomize")))
 			})
 		})
 		When("depends on is defined for an artifact", func() {
 			It("creates a kustomize object with DependsOn set correctly", func() {
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &kustomize2.Builder{
+					Config: kustomize2.Config{
 						GitRepositoryName:      gitRepositoryName,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						RootDir:                rootDir,
@@ -278,7 +278,14 @@ var _ = Describe("Builder", func() {
 						},
 					},
 				}
-				artifacts, err := builder.Build(partifact, pSub, pDef)
+				artifacts, err := builder.Build(partifact, pSub, pDef, []profilesv1.Artifact{
+					{
+						Name: "depends-on",
+						Kustomize: &profilesv1.Kustomize{
+							Path: "nginx/deployment",
+						},
+					},
+				})
 				Expect(err).NotTo(HaveOccurred())
 				kustomization := &kustomizev1.Kustomization{
 					TypeMeta: metav1.TypeMeta{

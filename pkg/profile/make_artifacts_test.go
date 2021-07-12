@@ -4,6 +4,9 @@ import (
 	"errors"
 	"path/filepath"
 
+	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
+	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
+	"github.com/fluxcd/pkg/runtime/dependency"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/otiai10/copy"
@@ -102,6 +105,60 @@ var _ = Describe("MakeArtifactsFunc", func() {
 			Expect(nginxChart.Objects).To(HaveLen(3)) // we test the object's generation in their respective builder tests
 		})
 
+		When("a dependsOn artifact defined", func() {
+			It("calls the builder with proper dependencies passed in", func() {
+				fakeGit.CloneStub = func(repo string, branch string, loc string) error {
+					from := filepath.Join("testdata", "dependson")
+					err := copy.Copy(from, loc)
+					Expect(err).NotTo(HaveOccurred())
+					return nil
+				}
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGit,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
+				artifacts, err := profile.MakeArtifacts(maker, pSub)
+				Expect(err).NotTo(HaveOccurred())
+				// we test the generated artifacts consistency in the builders, here we test if
+				// depends on was generated correctly.
+				Expect(len(artifacts)).To(Equal(4))
+
+				dep1 := artifacts[1]
+				helmRelease, ok := dep1.Objects[0].(*helmv2.HelmRelease)
+				Expect(ok).To(BeTrue())
+				Expect(helmRelease.Spec.DependsOn).To(ConsistOf(dependency.CrossNamespaceDependencyReference{
+					Name:      "mySub-weaveworks-nginx-dependon",
+					Namespace: "default",
+				}))
+				dep2 := artifacts[3]
+				kustomization, ok := dep2.Objects[0].(*kustomizev1.Kustomization)
+				Expect(ok).To(BeTrue(), "dep2.Objects's second item was not a kustomization object")
+				Expect(kustomization.Spec.DependsOn).To(ConsistOf(dependency.CrossNamespaceDependencyReference{
+					Name:      "mySub-weaveworks-nginx-dependon2",
+					Namespace: "default",
+				}))
+			})
+		})
+		When("a dependsOn artifact is not in the list of artifacts", func() {
+			It("returns an error", func() {
+				fakeGit.CloneStub = func(repo string, branch string, loc string) error {
+					from := filepath.Join("testdata", "dependson_missing")
+					err := copy.Copy(from, loc)
+					Expect(err).NotTo(HaveOccurred())
+					return nil
+				}
+				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					GitClient:        fakeGit,
+					RootDir:          rootDir,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
+				})
+				_, err := profile.MakeArtifacts(maker, pSub)
+				Expect(err).To(MatchError("nginx-chart's depending artifact dependon not found in the list of artifacts"))
+			})
+		})
 		When("fetching the nested profile definition fails", func() {
 			It("returns an error", func() {
 				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{

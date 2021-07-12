@@ -33,12 +33,12 @@ type Builder struct {
 }
 
 // Build a single artifact from a profile artifact and installation.
-func (c *Builder) Build(att profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]artifact.Artifact, error) {
+func (c *Builder) Build(att profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition, dependencies []profilesv1.Artifact) ([]artifact.Artifact, error) {
 	if err := validateArtifact(att); err != nil {
 		return nil, fmt.Errorf("validation failed for artifact %s: %w", att.Name, err)
 	}
 	a := artifact.Artifact{Name: att.Name}
-	helmRelease, cfgMap := c.makeHelmReleaseObjects(att, installation, definition.Name)
+	helmRelease, cfgMap := c.makeHelmReleaseObjects(att, installation, definition.Name, dependencies)
 	if cfgMap != nil {
 		a.Objects = append(a.Objects, cfgMap)
 	}
@@ -81,7 +81,7 @@ func validateArtifact(in profilesv1.Artifact) error {
 	return nil
 }
 
-func (c *Builder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string) (*helmv2.HelmRelease, *corev1.ConfigMap) {
+func (c *Builder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string, dependencies []profilesv1.Artifact) (*helmv2.HelmRelease, *corev1.ConfigMap) {
 	var helmChartSpec helmv2.HelmChartTemplateSpec
 	if artifact.Chart.Path != "" {
 		helmChartSpec = c.makeGitChartSpec(path.Join(installation.Spec.Source.Path, artifact.Chart.Path))
@@ -116,11 +116,13 @@ func (c *Builder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installat
 		ValuesFrom: values,
 	}
 	var d []dependency.CrossNamespaceDependencyReference
-	for _, dep := range artifact.DependsOn {
-		d = append(d, dependency.CrossNamespaceDependencyReference{
-			Name:      makeArtifactName(dep.Name, installation.Name, definitionName),
-			Namespace: installation.ObjectMeta.Namespace,
-		})
+	for _, dep := range dependencies {
+		if dep.Chart != nil {
+			d = append(d, dependency.CrossNamespaceDependencyReference{
+				Name:      makeArtifactName(dep.Name, installation.Name, definitionName),
+				Namespace: installation.ObjectMeta.Namespace,
+			})
+		}
 	}
 	spec.DependsOn = d
 	helmRelease := &helmv2.HelmRelease{

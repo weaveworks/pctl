@@ -16,8 +16,9 @@ import (
 
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
-	"github.com/weaveworks/pctl/pkg/profile/chart"
-	"github.com/weaveworks/pctl/pkg/profile/kustomize"
+	"github.com/weaveworks/pctl/pkg/profile/builders"
+	cbuilder "github.com/weaveworks/pctl/pkg/profile/builders/chart"
+	kbuilder "github.com/weaveworks/pctl/pkg/profile/builders/kustomize"
 )
 
 // ArtifactsMaker can create a list of artifacts.
@@ -39,7 +40,7 @@ type MakerConfig struct {
 type ProfilesArtifactsMaker struct {
 	MakerConfig
 
-	Builders     map[int]Builder
+	Builders     map[int]builders.Builder
 	nestedName   string
 	profileRepos []string
 	cloneCache   map[string]string
@@ -47,16 +48,16 @@ type ProfilesArtifactsMaker struct {
 
 // NewProfilesArtifactsMaker creates a new profiles artifacts maker.
 func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
-	builders := map[int]Builder{
-		KUSTOMIZE: &kustomize.Builder{
-			Config: kustomize.Config{
+	bldrs := map[int]builders.Builder{
+		builders.KUSTOMIZE: &kbuilder.Builder{
+			Config: kbuilder.Config{
 				GitRepositoryName:      cfg.GitRepoName,
 				GitRepositoryNamespace: cfg.GitRepoNamespace,
 				RootDir:                cfg.RootDir,
 			},
 		},
-		CHART: &chart.Builder{
-			Config: chart.Config{
+		builders.CHART: &cbuilder.Builder{
+			Config: cbuilder.Config{
 				GitRepositoryName:      cfg.GitRepoName,
 				GitRepositoryNamespace: cfg.GitRepoNamespace,
 				RootDir:                cfg.RootDir,
@@ -65,7 +66,7 @@ func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
 	}
 	return &ProfilesArtifactsMaker{
 		MakerConfig: cfg,
-		Builders:    builders,
+		Builders:    bldrs,
 		cloneCache:  make(map[string]string),
 	}
 }

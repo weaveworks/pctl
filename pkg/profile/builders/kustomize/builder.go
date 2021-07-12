@@ -29,7 +29,7 @@ type Builder struct {
 }
 
 // Build a single artifact from a profile artifact and installation.
-func (k *Builder) Build(att profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]artifact.Artifact, error) {
+func (k *Builder) Build(att profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition, dependencies []profilesv1.Artifact) ([]artifact.Artifact, error) {
 	if k.GitRepositoryNamespace == "" && k.GitRepositoryName == "" {
 		return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 	}
@@ -38,7 +38,7 @@ func (k *Builder) Build(att profilesv1.Artifact, installation profilesv1.Profile
 	}
 	a := artifact.Artifact{Name: att.Name}
 	path := filepath.Join(k.RootDir, "artifacts", att.Name, att.Kustomize.Path)
-	a.Objects = append(a.Objects, k.makeKustomization(att, path, installation, definition.Name))
+	a.Objects = append(a.Objects, k.makeKustomization(att, path, installation, definition.Name, dependencies))
 	branch := installation.Spec.Source.Branch
 	if installation.Spec.Source.Tag != "" {
 		branch = installation.Spec.Source.Tag
@@ -61,13 +61,15 @@ func validateArtifact(in profilesv1.Artifact) error {
 	return nil
 }
 
-func (k *Builder) makeKustomization(artifact profilesv1.Artifact, repoPath string, installation profilesv1.ProfileInstallation, definitionName string) *kustomizev1.Kustomization {
+func (k *Builder) makeKustomization(artifact profilesv1.Artifact, repoPath string, installation profilesv1.ProfileInstallation, definitionName string, dependencies []profilesv1.Artifact) *kustomizev1.Kustomization {
 	var dependsOn []dependency.CrossNamespaceDependencyReference
-	for _, dep := range artifact.DependsOn {
-		dependsOn = append(dependsOn, dependency.CrossNamespaceDependencyReference{
-			Name:      makeArtifactName(dep.Name, installation.Name, definitionName),
-			Namespace: installation.Namespace,
-		})
+	for _, dep := range dependencies {
+		if dep.Kustomize != nil {
+			dependsOn = append(dependsOn, dependency.CrossNamespaceDependencyReference{
+				Name:      makeArtifactName(dep.Name, installation.Name, definitionName),
+				Namespace: installation.Namespace,
+			})
+		}
 	}
 	return &kustomizev1.Kustomization{
 		ObjectMeta: metav1.ObjectMeta{
