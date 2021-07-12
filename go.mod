@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/fluxcd/helm-controller/api v0.11.1
 	github.com/fluxcd/kustomize-controller/api v0.13.2
+	github.com/fluxcd/pkg/runtime v0.12.1 // indirect
 	github.com/fluxcd/source-controller/api v0.15.3
 	github.com/google/uuid v1.2.0
 	github.com/jenkins-x/go-scm v1.10.6
@@ -28,6 +29,7 @@ require (
 
 // pin kustomize to v4.1.3
 replace (
+	github.com/weaveworks/profiles => ../profiles
 	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.8.10
 	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.10.21
 )

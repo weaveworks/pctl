@@ -98,12 +98,12 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 		if artifact.Kustomize != nil {
 			data, err := yaml.Marshal(artifact.Kustomize)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to marshal kustomize resource: %w", err)
 			}
 			filename := filepath.Join(artifactDir, "kustomization.yaml")
 			err = os.WriteFile(filename, data, 0644)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to write file %s: %w", filename, err)
 			}
 		}
 	}

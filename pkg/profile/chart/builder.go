@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
+	"github.com/fluxcd/pkg/runtime/dependency"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -108,6 +109,20 @@ func (c *Builder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installat
 			ValuesKey: artifactNameParts[len(artifactNameParts)-1],
 		})
 	}
+	spec := helmv2.HelmReleaseSpec{
+		Chart: helmv2.HelmChartTemplate{
+			Spec: helmChartSpec,
+		},
+		ValuesFrom: values,
+	}
+	if dep := artifact.DependsOn; dep != nil {
+		spec.DependsOn = []dependency.CrossNamespaceDependencyReference{
+			{
+				Name:      dep.Name,
+				Namespace: installation.ObjectMeta.Namespace,
+			},
+		}
+	}
 	helmRelease := &helmv2.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      makeArtifactName(artifact.Name, installation.Name, definitionName),
@@ -117,12 +132,7 @@ func (c *Builder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installat
 			Kind:       helmv2.HelmReleaseKind,
 			APIVersion: helmv2.GroupVersion.String(),
 		},
-		Spec: helmv2.HelmReleaseSpec{
-			Chart: helmv2.HelmChartTemplate{
-				Spec: helmChartSpec,
-			},
-			ValuesFrom: values,
-		},
+		Spec: spec,
 	}
 	return helmRelease, cfgMap
 }
