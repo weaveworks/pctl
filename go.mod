@@ -7,11 +7,11 @@ require (
 	github.com/fluxcd/kustomize-controller/api v0.13.2
 	github.com/fluxcd/source-controller/api v0.15.3
 	github.com/google/uuid v1.2.0
-	github.com/jenkins-x/go-scm v1.10.6
+	github.com/jenkins-x/go-scm v1.10.8
 	github.com/mattn/go-runewidth v0.0.10 // indirect
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/onsi/ginkgo v1.16.4
-	github.com/onsi/gomega v1.13.0
+	github.com/onsi/gomega v1.14.0
 	github.com/otiai10/copy v1.6.0
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/weaveworks/profiles v0.0.12
