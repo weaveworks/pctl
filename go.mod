@@ -8,7 +8,7 @@ require (
 	github.com/fluxcd/pkg/runtime v0.12.1
 	github.com/fluxcd/source-controller/api v0.15.3
 	github.com/google/uuid v1.2.0
-	github.com/jenkins-x/go-scm v1.10.6
+	github.com/jenkins-x/go-scm v1.10.8
 	github.com/mattn/go-runewidth v0.0.10 // indirect
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/onsi/ginkgo v1.16.4

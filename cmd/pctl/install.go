@@ -162,7 +162,7 @@ func install(c *cli.Context) error {
 		source = fmt.Sprintf("catalog entry %s/%s/%s", catalogName, profileName, version)
 	}
 
-	fmt.Printf("generating profile installation from source: %s\n\n", source)
+	fmt.Printf("generating profile installation from source: %s\n", source)
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{}, r)
 	var (
@@ -201,7 +201,11 @@ func install(c *cli.Context) error {
 			Version:       version,
 		},
 	}
-	return catalog.Install(cfg)
+	err = catalog.Install(cfg)
+	if err == nil {
+		fmt.Println("installation completed successfully")
+	}
+	return err
 }
 
 // createPullRequest runs the pull request creation part of the `install` command.
