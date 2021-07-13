@@ -99,7 +99,7 @@ var _ = Describe("Builder", func() {
 						RootDir:                rootDir,
 					},
 				}
-				artifacts, err := chartBuilder.Build(partifact, pSub, pDef, nil)
+				artifacts, err := chartBuilder.Build(partifact, pSub, pDef)
 				Expect(err).NotTo(HaveOccurred())
 				helmRelease := &helmv2.HelmRelease{
 					TypeMeta: metav1.TypeMeta{
@@ -173,16 +173,29 @@ var _ = Describe("Builder", func() {
 						},
 					},
 				}
-				artifacts, err := chartBuilder.Build(partifact, pSub, pDef, []profilesv1.Artifact{
-					{
-						Name: "depends-on-name",
-						Chart: &profilesv1.Chart{
-							Name:    "nginx",
-							Version: "1.1.1",
-							URL:     "https://charts.bitnami.com/bitnami",
-						},
+				pDef = profilesv1.ProfileDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: profileName1,
 					},
-				})
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Profile",
+						APIVersion: "packages.weave.works/profilesv1",
+					},
+					Spec: profilesv1.ProfileDefinitionSpec{
+						ProfileDescription: profilesv1.ProfileDescription{
+							Description: "foo",
+						},
+						Artifacts: []profilesv1.Artifact{partifact, {
+							Name: "depends-on-name",
+							Chart: &profilesv1.Chart{
+								URL:     "https://charts.bitnami.com/bitnami",
+								Name:    "dokuwiki",
+								Version: "11.1.6",
+							},
+						}},
+					},
+				}
+				artifacts, err := chartBuilder.Build(partifact, pSub, pDef)
 				Expect(err).NotTo(HaveOccurred())
 				helmRelease := &helmv2.HelmRelease{
 					TypeMeta: metav1.TypeMeta{
@@ -240,6 +253,47 @@ var _ = Describe("Builder", func() {
 				Expect(artifacts).To(ConsistOf(expected))
 			})
 		})
+		When("a dependency is defined but is not in the artifacts list", func() {
+			It("returns a sensible error", func() {
+				chartBuilder := &chart.Builder{
+					Config: chart.Config{
+						GitRepositoryName:      gitRepositoryName,
+						GitRepositoryNamespace: gitRepositoryNamespace,
+						RootDir:                rootDir,
+					},
+				}
+				partifact = profilesv1.Artifact{
+					Name: "dokuwiki",
+					Chart: &profilesv1.Chart{
+						URL:     "https://charts.bitnami.com/bitnami",
+						Name:    "dokuwiki",
+						Version: "11.1.6",
+					},
+					DependsOn: []profilesv1.DependsOn{
+						{
+							Name: "depends-on-name",
+						},
+					},
+				}
+				pDef = profilesv1.ProfileDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: profileName1,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Profile",
+						APIVersion: "packages.weave.works/profilesv1",
+					},
+					Spec: profilesv1.ProfileDefinitionSpec{
+						ProfileDescription: profilesv1.ProfileDescription{
+							Description: "foo",
+						},
+						Artifacts: []profilesv1.Artifact{partifact},
+					},
+				}
+				_, err := chartBuilder.Build(partifact, pSub, pDef)
+				Expect(err).To(MatchError("dokuwiki's depending artifact depends-on-name not found in the list of artifacts"))
+			})
+		})
 
 		When("a path based chart is configured", func() {
 			BeforeEach(func() {
@@ -259,7 +313,7 @@ var _ = Describe("Builder", func() {
 						RootDir:                rootDir,
 					},
 				}
-				artifacts, err := chartBuilder.Build(partifact, pSub, pDef, nil)
+				artifacts, err := chartBuilder.Build(partifact, pSub, pDef)
 				Expect(err).NotTo(HaveOccurred())
 				helmRelease := &helmv2.HelmRelease{
 					TypeMeta: metav1.TypeMeta{
@@ -331,7 +385,7 @@ var _ = Describe("Builder", func() {
 						Artifacts: []profilesv1.Artifact{partifact},
 					},
 				}
-				_, err := chartBuilder.Build(partifact, pSub, pDef, nil)
+				_, err := chartBuilder.Build(partifact, pSub, pDef)
 				Expect(err).To(MatchError("in case of local resources, the flux gitrepository object's details must be provided"))
 			})
 		})
@@ -353,7 +407,7 @@ var _ = Describe("Builder", func() {
 						RootDir: rootDir,
 					},
 				}
-				_, err := chartBuilder.Build(a, pSub, pDef, nil)
+				_, err := chartBuilder.Build(a, pSub, pDef)
 				Expect(err).To(MatchError(ContainSubstring("validation failed for artifact test: expected exactly one, got both: chart.path, chart.url")))
 			})
 		})
@@ -374,7 +428,7 @@ var _ = Describe("Builder", func() {
 						RootDir: rootDir,
 					},
 				}
-				_, err := chartBuilder.Build(a, pSub, pDef, nil)
+				_, err := chartBuilder.Build(a, pSub, pDef)
 				Expect(err).To(MatchError(ContainSubstring("validation failed for artifact test: expected exactly one, got both: chart, kustomize")))
 			})
 		})
@@ -397,7 +451,7 @@ var _ = Describe("Builder", func() {
 						RootDir: rootDir,
 					},
 				}
-				_, err := chartBuilder.Build(a, pSub, pDef, nil)
+				_, err := chartBuilder.Build(a, pSub, pDef)
 				Expect(err).To(MatchError(ContainSubstring("validation failed for artifact test: expected exactly one, got both: chart, profile")))
 			})
 		})
@@ -434,7 +488,7 @@ var _ = Describe("Builder", func() {
 						RootDir:                rootDir,
 					},
 				}
-				artifacts, err := chartBuilder.Build(partifact, pSub, pDef, nil)
+				artifacts, err := chartBuilder.Build(partifact, pSub, pDef)
 				Expect(err).NotTo(HaveOccurred())
 				configMap := &corev1.ConfigMap{
 					TypeMeta: metav1.TypeMeta{

@@ -29,7 +29,7 @@ type Builder struct {
 }
 
 // Build a single artifact from a profile artifact and installation.
-func (k *Builder) Build(att profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition, dependencies []profilesv1.Artifact) ([]artifact.Artifact, error) {
+func (k *Builder) Build(att profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]artifact.Artifact, error) {
 	if k.GitRepositoryNamespace == "" && k.GitRepositoryName == "" {
 		return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 	}
@@ -38,7 +38,17 @@ func (k *Builder) Build(att profilesv1.Artifact, installation profilesv1.Profile
 	}
 	a := artifact.Artifact{Name: att.Name}
 	path := filepath.Join(k.RootDir, "artifacts", att.Name, att.Kustomize.Path)
-	a.Objects = append(a.Objects, k.makeKustomization(att, path, installation, definition.Name, dependencies))
+
+	var deps []profilesv1.Artifact
+	for _, dep := range att.DependsOn {
+		d, ok := containsArtifact(dep.Name, definition.Spec.Artifacts)
+		if !ok {
+			return nil, fmt.Errorf("%s's depending artifact %s not found in the list of artifacts", a.Name, dep.Name)
+		}
+		deps = append(deps, d)
+	}
+
+	a.Objects = append(a.Objects, k.makeKustomization(att, path, installation, definition.Name, deps))
 	branch := installation.Spec.Source.Branch
 	if installation.Spec.Source.Tag != "" {
 		branch = installation.Spec.Source.Tag
@@ -93,6 +103,16 @@ func (k *Builder) makeKustomization(artifact profilesv1.Artifact, repoPath strin
 			DependsOn: dependsOn,
 		},
 	}
+}
+
+// containsArtifact checks whether an artifact with a specific name exists in a list of artifacts.
+func containsArtifact(name string, stack []profilesv1.Artifact) (profilesv1.Artifact, bool) {
+	for _, a := range stack {
+		if a.Name == name {
+			return a, true
+		}
+	}
+	return profilesv1.Artifact{}, false
 }
 
 func makeArtifactName(name string, installationName, definitionName string) string {

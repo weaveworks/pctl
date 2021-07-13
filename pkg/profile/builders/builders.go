@@ -17,5 +17,5 @@ const (
 //go:generate counterfeiter -o fakes/builder_maker.go . Builder
 type Builder interface {
 	// Build a single artifact from a profile artifact and installation.
-	Build(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition, dependencies []profilesv1.Artifact) ([]artifact.Artifact, error)
+	Build(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]artifact.Artifact, error)
 }

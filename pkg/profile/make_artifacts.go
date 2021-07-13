@@ -71,34 +71,11 @@ func MakeArtifacts(pam *ProfilesArtifactsMaker, installation profilesv1.ProfileI
 		} else {
 			return nil, errors.New("no artifact set")
 		}
-
-		// gather possible dependencies for the builder.
-		// note: this could be a map for O(1) lookup, but in reality, this list is so small that
-		// it shouldn't impact performance of the overall Make process.
-		var deps []profilesv1.Artifact
-		for _, dep := range a.DependsOn {
-			d, ok := containsArtifact(dep.Name, definition.Spec.Artifacts)
-			if !ok {
-				return nil, fmt.Errorf("%s's depending artifact %s not found in the list of artifacts", a.Name, dep.Name)
-			}
-			deps = append(deps, d)
-		}
-
-		arts, err := builder.Build(a, installation, definition, deps)
+		arts, err := builder.Build(a, installation, definition)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build artifact: %w", err)
 		}
 		artifacts = append(artifacts, arts...)
 	}
 	return artifacts, nil
-}
-
-// containsArtifact checks whether an artifact with a specific name exists in a list of artifacts.
-func containsArtifact(name string, stack []profilesv1.Artifact) (profilesv1.Artifact, bool) {
-	for _, a := range stack {
-		if a.Name == name {
-			return a, true
-		}
-	}
-	return profilesv1.Artifact{}, false
 }

@@ -33,12 +33,20 @@ type Builder struct {
 }
 
 // Build a single artifact from a profile artifact and installation.
-func (c *Builder) Build(att profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition, dependencies []profilesv1.Artifact) ([]artifact.Artifact, error) {
+func (c *Builder) Build(att profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]artifact.Artifact, error) {
 	if err := validateArtifact(att); err != nil {
 		return nil, fmt.Errorf("validation failed for artifact %s: %w", att.Name, err)
 	}
 	a := artifact.Artifact{Name: att.Name}
-	helmRelease, cfgMap := c.makeHelmReleaseObjects(att, installation, definition.Name, dependencies)
+	var deps []profilesv1.Artifact
+	for _, dep := range att.DependsOn {
+		d, ok := containsArtifact(dep.Name, definition.Spec.Artifacts)
+		if !ok {
+			return nil, fmt.Errorf("%s's depending artifact %s not found in the list of artifacts", a.Name, dep.Name)
+		}
+		deps = append(deps, d)
+	}
+	helmRelease, cfgMap := c.makeHelmReleaseObjects(att, installation, definition.Name, deps)
 	if cfgMap != nil {
 		a.Objects = append(a.Objects, cfgMap)
 	}
@@ -217,4 +225,14 @@ func (c *Builder) makeCfgMapName(name string, installation profilesv1.ProfileIns
 		name = filepath.Base(name)
 	}
 	return join(installation.Name, name, "defaultvalues")
+}
+
+// containsArtifact checks whether an artifact with a specific name exists in a list of artifacts.
+func containsArtifact(name string, stack []profilesv1.Artifact) (profilesv1.Artifact, bool) {
+	for _, a := range stack {
+		if a.Name == name {
+			return a, true
+		}
+	}
+	return profilesv1.Artifact{}, false
 }
