@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/kustomize/api/types"
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
-	chart2 "github.com/weaveworks/pctl/pkg/profile/builders/chart"
+	"github.com/weaveworks/pctl/pkg/profile/builders/chart"
 )
 
 var _ = Describe("Builder", func() {
@@ -92,8 +92,8 @@ var _ = Describe("Builder", func() {
 	Context("Build", func() {
 		When("a remote chart is configured", func() {
 			It("creates an artifact from an install and a profile definition", func() {
-				chartBuilder := &chart2.Builder{
-					Config: chart2.Config{
+				chartBuilder := &chart.Builder{
+					Config: chart.Config{
 						GitRepositoryName:      gitRepositoryName,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						RootDir:                rootDir,
@@ -153,8 +153,8 @@ var _ = Describe("Builder", func() {
 		})
 		When("a dependency is defined", func() {
 			It("adds the depends on field to the generated helm release", func() {
-				chartBuilder := &chart2.Builder{
-					Config: chart2.Config{
+				chartBuilder := &chart.Builder{
+					Config: chart.Config{
 						GitRepositoryName:      gitRepositoryName,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						RootDir:                rootDir,
@@ -252,8 +252,8 @@ var _ = Describe("Builder", func() {
 				}
 			})
 			It("creates an artifact from an install and a profile definition", func() {
-				chartBuilder := &chart2.Builder{
-					Config: chart2.Config{
+				chartBuilder := &chart.Builder{
+					Config: chart.Config{
 						GitRepositoryName:      gitRepositoryName,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						RootDir:                rootDir,
@@ -305,8 +305,8 @@ var _ = Describe("Builder", func() {
 
 		When("git-repository-name and git-repository-namespace aren't defined", func() {
 			It("returns an error", func() {
-				chartBuilder := &chart2.Builder{
-					Config: chart2.Config{
+				chartBuilder := &chart.Builder{
+					Config: chart.Config{
 						RootDir: rootDir,
 					},
 				}
@@ -348,8 +348,8 @@ var _ = Describe("Builder", func() {
 						Path:    "path",
 					},
 				}
-				chartBuilder := &chart2.Builder{
-					Config: chart2.Config{
+				chartBuilder := &chart.Builder{
+					Config: chart.Config{
 						RootDir: rootDir,
 					},
 				}
@@ -369,8 +369,8 @@ var _ = Describe("Builder", func() {
 						Path: "https://not.empty",
 					},
 				}
-				chartBuilder := &chart2.Builder{
-					Config: chart2.Config{
+				chartBuilder := &chart.Builder{
+					Config: chart.Config{
 						RootDir: rootDir,
 					},
 				}
@@ -392,8 +392,8 @@ var _ = Describe("Builder", func() {
 						},
 					},
 				}
-				chartBuilder := &chart2.Builder{
-					Config: chart2.Config{
+				chartBuilder := &chart.Builder{
+					Config: chart.Config{
 						RootDir: rootDir,
 					},
 				}
@@ -427,8 +427,8 @@ var _ = Describe("Builder", func() {
 						Artifacts: []profilesv1.Artifact{partifact},
 					},
 				}
-				chartBuilder := &chart2.Builder{
-					Config: chart2.Config{
+				chartBuilder := &chart.Builder{
+					Config: chart.Config{
 						GitRepositoryName:      gitRepositoryName,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						RootDir:                rootDir,

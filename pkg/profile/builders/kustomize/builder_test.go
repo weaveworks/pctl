@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
-	kustomize2 "github.com/weaveworks/pctl/pkg/profile/builders/kustomize"
+	"github.com/weaveworks/pctl/pkg/profile/builders/kustomize"
 )
 
 var _ = Describe("Builder", func() {
@@ -82,8 +82,8 @@ var _ = Describe("Builder", func() {
 
 	Context("Build", func() {
 		It("creates an partifact from an install and a profile definition", func() {
-			builder := &kustomize2.Builder{
-				Config: kustomize2.Config{
+			builder := &kustomize.Builder{
+				Config: kustomize.Config{
 					GitRepositoryName:      gitRepositoryName,
 					GitRepositoryNamespace: gitRepositoryNamespace,
 					RootDir:                rootDir,
@@ -138,8 +138,8 @@ var _ = Describe("Builder", func() {
 						},
 					},
 				}
-				builder := &kustomize2.Builder{
-					Config: kustomize2.Config{
+				builder := &kustomize.Builder{
+					Config: kustomize.Config{
 						GitRepositoryName:      gitRepositoryName,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						RootDir:                rootDir,
@@ -181,8 +181,8 @@ var _ = Describe("Builder", func() {
 		})
 		When("git-repository-name and git-repository-namespace aren't defined", func() {
 			It("returns an error", func() {
-				builder := &kustomize2.Builder{
-					Config: kustomize2.Config{
+				builder := &kustomize.Builder{
+					Config: kustomize.Config{
 						RootDir: rootDir,
 					},
 				}
@@ -225,8 +225,8 @@ var _ = Describe("Builder", func() {
 						Path: "https://not.empty",
 					},
 				}
-				builder := &kustomize2.Builder{
-					Config: kustomize2.Config{
+				builder := &kustomize.Builder{
+					Config: kustomize.Config{
 						RootDir:                rootDir,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						GitRepositoryName:      gitRepositoryName,
@@ -247,8 +247,8 @@ var _ = Describe("Builder", func() {
 						Path: "https://not.empty",
 					},
 				}
-				builder := &kustomize2.Builder{
-					Config: kustomize2.Config{
+				builder := &kustomize.Builder{
+					Config: kustomize.Config{
 						RootDir:                rootDir,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						GitRepositoryName:      gitRepositoryName,
@@ -260,8 +260,8 @@ var _ = Describe("Builder", func() {
 		})
 		When("depends on is defined for an artifact", func() {
 			It("creates a kustomize object with DependsOn set correctly", func() {
-				builder := &kustomize2.Builder{
-					Config: kustomize2.Config{
+				builder := &kustomize.Builder{
+					Config: kustomize.Config{
 						GitRepositoryName:      gitRepositoryName,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						RootDir:                rootDir,

@@ -72,7 +72,7 @@ func MakeArtifacts(pam *ProfilesArtifactsMaker, installation profilesv1.ProfileI
 			return nil, errors.New("no artifact set")
 		}
 
-		// check if any dependencies that exists actually exists in the list of artifacts.
+		// gather possible dependencies for the builder.
 		// note: this could be a map for O(1) lookup, but in reality, this list is so small that
 		// it shouldn't impact performance of the overall Make process.
 		var deps []profilesv1.Artifact

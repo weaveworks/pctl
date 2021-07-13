@@ -6,17 +6,17 @@ import (
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
 	"github.com/weaveworks/pctl/pkg/profile/builders"
-
 	"github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 type FakeBuilder struct {
-	BuildStub        func(v1alpha1.Artifact, v1alpha1.ProfileInstallation, v1alpha1.ProfileDefinition) ([]artifact.Artifact, error)
+	BuildStub        func(v1alpha1.Artifact, v1alpha1.ProfileInstallation, v1alpha1.ProfileDefinition, []v1alpha1.Artifact) ([]artifact.Artifact, error)
 	buildMutex       sync.RWMutex
 	buildArgsForCall []struct {
 		arg1 v1alpha1.Artifact
 		arg2 v1alpha1.ProfileInstallation
 		arg3 v1alpha1.ProfileDefinition
+		arg4 []v1alpha1.Artifact
 	}
 	buildReturns struct {
 		result1 []artifact.Artifact
@@ -30,20 +30,26 @@ type FakeBuilder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBuilder) Build(arg1 v1alpha1.Artifact, arg2 v1alpha1.ProfileInstallation, arg3 v1alpha1.ProfileDefinition) ([]artifact.Artifact, error) {
+func (fake *FakeBuilder) Build(arg1 v1alpha1.Artifact, arg2 v1alpha1.ProfileInstallation, arg3 v1alpha1.ProfileDefinition, arg4 []v1alpha1.Artifact) ([]artifact.Artifact, error) {
+	var arg4Copy []v1alpha1.Artifact
+	if arg4 != nil {
+		arg4Copy = make([]v1alpha1.Artifact, len(arg4))
+		copy(arg4Copy, arg4)
+	}
 	fake.buildMutex.Lock()
 	ret, specificReturn := fake.buildReturnsOnCall[len(fake.buildArgsForCall)]
 	fake.buildArgsForCall = append(fake.buildArgsForCall, struct {
 		arg1 v1alpha1.Artifact
 		arg2 v1alpha1.ProfileInstallation
 		arg3 v1alpha1.ProfileDefinition
-	}{arg1, arg2, arg3})
+		arg4 []v1alpha1.Artifact
+	}{arg1, arg2, arg3, arg4Copy})
 	stub := fake.BuildStub
 	fakeReturns := fake.buildReturns
-	fake.recordInvocation("Build", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("Build", []interface{}{arg1, arg2, arg3, arg4Copy})
 	fake.buildMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -57,17 +63,17 @@ func (fake *FakeBuilder) BuildCallCount() int {
 	return len(fake.buildArgsForCall)
 }
 
-func (fake *FakeBuilder) BuildCalls(stub func(v1alpha1.Artifact, v1alpha1.ProfileInstallation, v1alpha1.ProfileDefinition) ([]artifact.Artifact, error)) {
+func (fake *FakeBuilder) BuildCalls(stub func(v1alpha1.Artifact, v1alpha1.ProfileInstallation, v1alpha1.ProfileDefinition, []v1alpha1.Artifact) ([]artifact.Artifact, error)) {
 	fake.buildMutex.Lock()
 	defer fake.buildMutex.Unlock()
 	fake.BuildStub = stub
 }
 
-func (fake *FakeBuilder) BuildArgsForCall(i int) (v1alpha1.Artifact, v1alpha1.ProfileInstallation, v1alpha1.ProfileDefinition) {
+func (fake *FakeBuilder) BuildArgsForCall(i int) (v1alpha1.Artifact, v1alpha1.ProfileInstallation, v1alpha1.ProfileDefinition, []v1alpha1.Artifact) {
 	fake.buildMutex.RLock()
 	defer fake.buildMutex.RUnlock()
 	argsForCall := fake.buildArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeBuilder) BuildReturns(result1 []artifact.Artifact, result2 error) {
