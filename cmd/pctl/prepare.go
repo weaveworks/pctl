@@ -6,6 +6,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/weaveworks/pctl/pkg/cluster"
+	"github.com/weaveworks/pctl/pkg/config"
 )
 
 const (
@@ -59,6 +60,11 @@ func prepareCmd() *cli.Command {
 				Name:  "context",
 				Usage: "The Kubernetes context to use to apply the manifest files .",
 			},
+			&cli.StringFlag{
+				Name:  "git-repository",
+				Value: "",
+				Usage: "The namespace and name of the GitRepository object governing the flux repo.",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			kubeConfig := c.String("kubeconfig")
@@ -81,7 +87,12 @@ func prepareCmd() *cli.Command {
 			if err != nil {
 				return err
 			}
-			return p.Prepare()
+
+			if err := p.Prepare(); err != nil {
+				return err
+			}
+
+			return config.Create(c.String("git-repository"))
 		},
 	}
 }

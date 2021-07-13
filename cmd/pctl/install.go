@@ -11,6 +11,7 @@ import (
 
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
+	"github.com/weaveworks/pctl/pkg/config"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/profile"
 	"github.com/weaveworks/pctl/pkg/runner"
@@ -89,11 +90,6 @@ func installCmd() *cli.Command {
 				DefaultText: "<root>",
 				Usage:       "Value defining the path to a profile when url is provided.",
 			},
-			&cli.StringFlag{
-				Name:  "git-repository",
-				Value: "",
-				Usage: "The namespace and name of the GitRepository object governing the flux repo.",
-			},
 		},
 		Action: func(c *cli.Context) error {
 			// Run installation main
@@ -151,7 +147,10 @@ func install(c *cli.Context) error {
 	configMap := c.String("config-map")
 	dir := c.String("out")
 	path := c.String("profile-path")
-	gitRepository := c.String("git-repository")
+	gitRepository, err := config.Get()
+	if err != nil {
+		return fmt.Errorf("failed to fetch .pctl/config: %w", err)
+	}
 
 	var source string
 	if url != "" && path != "" {
