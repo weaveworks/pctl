@@ -3,7 +3,6 @@ package version
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 //go:generate go run ./release_generate.go
@@ -28,8 +27,8 @@ func GetVersionInfo() Info {
 		Version:      Version,
 		PreReleaseID: PreReleaseID,
 		Metadata: BuildMetadata{
-			GitCommit: gitCommit,
-			BuildDate: buildDate,
+			GitCommit: GitCommit,
+			BuildDate: BuildDate,
 		},
 	}
 }
@@ -53,18 +52,14 @@ func GetVersion() string {
 
 	versionWithPR := fmt.Sprintf("%s%s%s", Version, ExtraSep, PreReleaseID)
 
-	if isReleaseCandidate(PreReleaseID) || (gitCommit == "" || buildDate == "") {
+	if GitCommit == "" || BuildDate == "" {
 		return versionWithPR
 	}
 
 	//  Include build metadata
 	return fmt.Sprintf("%s+%s.%s",
 		versionWithPR,
-		gitCommit,
-		buildDate,
+		GitCommit,
+		BuildDate,
 	)
-}
-
-func isReleaseCandidate(preReleaseID string) bool {
-	return strings.HasPrefix(preReleaseID, "rc.")
 }

@@ -22,7 +22,7 @@ lint: ## Run the linter
 	golangci-lint run --exclude-use-default=false --timeout=5m0s
 
 build: ## Build the pctl binary to ./pctl
-	CGO_ENABLED=0 go build -ldflags "-X $(version_pkg).gitCommit=$(git_commit) -X $(version_pkg).buildDate=$(build_date)" -o pctl ./cmd/pctl
+	CGO_ENABLED=0 go build -ldflags "-X $(version_pkg).GitCommit=$(git_commit) -X $(version_pkg).BuildDate=$(build_date)" -o pctl ./cmd/pctl
 
 local-env: submodule ## Create local environment
 	cd dependencies/profiles && make local-env

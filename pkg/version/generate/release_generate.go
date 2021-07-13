@@ -17,11 +17,10 @@ import (
 
 const versionFilename = "pkg/version/release.go"
 const defaultPreReleaseID = "dev"
-const defaultReleaseCandidate = "rc.0"
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("missing argument")
+		log.Fatal("usage: generate <release|development|full-version|print-version|print-major-minor-version>")
 	}
 
 	command := os.Args[1]
@@ -30,8 +29,6 @@ func main() {
 	switch command {
 	case "release":
 		newVersion, newPreRelease = prepareRelease()
-	case "release-candidate":
-		newVersion, newPreRelease = prepareReleaseCandidate()
 	case "development":
 		newVersion, newPreRelease = nextDevelopmentIteration()
 	case "full-version":
@@ -45,7 +42,7 @@ func main() {
 		fmt.Println(printMajorMinor())
 		return
 	default:
-		log.Fatalf("unknown option %q. Expected 'release', 'release-candidate', 'development', 'print-version' or 'print-major-minor-version'", command)
+		log.Fatalf("unknown option %q. Expected 'release','development','full-version','print-version' or 'print-major-minor-version'", command)
 	}
 
 	if err := writeVersionToFile(newVersion, newPreRelease, versionFilename); err != nil {
@@ -59,19 +56,6 @@ func main() {
 
 func prepareRelease() (string, string) {
 	return version.Version, ""
-}
-
-func prepareReleaseCandidate() (string, string) {
-	if strings.HasPrefix(version.PreReleaseID, "rc.") {
-		// Next RC
-		rcNumber, err := strconv.Atoi(strings.TrimPrefix(version.PreReleaseID, "rc."))
-		if err != nil {
-			log.Fatalf("cannot parse rc version from pre-release id %s", version.PreReleaseID)
-		}
-		newRC := rcNumber + 1
-		return version.Version, fmt.Sprintf("rc.%d", newRC)
-	}
-	return version.Version, defaultReleaseCandidate
 }
 
 func printMajorMinor() string {
@@ -97,11 +81,11 @@ func writeVersionToFile(version, preReleaseID, fileName string) error {
 	f.Comment("PreReleaseID can be empty for releases, \"rc.X\" for release candidates and \"dev\" for snapshots")
 	f.Var().Id("PreReleaseID").Op("=").Lit(preReleaseID)
 
-	f.Comment("gitCommit is the short commit hash. It will be set by the linker.")
-	f.Var().Id("gitCommit").Op("=").Lit("")
+	f.Comment("GitCommit is the short commit hash. It will be set by the linker.")
+	f.Var().Id("GitCommit").Op("=").Lit("")
 
-	f.Comment("buildDate is the time of the build with format yyyy-mm-ddThh:mm:ssZ. It will be set by the linker.")
-	f.Var().Id("buildDate").Op("=").Lit("")
+	f.Comment("BuildDate is the time of the build with format yyyy-mm-ddThh:mm:ssZ. It will be set by the linker.")
+	f.Var().Id("BuildDate").Op("=").Lit("")
 
 	if err := f.Save(fileName); err != nil {
 		return err

@@ -15,7 +15,6 @@ require (
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.14.0
 	github.com/otiai10/copy v1.6.0
-	github.com/pkg/errors v0.9.1
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/weaveworks/profiles v0.0.13
 	gopkg.in/yaml.v2 v2.4.0
