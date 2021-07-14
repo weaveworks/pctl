@@ -9,7 +9,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/version"
 )
 
-var _ = Describe("release tests", func() {
+var _ = Describe("generate release file tests", func() {
 	BeforeEach(func() {
 		version.Version = "0.5.0"
 		version.PreReleaseID = "dev"
@@ -47,31 +47,4 @@ var _ = Describe("release tests", func() {
 		Expect(v).To(Equal("0.6.0"))
 		Expect(p).To(Equal("dev"))
 	})
-
-	It("produces the correct default release candidate from dev", func() {
-		version.PreReleaseID = "dev"
-
-		v, p := prepareReleaseCandidate()
-
-		Expect(v).To(Equal("0.5.0"))
-		Expect(p).To(Equal("rc.0"))
-	})
-	It("produces the correct default release candidate from release", func() {
-		version.PreReleaseID = ""
-
-		v, p := prepareReleaseCandidate()
-
-		Expect(v).To(Equal("0.5.0"))
-		Expect(p).To(Equal("rc.0"))
-	})
-
-	It("produces next release candidate", func() {
-		version.PreReleaseID = "rc.1"
-
-		v, p := prepareReleaseCandidate()
-
-		Expect(v).To(Equal("0.5.0"))
-		Expect(p).To(Equal("rc.2"))
-	})
-
 })

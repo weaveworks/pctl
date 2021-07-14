@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
-	"strings"
 
-	"github.com/blang/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/dave/jennifer/jen"
 
 	"github.com/weaveworks/pctl/pkg/version"
@@ -20,7 +18,7 @@ const defaultPreReleaseID = "dev"
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("usage: generate <release|development|full-version|print-version|print-major-minor-version>")
+		log.Fatal("usage: generate <release|development|full-version>")
 	}
 
 	command := os.Args[1]
@@ -34,15 +32,8 @@ func main() {
 	case "full-version":
 		fmt.Println(version.GetVersion())
 		return
-	case "print-version":
-		// Print simplified version X.Y.Z
-		fmt.Println(version.Version)
-		return
-	case "print-major-minor-version":
-		fmt.Println(printMajorMinor())
-		return
 	default:
-		log.Fatalf("unknown option %q. Expected 'release','development','full-version','print-version' or 'print-major-minor-version'", command)
+		log.Fatalf("unknown option %q. Expected 'release','development','full-version'", command)
 	}
 
 	if err := writeVersionToFile(newVersion, newPreRelease, versionFilename); err != nil {
@@ -58,14 +49,9 @@ func prepareRelease() (string, string) {
 	return version.Version, ""
 }
 
-func printMajorMinor() string {
-	ver := semver.MustParse(version.Version)
-	return fmt.Sprintf("%v.%v", ver.Major, ver.Minor)
-}
-
 func nextDevelopmentIteration() (string, string) {
 	ver := semver.MustParse(version.Version)
-	ver.Minor++
+	ver.IncMinor()
 	return ver.String(), defaultPreReleaseID
 }
 
