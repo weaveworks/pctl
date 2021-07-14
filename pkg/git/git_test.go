@@ -2,6 +2,7 @@ package git_test
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -184,6 +185,41 @@ var _ = Describe("git", func() {
 		})
 	})
 
+	Context("CreateNewBranch", func() {
+		It("creates a branch", func() {
+			g := git.NewCLIGit(git.CLIGitConfig{
+				Directory: "location",
+				Branch:    "test01",
+				Remote:    "origin",
+				Base:      "main",
+			}, runner)
+			err := g.CreateBranch()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(runner.RunCallCount()).To(Equal(1))
+			arg, args := runner.RunArgsForCall(0)
+			Expect(arg).To(Equal("git"))
+			Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "checkout", "-b", "test01"}))
+
+		})
+		When("an error occurs", func() {
+			It("returns an error", func() {
+				runner.RunReturns([]byte(""), errors.New("nope"))
+				g := git.NewCLIGit(git.CLIGitConfig{
+					Directory: "location",
+					Branch:    "test01",
+					Remote:    "origin",
+					Base:      "main",
+				}, runner)
+				err := g.CreateBranch()
+				Expect(err).To(MatchError(`failed to create new branch test01: nope`))
+				Expect(runner.RunCallCount()).To(Equal(1))
+				arg, args := runner.RunArgsForCall(0)
+				Expect(arg).To(Equal("git"))
+				Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "checkout", "-b", "test01"}))
+			})
+		})
+	})
+
 	Context("CreateBranch", func() {
 		When("normal flow operations", func() {
 			It("creates a branch if it differs from base", func() {
@@ -275,6 +311,138 @@ var _ = Describe("git", func() {
 				}, runner)
 				Expect(g.IsRepository()).NotTo(Succeed())
 				Expect(runner.RunCallCount()).To(Equal(0))
+			})
+		})
+	})
+
+	Context("Init", func() {
+		var tmp string
+		BeforeEach(func() {
+			var err error
+			tmp, err = ioutil.TempDir("", "detect_git_repo")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(tmp)).To(Succeed())
+		})
+
+		It("initiatest the git repository", func() {
+			g := git.NewCLIGit(git.CLIGitConfig{
+				Directory: tmp,
+				Branch:    "main",
+				Remote:    "origin",
+			}, runner)
+			Expect(g.Init()).To(Succeed())
+			Expect(runner.RunCallCount()).To(Equal(1))
+			arg, args := runner.RunArgsForCall(0)
+			Expect(arg).To(Equal("git"))
+			Expect(args).To(Equal([]string{"init", tmp, "-b", "main"}))
+		})
+
+		When("init fails", func() {
+			It("returns an error", func() {
+				runner.RunReturns(nil, fmt.Errorf("init failed"))
+				g := git.NewCLIGit(git.CLIGitConfig{
+					Directory: tmp,
+					Branch:    "main",
+					Remote:    "origin",
+				}, runner)
+				Expect(g.Init()).To(MatchError("failed to init: init failed"))
+				Expect(runner.RunCallCount()).To(Equal(1))
+				arg, args := runner.RunArgsForCall(0)
+				Expect(arg).To(Equal("git"))
+				Expect(args).To(Equal([]string{"init", tmp, "-b", "main"}))
+			})
+		})
+	})
+
+	Context("Merge", func() {
+		It("merges the branch", func() {
+			g := git.NewCLIGit(git.CLIGitConfig{
+				Directory: "location",
+				Branch:    "main",
+				Remote:    "origin",
+			}, runner)
+			mergeConflict, err := g.Merge("user-changes")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mergeConflict).To(BeFalse())
+			Expect(runner.RunCallCount()).To(Equal(1))
+			arg, args := runner.RunArgsForCall(0)
+			Expect(arg).To(Equal("git"))
+			Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "merge", "user-changes"}))
+		})
+
+		When("an error occurings during merge", func() {
+			When("its not due to a conflict", func() {
+				It("returns an error", func() {
+					runner.RunReturns(nil, fmt.Errorf("merge failed"))
+					g := git.NewCLIGit(git.CLIGitConfig{
+						Directory: "location",
+						Branch:    "main",
+						Remote:    "origin",
+					}, runner)
+					mergeConflict, err := g.Merge("user-changes")
+					Expect(err).To(MatchError("failed to run merge: merge failed"))
+					Expect(mergeConflict).To(BeFalse())
+					Expect(runner.RunCallCount()).To(Equal(1))
+					arg, args := runner.RunArgsForCall(0)
+					Expect(arg).To(Equal("git"))
+					Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "merge", "user-changes"}))
+				})
+			})
+
+			When("its due to a conflict", func() {
+				It("returns conflict true and no error", func() {
+					runner.RunReturns([]byte("some text followed by: Merge conflict"), fmt.Errorf("merge failed"))
+					g := git.NewCLIGit(git.CLIGitConfig{
+						Directory: "location",
+						Branch:    "main",
+						Remote:    "origin",
+					}, runner)
+					mergeConflict, err := g.Merge("user-changes")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(mergeConflict).To(BeTrue())
+					Expect(runner.RunCallCount()).To(Equal(1))
+					arg, args := runner.RunArgsForCall(0)
+					Expect(arg).To(Equal("git"))
+					Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "merge", "user-changes"}))
+				})
+			})
+		})
+	})
+
+	Context("Checkout", func() {
+		It("checkouts the branch", func() {
+			g := git.NewCLIGit(git.CLIGitConfig{
+				Directory: "location",
+				Branch:    "test01",
+				Remote:    "origin",
+				Base:      "main",
+			}, runner)
+			err := g.Checkout("test01")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(runner.RunCallCount()).To(Equal(1))
+			arg, args := runner.RunArgsForCall(0)
+			Expect(arg).To(Equal("git"))
+			Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "checkout", "test01"}))
+		})
+
+		When("an error occurs", func() {
+			It("returns an error", func() {
+				runner.RunReturns([]byte(""), errors.New("nope"))
+				g := git.NewCLIGit(git.CLIGitConfig{
+					Directory: "location",
+					Branch:    "test01",
+					Remote:    "origin",
+					Base:      "main",
+				}, runner)
+				err := g.Checkout("test01")
+				Expect(err).To(MatchError(`failed to checkout branch test01: nope`))
+				Expect(runner.RunCallCount()).To(Equal(1))
+				arg, args := runner.RunArgsForCall(0)
+				Expect(arg).To(Equal("git"))
+				Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "checkout", "test01"}))
 			})
 		})
 	})

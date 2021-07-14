@@ -18,6 +18,17 @@ type FakeGit struct {
 	addReturnsOnCall map[int]struct {
 		result1 error
 	}
+	CheckoutStub        func(string) error
+	checkoutMutex       sync.RWMutex
+	checkoutArgsForCall []struct {
+		arg1 string
+	}
+	checkoutReturns struct {
+		result1 error
+	}
+	checkoutReturnsOnCall map[int]struct {
+		result1 error
+	}
 	CloneStub        func(string, string, string) error
 	cloneMutex       sync.RWMutex
 	cloneArgsForCall []struct {
@@ -51,15 +62,26 @@ type FakeGit struct {
 	createBranchReturnsOnCall map[int]struct {
 		result1 error
 	}
-	CreateRepositoryStub        func() error
-	createRepositoryMutex       sync.RWMutex
-	createRepositoryArgsForCall []struct {
+	CreateNewBranchStub        func(string) error
+	createNewBranchMutex       sync.RWMutex
+	createNewBranchArgsForCall []struct {
+		arg1 string
 	}
-	createRepositoryReturns struct {
+	createNewBranchReturns struct {
 		result1 error
 	}
-	createRepositoryReturnsOnCall map[int]struct {
+	createNewBranchReturnsOnCall map[int]struct {
 		result1 error
+	}
+	GetDirectoryStub        func() string
+	getDirectoryMutex       sync.RWMutex
+	getDirectoryArgsForCall []struct {
+	}
+	getDirectoryReturns struct {
+		result1 string
+	}
+	getDirectoryReturnsOnCall map[int]struct {
+		result1 string
 	}
 	HasChangesStub        func() (bool, error)
 	hasChangesMutex       sync.RWMutex
@@ -73,6 +95,16 @@ type FakeGit struct {
 		result1 bool
 		result2 error
 	}
+	InitStub        func() error
+	initMutex       sync.RWMutex
+	initArgsForCall []struct {
+	}
+	initReturns struct {
+		result1 error
+	}
+	initReturnsOnCall map[int]struct {
+		result1 error
+	}
 	IsRepositoryStub        func() error
 	isRepositoryMutex       sync.RWMutex
 	isRepositoryArgsForCall []struct {
@@ -83,6 +115,19 @@ type FakeGit struct {
 	isRepositoryReturnsOnCall map[int]struct {
 		result1 error
 	}
+	MergeStub        func(string) (bool, error)
+	mergeMutex       sync.RWMutex
+	mergeArgsForCall []struct {
+		arg1 string
+	}
+	mergeReturns struct {
+		result1 bool
+		result2 error
+	}
+	mergeReturnsOnCall map[int]struct {
+		result1 bool
+		result2 error
+	}
 	PushStub        func() error
 	pushMutex       sync.RWMutex
 	pushArgsForCall []struct {
@@ -91,20 +136,6 @@ type FakeGit struct {
 		result1 error
 	}
 	pushReturnsOnCall map[int]struct {
-		result1 error
-	}
-	SparseCloneStub        func(string, string, string, string) error
-	sparseCloneMutex       sync.RWMutex
-	sparseCloneArgsForCall []struct {
-		arg1 string
-		arg2 string
-		arg3 string
-		arg4 string
-	}
-	sparseCloneReturns struct {
-		result1 error
-	}
-	sparseCloneReturnsOnCall map[int]struct {
 		result1 error
 	}
 	invocations      map[string][][]interface{}
@@ -160,6 +191,67 @@ func (fake *FakeGit) AddReturnsOnCall(i int, result1 error) {
 		})
 	}
 	fake.addReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGit) Checkout(arg1 string) error {
+	fake.checkoutMutex.Lock()
+	ret, specificReturn := fake.checkoutReturnsOnCall[len(fake.checkoutArgsForCall)]
+	fake.checkoutArgsForCall = append(fake.checkoutArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.CheckoutStub
+	fakeReturns := fake.checkoutReturns
+	fake.recordInvocation("Checkout", []interface{}{arg1})
+	fake.checkoutMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeGit) CheckoutCallCount() int {
+	fake.checkoutMutex.RLock()
+	defer fake.checkoutMutex.RUnlock()
+	return len(fake.checkoutArgsForCall)
+}
+
+func (fake *FakeGit) CheckoutCalls(stub func(string) error) {
+	fake.checkoutMutex.Lock()
+	defer fake.checkoutMutex.Unlock()
+	fake.CheckoutStub = stub
+}
+
+func (fake *FakeGit) CheckoutArgsForCall(i int) string {
+	fake.checkoutMutex.RLock()
+	defer fake.checkoutMutex.RUnlock()
+	argsForCall := fake.checkoutArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeGit) CheckoutReturns(result1 error) {
+	fake.checkoutMutex.Lock()
+	defer fake.checkoutMutex.Unlock()
+	fake.CheckoutStub = nil
+	fake.checkoutReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGit) CheckoutReturnsOnCall(i int, result1 error) {
+	fake.checkoutMutex.Lock()
+	defer fake.checkoutMutex.Unlock()
+	fake.CheckoutStub = nil
+	if fake.checkoutReturnsOnCall == nil {
+		fake.checkoutReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.checkoutReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -333,15 +425,76 @@ func (fake *FakeGit) CreateBranchReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeGit) CreateRepository() error {
-	fake.createRepositoryMutex.Lock()
-	ret, specificReturn := fake.createRepositoryReturnsOnCall[len(fake.createRepositoryArgsForCall)]
-	fake.createRepositoryArgsForCall = append(fake.createRepositoryArgsForCall, struct {
+func (fake *FakeGit) CreateNewBranch(arg1 string) error {
+	fake.createNewBranchMutex.Lock()
+	ret, specificReturn := fake.createNewBranchReturnsOnCall[len(fake.createNewBranchArgsForCall)]
+	fake.createNewBranchArgsForCall = append(fake.createNewBranchArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.CreateNewBranchStub
+	fakeReturns := fake.createNewBranchReturns
+	fake.recordInvocation("CreateNewBranch", []interface{}{arg1})
+	fake.createNewBranchMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeGit) CreateNewBranchCallCount() int {
+	fake.createNewBranchMutex.RLock()
+	defer fake.createNewBranchMutex.RUnlock()
+	return len(fake.createNewBranchArgsForCall)
+}
+
+func (fake *FakeGit) CreateNewBranchCalls(stub func(string) error) {
+	fake.createNewBranchMutex.Lock()
+	defer fake.createNewBranchMutex.Unlock()
+	fake.CreateNewBranchStub = stub
+}
+
+func (fake *FakeGit) CreateNewBranchArgsForCall(i int) string {
+	fake.createNewBranchMutex.RLock()
+	defer fake.createNewBranchMutex.RUnlock()
+	argsForCall := fake.createNewBranchArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeGit) CreateNewBranchReturns(result1 error) {
+	fake.createNewBranchMutex.Lock()
+	defer fake.createNewBranchMutex.Unlock()
+	fake.CreateNewBranchStub = nil
+	fake.createNewBranchReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGit) CreateNewBranchReturnsOnCall(i int, result1 error) {
+	fake.createNewBranchMutex.Lock()
+	defer fake.createNewBranchMutex.Unlock()
+	fake.CreateNewBranchStub = nil
+	if fake.createNewBranchReturnsOnCall == nil {
+		fake.createNewBranchReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.createNewBranchReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGit) GetDirectory() string {
+	fake.getDirectoryMutex.Lock()
+	ret, specificReturn := fake.getDirectoryReturnsOnCall[len(fake.getDirectoryArgsForCall)]
+	fake.getDirectoryArgsForCall = append(fake.getDirectoryArgsForCall, struct {
 	}{})
-	stub := fake.CreateRepositoryStub
-	fakeReturns := fake.createRepositoryReturns
-	fake.recordInvocation("CreateRepository", []interface{}{})
-	fake.createRepositoryMutex.Unlock()
+	stub := fake.GetDirectoryStub
+	fakeReturns := fake.getDirectoryReturns
+	fake.recordInvocation("GetDirectory", []interface{}{})
+	fake.getDirectoryMutex.Unlock()
 	if stub != nil {
 		return stub()
 	}
@@ -351,38 +504,38 @@ func (fake *FakeGit) CreateRepository() error {
 	return fakeReturns.result1
 }
 
-func (fake *FakeGit) CreateRepositoryCallCount() int {
-	fake.createRepositoryMutex.RLock()
-	defer fake.createRepositoryMutex.RUnlock()
-	return len(fake.createRepositoryArgsForCall)
+func (fake *FakeGit) GetDirectoryCallCount() int {
+	fake.getDirectoryMutex.RLock()
+	defer fake.getDirectoryMutex.RUnlock()
+	return len(fake.getDirectoryArgsForCall)
 }
 
-func (fake *FakeGit) CreateRepositoryCalls(stub func() error) {
-	fake.createRepositoryMutex.Lock()
-	defer fake.createRepositoryMutex.Unlock()
-	fake.CreateRepositoryStub = stub
+func (fake *FakeGit) GetDirectoryCalls(stub func() string) {
+	fake.getDirectoryMutex.Lock()
+	defer fake.getDirectoryMutex.Unlock()
+	fake.GetDirectoryStub = stub
 }
 
-func (fake *FakeGit) CreateRepositoryReturns(result1 error) {
-	fake.createRepositoryMutex.Lock()
-	defer fake.createRepositoryMutex.Unlock()
-	fake.CreateRepositoryStub = nil
-	fake.createRepositoryReturns = struct {
-		result1 error
+func (fake *FakeGit) GetDirectoryReturns(result1 string) {
+	fake.getDirectoryMutex.Lock()
+	defer fake.getDirectoryMutex.Unlock()
+	fake.GetDirectoryStub = nil
+	fake.getDirectoryReturns = struct {
+		result1 string
 	}{result1}
 }
 
-func (fake *FakeGit) CreateRepositoryReturnsOnCall(i int, result1 error) {
-	fake.createRepositoryMutex.Lock()
-	defer fake.createRepositoryMutex.Unlock()
-	fake.CreateRepositoryStub = nil
-	if fake.createRepositoryReturnsOnCall == nil {
-		fake.createRepositoryReturnsOnCall = make(map[int]struct {
-			result1 error
+func (fake *FakeGit) GetDirectoryReturnsOnCall(i int, result1 string) {
+	fake.getDirectoryMutex.Lock()
+	defer fake.getDirectoryMutex.Unlock()
+	fake.GetDirectoryStub = nil
+	if fake.getDirectoryReturnsOnCall == nil {
+		fake.getDirectoryReturnsOnCall = make(map[int]struct {
+			result1 string
 		})
 	}
-	fake.createRepositoryReturnsOnCall[i] = struct {
-		result1 error
+	fake.getDirectoryReturnsOnCall[i] = struct {
+		result1 string
 	}{result1}
 }
 
@@ -442,6 +595,59 @@ func (fake *FakeGit) HasChangesReturnsOnCall(i int, result1 bool, result2 error)
 	}{result1, result2}
 }
 
+func (fake *FakeGit) Init() error {
+	fake.initMutex.Lock()
+	ret, specificReturn := fake.initReturnsOnCall[len(fake.initArgsForCall)]
+	fake.initArgsForCall = append(fake.initArgsForCall, struct {
+	}{})
+	stub := fake.InitStub
+	fakeReturns := fake.initReturns
+	fake.recordInvocation("Init", []interface{}{})
+	fake.initMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeGit) InitCallCount() int {
+	fake.initMutex.RLock()
+	defer fake.initMutex.RUnlock()
+	return len(fake.initArgsForCall)
+}
+
+func (fake *FakeGit) InitCalls(stub func() error) {
+	fake.initMutex.Lock()
+	defer fake.initMutex.Unlock()
+	fake.InitStub = stub
+}
+
+func (fake *FakeGit) InitReturns(result1 error) {
+	fake.initMutex.Lock()
+	defer fake.initMutex.Unlock()
+	fake.InitStub = nil
+	fake.initReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGit) InitReturnsOnCall(i int, result1 error) {
+	fake.initMutex.Lock()
+	defer fake.initMutex.Unlock()
+	fake.InitStub = nil
+	if fake.initReturnsOnCall == nil {
+		fake.initReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.initReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeGit) IsRepository() error {
 	fake.isRepositoryMutex.Lock()
 	ret, specificReturn := fake.isRepositoryReturnsOnCall[len(fake.isRepositoryArgsForCall)]
@@ -493,6 +699,70 @@ func (fake *FakeGit) IsRepositoryReturnsOnCall(i int, result1 error) {
 	fake.isRepositoryReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeGit) Merge(arg1 string) (bool, error) {
+	fake.mergeMutex.Lock()
+	ret, specificReturn := fake.mergeReturnsOnCall[len(fake.mergeArgsForCall)]
+	fake.mergeArgsForCall = append(fake.mergeArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.MergeStub
+	fakeReturns := fake.mergeReturns
+	fake.recordInvocation("Merge", []interface{}{arg1})
+	fake.mergeMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeGit) MergeCallCount() int {
+	fake.mergeMutex.RLock()
+	defer fake.mergeMutex.RUnlock()
+	return len(fake.mergeArgsForCall)
+}
+
+func (fake *FakeGit) MergeCalls(stub func(string) (bool, error)) {
+	fake.mergeMutex.Lock()
+	defer fake.mergeMutex.Unlock()
+	fake.MergeStub = stub
+}
+
+func (fake *FakeGit) MergeArgsForCall(i int) string {
+	fake.mergeMutex.RLock()
+	defer fake.mergeMutex.RUnlock()
+	argsForCall := fake.mergeArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeGit) MergeReturns(result1 bool, result2 error) {
+	fake.mergeMutex.Lock()
+	defer fake.mergeMutex.Unlock()
+	fake.MergeStub = nil
+	fake.mergeReturns = struct {
+		result1 bool
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeGit) MergeReturnsOnCall(i int, result1 bool, result2 error) {
+	fake.mergeMutex.Lock()
+	defer fake.mergeMutex.Unlock()
+	fake.MergeStub = nil
+	if fake.mergeReturnsOnCall == nil {
+		fake.mergeReturnsOnCall = make(map[int]struct {
+			result1 bool
+			result2 error
+		})
+	}
+	fake.mergeReturnsOnCall[i] = struct {
+		result1 bool
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeGit) Push() error {
@@ -548,91 +818,33 @@ func (fake *FakeGit) PushReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeGit) SparseClone(arg1 string, arg2 string, arg3 string, arg4 string) error {
-	fake.sparseCloneMutex.Lock()
-	ret, specificReturn := fake.sparseCloneReturnsOnCall[len(fake.sparseCloneArgsForCall)]
-	fake.sparseCloneArgsForCall = append(fake.sparseCloneArgsForCall, struct {
-		arg1 string
-		arg2 string
-		arg3 string
-		arg4 string
-	}{arg1, arg2, arg3, arg4})
-	stub := fake.SparseCloneStub
-	fakeReturns := fake.sparseCloneReturns
-	fake.recordInvocation("SparseClone", []interface{}{arg1, arg2, arg3, arg4})
-	fake.sparseCloneMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeGit) SparseCloneCallCount() int {
-	fake.sparseCloneMutex.RLock()
-	defer fake.sparseCloneMutex.RUnlock()
-	return len(fake.sparseCloneArgsForCall)
-}
-
-func (fake *FakeGit) SparseCloneCalls(stub func(string, string, string, string) error) {
-	fake.sparseCloneMutex.Lock()
-	defer fake.sparseCloneMutex.Unlock()
-	fake.SparseCloneStub = stub
-}
-
-func (fake *FakeGit) SparseCloneArgsForCall(i int) (string, string, string, string) {
-	fake.sparseCloneMutex.RLock()
-	defer fake.sparseCloneMutex.RUnlock()
-	argsForCall := fake.sparseCloneArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
-}
-
-func (fake *FakeGit) SparseCloneReturns(result1 error) {
-	fake.sparseCloneMutex.Lock()
-	defer fake.sparseCloneMutex.Unlock()
-	fake.SparseCloneStub = nil
-	fake.sparseCloneReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeGit) SparseCloneReturnsOnCall(i int, result1 error) {
-	fake.sparseCloneMutex.Lock()
-	defer fake.sparseCloneMutex.Unlock()
-	fake.SparseCloneStub = nil
-	if fake.sparseCloneReturnsOnCall == nil {
-		fake.sparseCloneReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.sparseCloneReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeGit) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.addMutex.RLock()
 	defer fake.addMutex.RUnlock()
+	fake.checkoutMutex.RLock()
+	defer fake.checkoutMutex.RUnlock()
 	fake.cloneMutex.RLock()
 	defer fake.cloneMutex.RUnlock()
 	fake.commitMutex.RLock()
 	defer fake.commitMutex.RUnlock()
 	fake.createBranchMutex.RLock()
 	defer fake.createBranchMutex.RUnlock()
-	fake.createRepositoryMutex.RLock()
-	defer fake.createRepositoryMutex.RUnlock()
+	fake.createNewBranchMutex.RLock()
+	defer fake.createNewBranchMutex.RUnlock()
+	fake.getDirectoryMutex.RLock()
+	defer fake.getDirectoryMutex.RUnlock()
 	fake.hasChangesMutex.RLock()
 	defer fake.hasChangesMutex.RUnlock()
+	fake.initMutex.RLock()
+	defer fake.initMutex.RUnlock()
 	fake.isRepositoryMutex.RLock()
 	defer fake.isRepositoryMutex.RUnlock()
+	fake.mergeMutex.RLock()
+	defer fake.mergeMutex.RUnlock()
 	fake.pushMutex.RLock()
 	defer fake.pushMutex.RUnlock()
-	fake.sparseCloneMutex.RLock()
-	defer fake.sparseCloneMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

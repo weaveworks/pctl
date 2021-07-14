@@ -38,8 +38,8 @@ type InstallConfig struct {
 
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile installation
 // and its artifacts
-func Install(cfg InstallConfig) error {
-	pSpec, err := getProfileSpec(cfg)
+func (m *Manager) Install(cfg InstallConfig) error {
+	pSpec, err := m.getProfileSpec(cfg)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func Install(cfg InstallConfig) error {
 }
 
 // getProfileSpec generates a spec based on configured properties.
-func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileInstallationSpec, error) {
+func (m *Manager) getProfileSpec(cfg InstallConfig) (profilesv1.ProfileInstallationSpec, error) {
 	if cfg.URL != "" {
 		return profilesv1.ProfileInstallationSpec{
 			Source: &profilesv1.Source{
@@ -72,7 +72,7 @@ func getProfileSpec(cfg InstallConfig) (profilesv1.ProfileInstallationSpec, erro
 			ConfigMap: cfg.ConfigMap,
 		}, nil
 	}
-	p, err := Show(cfg.CatalogClient, cfg.CatalogName, cfg.ProfileName, cfg.Version)
+	p, err := m.Show(cfg.CatalogClient, cfg.CatalogName, cfg.ProfileName, cfg.Version)
 	if err != nil {
 		return profilesv1.ProfileInstallationSpec{}, fmt.Errorf("failed to get profile %q in catalog %q: %w", cfg.ProfileName, cfg.CatalogName, err)
 	}

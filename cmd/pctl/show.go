@@ -45,7 +45,8 @@ func showCmd() *cli.Command {
 			if len(parts) == 3 {
 				catalogVersion = parts[2]
 			}
-			profile, err := catalog.Show(catalogClient, catalogName, profileName, catalogVersion)
+			manager := &catalog.Manager{}
+			profile, err := manager.Show(catalogClient, catalogName, profileName, catalogVersion)
 			if err != nil {
 				return err
 			}
