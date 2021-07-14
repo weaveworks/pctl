@@ -5,9 +5,11 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
-	"github.com/fluxcd/pkg/runtime/dependency"
+	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
+	"github.com/fluxcd/pkg/apis/meta"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,16 +39,19 @@ func (c *Builder) Build(att profilesv1.Artifact, installation profilesv1.Profile
 	if err := validateArtifact(att); err != nil {
 		return nil, fmt.Errorf("validation failed for artifact %s: %w", att.Name, err)
 	}
-	a := artifact.Artifact{Name: att.Name}
-	var deps []profilesv1.Artifact
-	for _, dep := range att.DependsOn {
-		d, ok := containsArtifact(dep.Name, definition.Spec.Artifacts)
-		if !ok {
-			return nil, fmt.Errorf("%s's depending artifact %s not found in the list of artifacts", a.Name, dep.Name)
-		}
-		deps = append(deps, d)
-	}
-	helmRelease, cfgMap := c.makeHelmReleaseObjects(att, installation, definition.Name, deps)
+	// but we want the kustomization outside this so return multiple artifacts.
+	a := artifact.Artifact{Name: att.Name, SubFolder: "helm-chart"}
+	//var deps []profilesv1.Artifact
+	//for _, dep := range att.DependsOn {
+	//	d, ok := containsArtifact(dep.Name, definition.Spec.Artifacts)
+	//	if !ok {
+	//		return nil, fmt.Errorf("%s's depending artifact %s not found in the list of artifacts", a.Name, dep.Name)
+	//	}
+	//
+	//	deps = append(deps, d)
+	//}
+
+	helmRelease, cfgMap := c.makeHelmReleaseObjects(att, installation, definition.Name)
 	if cfgMap != nil {
 		a.Objects = append(a.Objects, cfgMap)
 	}
@@ -55,7 +60,7 @@ func (c *Builder) Build(att profilesv1.Artifact, installation profilesv1.Profile
 		if c.GitRepositoryNamespace == "" && c.GitRepositoryName == "" {
 			return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 		}
-		helmRelease.Spec.Chart.Spec.Chart = filepath.Join(c.RootDir, "artifacts", att.Name, att.Chart.Path)
+		helmRelease.Spec.Chart.Spec.Chart = filepath.Join(c.RootDir, "artifacts", "helm-chart", att.Name, att.Chart.Path)
 		branch := installation.Spec.Source.Branch
 		if installation.Spec.Source.Tag != "" {
 			branch = installation.Spec.Source.Tag
@@ -72,6 +77,10 @@ func (c *Builder) Build(att profilesv1.Artifact, installation profilesv1.Profile
 		helmRepository := c.makeHelmRepository(att.Chart.URL, att.Chart.Name, installation)
 		a.Objects = append(a.Objects, helmRepository)
 	}
+	a.HelmWrapper = &types.Kustomization{
+		Resources: []string{"kustomize-flux.yaml"},
+	}
+	a.HelmWrapperKustomization = c.makeKustomizeWrapper(att, installation, definition.Name)
 	return []artifact.Artifact{a}, nil
 }
 
@@ -89,7 +98,7 @@ func validateArtifact(in profilesv1.Artifact) error {
 	return nil
 }
 
-func (c *Builder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string, dependencies []profilesv1.Artifact) (*helmv2.HelmRelease, *corev1.ConfigMap) {
+func (c *Builder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string) (*helmv2.HelmRelease, *corev1.ConfigMap) {
 	var helmChartSpec helmv2.HelmChartTemplateSpec
 	if artifact.Chart.Path != "" {
 		helmChartSpec = c.makeGitChartSpec(path.Join(installation.Spec.Source.Path, artifact.Chart.Path))
@@ -117,22 +126,6 @@ func (c *Builder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installat
 			ValuesKey: artifactNameParts[len(artifactNameParts)-1],
 		})
 	}
-	spec := helmv2.HelmReleaseSpec{
-		Chart: helmv2.HelmChartTemplate{
-			Spec: helmChartSpec,
-		},
-		ValuesFrom: values,
-	}
-	var d []dependency.CrossNamespaceDependencyReference
-	for _, dep := range dependencies {
-		if dep.Chart != nil {
-			d = append(d, dependency.CrossNamespaceDependencyReference{
-				Name:      makeArtifactName(dep.Name, installation.Name, definitionName),
-				Namespace: installation.ObjectMeta.Namespace,
-			})
-		}
-	}
-	spec.DependsOn = d
 	helmRelease := &helmv2.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      makeArtifactName(artifact.Name, installation.Name, definitionName),
@@ -142,7 +135,12 @@ func (c *Builder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installat
 			Kind:       helmv2.HelmReleaseKind,
 			APIVersion: helmv2.GroupVersion.String(),
 		},
-		Spec: spec,
+		Spec: helmv2.HelmReleaseSpec{
+			Chart: helmv2.HelmChartTemplate{
+				Spec: helmChartSpec,
+			},
+			ValuesFrom: values,
+		},
 	}
 	return helmRelease, cfgMap
 }
@@ -167,6 +165,41 @@ func (c *Builder) makeHelmRepoName(name string, installation profilesv1.ProfileI
 	repoParts := strings.Split(installation.Spec.Source.URL, "/")
 	repoName := repoParts[len(repoParts)-1]
 	return join(installation.Name, repoName, name)
+}
+
+// TODO: this will not create it with kustomize-flux -> because it uses the Kind not the name.
+func (c *Builder) makeKustomizeWrapper(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string) *kustomizev1.Kustomization {
+	path := filepath.Join(c.RootDir, "artifacts", artifact.Name, "helm-chart")
+	return &kustomizev1.Kustomization{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      makeArtifactName(artifact.Name+"-wrapper", installation.Name, definitionName),
+			Namespace: installation.ObjectMeta.Namespace,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       kustomizev1.KustomizationKind,
+			APIVersion: kustomizev1.GroupVersion.String(),
+		},
+		Spec: kustomizev1.KustomizationSpec{
+			Path:            path,
+			Interval:        metav1.Duration{Duration: time.Minute * 5},
+			Prune:           true,
+			TargetNamespace: installation.ObjectMeta.Namespace,
+			SourceRef: kustomizev1.CrossNamespaceSourceReference{
+				Kind:      sourcev1.GitRepositoryKind,
+				Name:      c.GitRepositoryName,
+				Namespace: c.GitRepositoryNamespace,
+			},
+			//DependsOn: dependsOn,
+			HealthChecks: []meta.NamespacedObjectKindReference{
+				{
+					APIVersion: helmv2.GroupVersion.String(),
+					Kind:       helmv2.HelmReleaseKind,
+					Name:       makeArtifactName(artifact.Name, installation.Name, definitionName),
+					Namespace:  installation.ObjectMeta.Namespace,
+				},
+			},
+		},
+	}
 }
 
 func makeArtifactName(name string, installationName, definitionName string) string {
@@ -227,12 +260,12 @@ func (c *Builder) makeCfgMapName(name string, installation profilesv1.ProfileIns
 	return join(installation.Name, name, "defaultvalues")
 }
 
-// containsArtifact checks whether an artifact with a specific name exists in a list of artifacts.
-func containsArtifact(name string, stack []profilesv1.Artifact) (profilesv1.Artifact, bool) {
-	for _, a := range stack {
-		if a.Name == name {
-			return a, true
-		}
-	}
-	return profilesv1.Artifact{}, false
-}
+//// containsArtifact checks whether an artifact with a specific name exists in a list of artifacts.
+//func containsArtifact(name string, stack []profilesv1.Artifact) (profilesv1.Artifact, bool) {
+//	for _, a := range stack {
+//		if a.Name == name {
+//			return a, true
+//		}
+//	}
+//	return profilesv1.Artifact{}, false
+//}

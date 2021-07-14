@@ -82,7 +82,7 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 	defer pa.cleanCloneCache()
 	for _, artifact := range artifacts {
 		artifactDir := filepath.Join(artifactsRootDir, artifact.Name)
-		if err := os.MkdirAll(artifactDir, 0755); err != nil {
+		if err := os.MkdirAll(artifactDir, 0755); err != nil && !os.IsExist(err) {
 			return fmt.Errorf("failed to create directory")
 		}
 		if artifact.RepoURL != "" {
@@ -91,13 +91,33 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 			}
 		}
 		for _, obj := range artifact.Objects {
+			// Wrap the objects into a sub-folder.
 			filename := filepath.Join(artifactDir, fmt.Sprintf("%s.%s", obj.GetObjectKind().GroupVersionKind().Kind, "yaml"))
+			if artifact.SubFolder != "" {
+				subFolder := filepath.Join(artifactDir, artifact.SubFolder)
+				if err := os.MkdirAll(subFolder, 0755); err != nil && !os.IsExist(err) {
+					return fmt.Errorf("failed to create directory")
+				}
+				filename = filepath.Join(subFolder, fmt.Sprintf("%s.%s", obj.GetObjectKind().GroupVersionKind().Kind, "yaml"))
+			}
 			if err := pa.generateOutput(filename, obj); err != nil {
 				return err
 			}
 		}
+		// This is helmRelease related so it must be inside the sub-folder for the helm release.
 		if artifact.Kustomize != nil {
 			data, err := yaml.Marshal(artifact.Kustomize)
+			if err != nil {
+				return fmt.Errorf("failed to marshal kustomize resource: %w", err)
+			}
+			filename := filepath.Join(artifactDir, artifact.SubFolder, "kustomization.yaml")
+			err = os.WriteFile(filename, data, 0644)
+			if err != nil {
+				return fmt.Errorf("failed to write file %s: %w", filename, err)
+			}
+		}
+		if artifact.HelmWrapper != nil {
+			data, err := yaml.Marshal(artifact.HelmWrapper)
 			if err != nil {
 				return fmt.Errorf("failed to marshal kustomize resource: %w", err)
 			}
@@ -105,6 +125,11 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 			err = os.WriteFile(filename, data, 0644)
 			if err != nil {
 				return fmt.Errorf("failed to write file %s: %w", filename, err)
+			}
+		}
+		if artifact.HelmWrapperKustomization != nil {
+			if err := pa.generateOutput(filepath.Join(artifactDir, "kustomize-flux.yaml"), artifact.HelmWrapperKustomization); err != nil {
+				return fmt.Errorf("failed to write file kustomize-flux.yaml: %w", err)
 			}
 		}
 	}
