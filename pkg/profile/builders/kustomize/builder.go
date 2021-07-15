@@ -74,12 +74,10 @@ func validateArtifact(in profilesv1.Artifact) error {
 func (k *Builder) makeKustomization(artifact profilesv1.Artifact, repoPath string, installation profilesv1.ProfileInstallation, definitionName string, dependencies []profilesv1.Artifact) *kustomizev1.Kustomization {
 	var dependsOn []dependency.CrossNamespaceDependencyReference
 	for _, dep := range dependencies {
-		if dep.Kustomize != nil {
-			dependsOn = append(dependsOn, dependency.CrossNamespaceDependencyReference{
-				Name:      makeArtifactName(dep.Name, installation.Name, definitionName),
-				Namespace: installation.Namespace,
-			})
-		}
+		dependsOn = append(dependsOn, dependency.CrossNamespaceDependencyReference{
+			Name:      makeArtifactName(dep.Name, installation.Name, definitionName),
+			Namespace: installation.Namespace,
+		})
 	}
 	return &kustomizev1.Kustomization{
 		ObjectMeta: metav1.ObjectMeta{

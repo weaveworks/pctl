@@ -10,6 +10,7 @@ import (
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	"github.com/fluxcd/pkg/apis/meta"
+	"github.com/fluxcd/pkg/runtime/dependency"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -39,18 +40,16 @@ func (c *Builder) Build(att profilesv1.Artifact, installation profilesv1.Profile
 	if err := validateArtifact(att); err != nil {
 		return nil, fmt.Errorf("validation failed for artifact %s: %w", att.Name, err)
 	}
-	// but we want the kustomization outside this so return multiple artifacts.
-	a := artifact.Artifact{Name: att.Name, SubFolder: "helm-chart"}
-	//var deps []profilesv1.Artifact
-	//for _, dep := range att.DependsOn {
-	//	d, ok := containsArtifact(dep.Name, definition.Spec.Artifacts)
-	//	if !ok {
-	//		return nil, fmt.Errorf("%s's depending artifact %s not found in the list of artifacts", a.Name, dep.Name)
-	//	}
-	//
-	//	deps = append(deps, d)
-	//}
+	var deps []profilesv1.Artifact
+	for _, dep := range att.DependsOn {
+		d, ok := containsArtifact(dep.Name, definition.Spec.Artifacts)
+		if !ok {
+			return nil, fmt.Errorf("%s's depending artifact %s not found in the list of artifacts", att.Name, dep.Name)
+		}
 
+		deps = append(deps, d)
+	}
+	a := artifact.Artifact{Name: att.Name, SubFolder: "helm-chart"}
 	helmRelease, cfgMap := c.makeHelmReleaseObjects(att, installation, definition.Name)
 	if cfgMap != nil {
 		a.Objects = append(a.Objects, cfgMap)
@@ -80,7 +79,7 @@ func (c *Builder) Build(att profilesv1.Artifact, installation profilesv1.Profile
 	a.HelmWrapper = &types.Kustomization{
 		Resources: []string{"kustomize-flux.yaml"},
 	}
-	a.HelmWrapperKustomization = c.makeKustomizeWrapper(att, installation, definition.Name)
+	a.HelmWrapperKustomization = c.makeKustomizeWrapper(att, installation, definition.Name, deps)
 	return []artifact.Artifact{a}, nil
 }
 
@@ -167,9 +166,14 @@ func (c *Builder) makeHelmRepoName(name string, installation profilesv1.ProfileI
 	return join(installation.Name, repoName, name)
 }
 
-// TODO: this will not create it with kustomize-flux -> because it uses the Kind not the name.
-func (c *Builder) makeKustomizeWrapper(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string) *kustomizev1.Kustomization {
-	path := filepath.Join(c.RootDir, "artifacts", artifact.Name, "helm-chart")
+func (c *Builder) makeKustomizeWrapper(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string, dependencies []profilesv1.Artifact) *kustomizev1.Kustomization {
+	var dependsOn []dependency.CrossNamespaceDependencyReference
+	for _, dep := range dependencies {
+		dependsOn = append(dependsOn, dependency.CrossNamespaceDependencyReference{
+			Name:      makeArtifactName(dep.Name, installation.Name, definitionName),
+			Namespace: installation.Namespace,
+		})
+	}
 	return &kustomizev1.Kustomization{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      makeArtifactName(artifact.Name+"-wrapper", installation.Name, definitionName),
@@ -180,7 +184,7 @@ func (c *Builder) makeKustomizeWrapper(artifact profilesv1.Artifact, installatio
 			APIVersion: kustomizev1.GroupVersion.String(),
 		},
 		Spec: kustomizev1.KustomizationSpec{
-			Path:            path,
+			Path:            filepath.Join(c.RootDir, "artifacts", artifact.Name, "helm-chart"),
 			Interval:        metav1.Duration{Duration: time.Minute * 5},
 			Prune:           true,
 			TargetNamespace: installation.ObjectMeta.Namespace,
@@ -189,7 +193,7 @@ func (c *Builder) makeKustomizeWrapper(artifact profilesv1.Artifact, installatio
 				Name:      c.GitRepositoryName,
 				Namespace: c.GitRepositoryNamespace,
 			},
-			//DependsOn: dependsOn,
+			DependsOn: dependsOn,
 			HealthChecks: []meta.NamespacedObjectKindReference{
 				{
 					APIVersion: helmv2.GroupVersion.String(),
@@ -260,12 +264,12 @@ func (c *Builder) makeCfgMapName(name string, installation profilesv1.ProfileIns
 	return join(installation.Name, name, "defaultvalues")
 }
 
-//// containsArtifact checks whether an artifact with a specific name exists in a list of artifacts.
-//func containsArtifact(name string, stack []profilesv1.Artifact) (profilesv1.Artifact, bool) {
-//	for _, a := range stack {
-//		if a.Name == name {
-//			return a, true
-//		}
-//	}
-//	return profilesv1.Artifact{}, false
-//}
+// containsArtifact checks whether an artifact with a specific name exists in a list of artifacts.
+func containsArtifact(name string, stack []profilesv1.Artifact) (profilesv1.Artifact, bool) {
+	for _, a := range stack {
+		if a.Name == name {
+			return a, true
+		}
+	}
+	return profilesv1.Artifact{}, false
+}
