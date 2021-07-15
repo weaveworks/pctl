@@ -26,6 +26,7 @@ var _ = Describe("Install", func() {
 		httpBody          []byte
 		cfg               catalog.InstallConfig
 		fakeMakeArtifacts *artifactFakes.FakeArtifactsMaker
+		manager           catalog.Manager
 	)
 
 	BeforeEach(func() {
@@ -73,7 +74,7 @@ var _ = Describe("Install", func() {
 	Describe("install", func() {
 		When("installing from a catalog entry", func() {
 			It("generates the artifacts", func() {
-				err := catalog.Install(cfg)
+				err := manager.Install(cfg)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeMakeArtifacts.MakeCallCount()).To(Equal(1))
 				arg := fakeMakeArtifacts.MakeArgsForCall(0)
@@ -123,7 +124,7 @@ var _ = Describe("Install", func() {
 				}
 			})
 			It("generates the artifacts", func() {
-				err := catalog.Install(cfg)
+				err := manager.Install(cfg)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeMakeArtifacts.MakeCallCount()).To(Equal(1))
 				arg := fakeMakeArtifacts.MakeArgsForCall(0)
@@ -151,7 +152,7 @@ var _ = Describe("Install", func() {
 		When("getting the artifacts fails", func() {
 			It("errors", func() {
 				fakeMakeArtifacts.MakeReturns(fmt.Errorf("foo"))
-				err := catalog.Install(cfg)
+				err := manager.Install(cfg)
 				Expect(err).To(MatchError("failed to make artifacts: foo"))
 			})
 		})
@@ -174,7 +175,7 @@ var _ = Describe("Install", func() {
 						URL:           "https://github.com/weaveworks/profiles-examples",
 					},
 				}
-				err := catalog.Install(cfg)
+				err := manager.Install(cfg)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})

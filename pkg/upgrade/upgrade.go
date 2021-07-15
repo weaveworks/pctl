@@ -12,6 +12,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/profile"
 	"github.com/weaveworks/pctl/pkg/runner"
+	"github.com/weaveworks/pctl/pkg/upgrade/branch"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"sigs.k8s.io/yaml"
 )
@@ -40,11 +41,7 @@ func Upgrade(cfg UpgradeConfig) error {
 	catalogName := profileInstallation.Spec.Catalog.Catalog
 	profileName := profileInstallation.Spec.Catalog.Profile
 	currentVersion := profileInstallation.Spec.Catalog.Version
-	_, err = cfg.CatalogManager.Show(cfg.CatalogClient, catalogName, profileName, currentVersion)
-	if err != nil {
-		return fmt.Errorf("failed to get profile %q in catalog %q version %q: %w", profileName, catalogName, currentVersion, err)
-	}
-
+	//check new version exists
 	_, err = cfg.CatalogManager.Show(cfg.CatalogClient, catalogName, profileName, cfg.Version)
 	if err != nil {
 		return fmt.Errorf("failed to get profile %q in catalog %q version %q: %w", profileName, catalogName, cfg.Version, err)
@@ -71,14 +68,33 @@ func Upgrade(cfg UpgradeConfig) error {
 			ProfileName: profileName,
 			CatalogName: catalogName,
 			Version:     currentVersion,
+			ConfigMap:   profileInstallation.Spec.ConfigMap,
 		},
 	}
 
-	if err := createBaseBranch(cfg.GitClient, workingDir, installConfig, cfg.CatalogManager); err != nil {
+	branchManager := &branch.Manager{
+		WorkingDir: workingDir,
+		GitClient:  cfg.GitClient,
+	}
+
+	err = branchManager.CreateRepoWithBaseBranch(func() error {
+		if err := cfg.CatalogManager.Install(installConfig); err != nil {
+			return fmt.Errorf("failed to install base profile: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
 		return err
 	}
 
-	if err := createBranchWithUserChanges(cfg.GitClient, workingDir, cfg.ProfileDir); err != nil {
+	err = branchManager.CreateBranchWithContent("user-changes", func() error {
+		if err := copy.Copy(cfg.ProfileDir, workingDir); err != nil {
+			return fmt.Errorf("failed to copy profile during upgrade: %w", err)
+		}
+		return nil
+	})
+
+	if err != nil {
 		return err
 	}
 
@@ -97,9 +113,18 @@ func Upgrade(cfg UpgradeConfig) error {
 			ProfileName: profileName,
 			CatalogName: catalogName,
 			Version:     cfg.Version,
+			ConfigMap:   profileInstallation.Spec.ConfigMap,
 		},
 	}
-	if err := createBranchWithNewVersion(cfg.GitClient, workingDir, installConfig, cfg.CatalogManager); err != nil {
+
+	err = branchManager.CreateBranchWithContent("update-changes", func() error {
+		if err := cfg.CatalogManager.Install(installConfig); err != nil {
+			return fmt.Errorf("failed to install update profile: %w", err)
+		}
+		return nil
+	})
+
+	if err != nil {
 		return err
 	}
 
@@ -111,82 +136,13 @@ func Upgrade(cfg UpgradeConfig) error {
 		fmt.Println("merge conflict")
 	}
 
-	return nil
-}
-
-func createBaseBranch(gitClient git.Git, workingDir string, installConfig catalog.InstallConfig, catalogManager catalog.CatalogManager) error {
-	if err := os.Mkdir(workingDir, 0755); err != nil {
-		return fmt.Errorf("failed to create working directory: %w", err)
+	if err := os.RemoveAll(cfg.ProfileDir); err != nil {
+		return err
 	}
 
-	if err := catalogManager.Install(installConfig); err != nil {
-		return fmt.Errorf("failed to install base profile: %w", err)
+	if err := copy.Copy(workingDir, cfg.ProfileDir); err != nil {
+		return err
 	}
 
-	if err := gitClient.Add(); err != nil {
-		return fmt.Errorf("failed to add: %w", err)
-	}
-
-	if err := gitClient.Commit(); err != nil {
-		return fmt.Errorf("failed to add: %w", err)
-	}
-	return nil
-}
-
-func createBranchWithUserChanges(gitClient git.Git, workingDir, profileDir string) error {
-	if err := gitClient.CreateNewBranch("user-changes"); err != nil {
-		return fmt.Errorf("failed to add: %w", err)
-	}
-
-	if err := os.RemoveAll(workingDir); err != nil {
-		return fmt.Errorf("failed to add: %w", err)
-	}
-
-	if err := os.Mkdir(workingDir, 0755); err != nil {
-		return fmt.Errorf("failed to create working directory: %w", err)
-	}
-
-	if err := copy.Copy(profileDir, workingDir); err != nil {
-		return fmt.Errorf("failed to copy profile during upgrade: %w", err)
-	}
-
-	if err := gitClient.Add(); err != nil {
-		return fmt.Errorf("failed to add: %w", err)
-	}
-
-	if err := gitClient.Commit(); err != nil {
-		return fmt.Errorf("failed to add: %w", err)
-	}
-	return nil
-}
-
-func createBranchWithNewVersion(gitClient git.Git, workingDir string, installConfig catalog.InstallConfig, catalogManager catalog.CatalogManager) error {
-	if err := gitClient.Checkout("main"); err != nil {
-		return fmt.Errorf("failed to add: %w", err)
-	}
-
-	if err := gitClient.CreateNewBranch("update-changes"); err != nil {
-		return fmt.Errorf("failed to add: %w", err)
-	}
-
-	if err := os.RemoveAll(workingDir); err != nil {
-		return fmt.Errorf("failed to add: %w", err)
-	}
-
-	if err := os.Mkdir(workingDir, 0755); err != nil {
-		return fmt.Errorf("failed to create working directory: %w", err)
-	}
-
-	if err := catalogManager.Install(installConfig); err != nil {
-		return fmt.Errorf("failed to install update profile: %w", err)
-	}
-
-	if err := gitClient.Add(); err != nil {
-		return fmt.Errorf("failed to add: %w", err)
-	}
-
-	if err := gitClient.Commit(); err != nil {
-		return fmt.Errorf("failed to add: %w", err)
-	}
 	return nil
 }

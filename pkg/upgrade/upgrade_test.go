@@ -59,37 +59,12 @@ var _ = Describe("Upgrade", func() {
 		Expect(ioutil.WriteFile(filepath.Join(tempDir, "profile-installation.yaml"), bytes, 0755)).To(Succeed())
 		path = tempDir
 		fakeGitClient.GetDirectoryReturns(workingDir)
-
-		// httpBody := []byte(`{"item":
-		// {
-		// "name": "my-profile",
-		// "description": "nginx 1",
-		// "tag": "0.1.0",
-		// "catalogSource": "my-catalog (https://github.com/weaveworks/profiles)",
-		// "url": "https://github.com/weaveworks/nginx-profile",
-		// "prerequisites": ["Kubernetes 1.18+"],
-		// "maintainer": "WeaveWorks <gitops@weave.works>"
-		// }}
-		//   `)
-		// fakeCatalogClient.DoRequestReturnsOnCall(0, httpBody, 200, nil)
 		fakeCatalogManager.ShowReturnsOnCall(0, profilesv1.ProfileCatalogEntry{
-			Tag:           "v0.1.0",
+			Tag:           "v0.1.1",
 			CatalogSource: "my-catalog",
 			Name:          "my-profile2",
 		}, nil)
 
-		// httpBody = []byte(`{"item":
-		// {
-		// "name": "my-profile",
-		// "description": "nginx 1",
-		// "tag": "0.1.1",
-		// "catalogSource": "my-catalog (https://github.com/weaveworks/profiles)",
-		// "url": "https://github.com/weaveworks/nginx-profile",
-		// "prerequisites": ["Kubernetes 1.18+"],
-		// "maintainer": "WeaveWorks <gitops@weave.works>"
-		// }}
-		//   `)
-		// fakeCatalogClient.DoRequestReturnsOnCall(1, httpBody, 200, nil)
 		cfg = upgrade.UpgradeConfig{
 			ProfileDir:       path,
 			Version:          version,
@@ -102,20 +77,15 @@ var _ = Describe("Upgrade", func() {
 	})
 
 	AfterEach(func() {
-		// fmt.Println("working dir ", workingDir)
-		// fmt.Println("temp dir ", tempDir)
 		_ = os.RemoveAll(tempDir)
 	})
 
 	It("Upgrades the profile installation", func() {
 		err := upgrade.Upgrade(cfg)
 		Expect(err).NotTo(HaveOccurred())
-		_, catalogName, profileName, desiredVersion := fakeCatalogManager.ShowArgsForCall(0)
-		Expect(catalogName).To(Equal("my-catalog"))
-		Expect(profileName).To(Equal("my-profile"))
-		Expect(desiredVersion).To(Equal("v0.1.0"))
 
-		_, catalogName, profileName, desiredVersion = fakeCatalogManager.ShowArgsForCall(1)
+		Expect(fakeCatalogManager.ShowCallCount()).To(Equal(1))
+		_, catalogName, profileName, desiredVersion := fakeCatalogManager.ShowArgsForCall(0)
 		Expect(catalogName).To(Equal("my-catalog"))
 		Expect(profileName).To(Equal("my-profile"))
 		Expect(desiredVersion).To(Equal("v0.1.1"))
@@ -160,30 +130,16 @@ var _ = Describe("Upgrade", func() {
 		})
 	})
 
-	When("the existing profile cannot be found", func() {
+	When("the new profile cannot be found", func() {
 		BeforeEach(func() {
 			fakeCatalogManager.ShowReturnsOnCall(0, profilesv1.ProfileCatalogEntry{}, fmt.Errorf("whoops"))
 		})
 
 		It("returns an error", func() {
 			err := upgrade.Upgrade(cfg)
-			Expect(err).To(MatchError(ContainSubstring("failed to get profile \"my-profile\" in catalog \"my-catalog\" version \"v0.1.0\":")))
-			_, catalogName, profileName, desiredVersion := fakeCatalogManager.ShowArgsForCall(0)
-			Expect(catalogName).To(Equal("my-catalog"))
-			Expect(profileName).To(Equal("my-profile"))
-			Expect(desiredVersion).To(Equal("v0.1.0"))
-		})
-	})
-
-	When("the desired profile cannot be found", func() {
-		BeforeEach(func() {
-			fakeCatalogManager.ShowReturnsOnCall(1, profilesv1.ProfileCatalogEntry{}, fmt.Errorf("whoops"))
-		})
-
-		It("returns an error", func() {
-			err := upgrade.Upgrade(cfg)
+			Expect(fakeCatalogManager.ShowCallCount()).To(Equal(1))
 			Expect(err).To(MatchError(ContainSubstring("failed to get profile \"my-profile\" in catalog \"my-catalog\" version \"v0.1.1\":")))
-			_, catalogName, profileName, desiredVersion := fakeCatalogManager.ShowArgsForCall(1)
+			_, catalogName, profileName, desiredVersion := fakeCatalogManager.ShowArgsForCall(0)
 			Expect(catalogName).To(Equal("my-catalog"))
 			Expect(profileName).To(Equal("my-profile"))
 			Expect(desiredVersion).To(Equal("v0.1.1"))
