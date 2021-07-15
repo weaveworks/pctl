@@ -13,6 +13,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/runtime"
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"sigs.k8s.io/kustomize/api/types"
 
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
@@ -105,27 +106,13 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 			}
 		}
 		// This is helmRelease related so it must be inside the sub-folder for the helm release.
-		if artifact.Kustomize != nil {
-			data, err := yaml.Marshal(artifact.Kustomize)
-			if err != nil {
-				return fmt.Errorf("failed to marshal kustomize resource: %w", err)
-			}
-			filename := filepath.Join(artifactDir, artifact.SubFolder, "kustomization.yaml")
-			err = os.WriteFile(filename, data, 0644)
-			if err != nil {
-				return fmt.Errorf("failed to write file %s: %w", filename, err)
-			}
+		filename := filepath.Join(artifactDir, artifact.SubFolder, "kustomization.yaml")
+		if err := writeOutKustomizeResource(artifact.Kustomize, filename); err != nil {
+			return err
 		}
-		if artifact.HelmWrapper != nil {
-			data, err := yaml.Marshal(artifact.HelmWrapper)
-			if err != nil {
-				return fmt.Errorf("failed to marshal kustomize resource: %w", err)
-			}
-			filename := filepath.Join(artifactDir, "kustomization.yaml")
-			err = os.WriteFile(filename, data, 0644)
-			if err != nil {
-				return fmt.Errorf("failed to write file %s: %w", filename, err)
-			}
+		filename = filepath.Join(artifactDir, "kustomization.yaml")
+		if err := writeOutKustomizeResource(artifact.HelmWrapper, filename); err != nil {
+			return err
 		}
 		if artifact.HelmWrapperKustomization != nil {
 			if err := pa.generateOutput(filepath.Join(artifactDir, "kustomize-flux.yaml"), artifact.HelmWrapperKustomization); err != nil {
@@ -134,6 +121,21 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 		}
 	}
 	return pa.generateOutput(filepath.Join(profileRootdir, "profile-installation.yaml"), &installation)
+}
+
+func writeOutKustomizeResource(kustomize *types.Kustomization, filename string) error {
+	if kustomize == nil {
+		return nil
+	}
+	data, err := yaml.Marshal(kustomize)
+	if err != nil {
+		return fmt.Errorf("failed to marshal kustomize resource: %w", err)
+	}
+	err = os.WriteFile(filename, data, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write file %s: %w", filename, err)
+	}
+	return nil
 }
 
 // getRepositoryLocalArtifacts clones all repository local artifacts so they can be copied over to the flux repository.
