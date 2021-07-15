@@ -80,13 +80,17 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 			}
 		}
 		for _, obj := range artifact.Objects {
-			filename := filepath.Join(artifactDir, fmt.Sprintf("%s.%s", obj.GetObjectKind().GroupVersionKind().Kind, "yaml"))
-			if artifact.SubFolder != "" {
-				subFolder := filepath.Join(artifactDir, artifact.SubFolder)
+			name := obj.GetObjectKind().GroupVersionKind().Kind
+			if obj.Name != "" {
+				name = obj.Name
+			}
+			filename := filepath.Join(artifactDir, fmt.Sprintf("%s.%s", name, "yaml"))
+			if obj.Path != "" {
+				subFolder := filepath.Join(artifactDir, obj.Path)
 				if err := os.MkdirAll(subFolder, 0755); err != nil && !os.IsExist(err) {
 					return fmt.Errorf("failed to create directory")
 				}
-				filename = filepath.Join(subFolder, fmt.Sprintf("%s.%s", obj.GetObjectKind().GroupVersionKind().Kind, "yaml"))
+				filename = filepath.Join(subFolder, fmt.Sprintf("%s.%s", name, "yaml"))
 			}
 			if err := pa.generateOutput(filename, obj); err != nil {
 				return err
@@ -103,9 +107,6 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 		filename := filepath.Join(artifactDir, "kustomization.yaml")
 		if err := writeOutKustomizeResource(artifact.KustomizeWrapper, filename); err != nil {
 			return err
-		}
-		if err := pa.generateOutput(filepath.Join(artifactDir, "kustomize-flux.yaml"), artifact.KustomizeWrapperObject); err != nil {
-			return fmt.Errorf("failed to write file kustomize-flux.yaml: %w", err)
 		}
 	}
 	return pa.generateOutput(filepath.Join(profileRootdir, "profile-installation.yaml"), &installation)
