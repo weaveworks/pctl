@@ -17,9 +17,7 @@ import (
 
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
-	"github.com/weaveworks/pctl/pkg/profile/builders"
-	cbuilder "github.com/weaveworks/pctl/pkg/profile/builders/chart"
-	kbuilder "github.com/weaveworks/pctl/pkg/profile/builders/kustomize"
+	"github.com/weaveworks/pctl/pkg/profile/builder"
 )
 
 // ArtifactsMaker can create a list of artifacts.
@@ -41,7 +39,7 @@ type MakerConfig struct {
 type ProfilesArtifactsMaker struct {
 	MakerConfig
 
-	Builders     map[int]builders.Builder
+	Builder      builder.Builder
 	nestedName   string
 	profileRepos []string
 	cloneCache   map[string]string
@@ -49,26 +47,16 @@ type ProfilesArtifactsMaker struct {
 
 // NewProfilesArtifactsMaker creates a new profiles artifacts maker.
 func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
-	bldrs := map[int]builders.Builder{
-		builders.KUSTOMIZE: &kbuilder.Builder{
-			Config: kbuilder.Config{
-				GitRepositoryName:      cfg.GitRepoName,
-				GitRepositoryNamespace: cfg.GitRepoNamespace,
-				RootDir:                cfg.RootDir,
-			},
-		},
-		builders.CHART: &cbuilder.Builder{
-			Config: cbuilder.Config{
-				GitRepositoryName:      cfg.GitRepoName,
-				GitRepositoryNamespace: cfg.GitRepoNamespace,
-				RootDir:                cfg.RootDir,
-			},
-		},
-	}
 	return &ProfilesArtifactsMaker{
 		MakerConfig: cfg,
-		Builders:    bldrs,
-		cloneCache:  make(map[string]string),
+		Builder: &builder.ArtifactBuilder{
+			Config: builder.Config{
+				GitRepositoryName:      cfg.GitRepoName,
+				GitRepositoryNamespace: cfg.GitRepoNamespace,
+				RootDir:                cfg.RootDir,
+			},
+		},
+		cloneCache: make(map[string]string),
 	}
 }
 
@@ -92,7 +80,6 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 			}
 		}
 		for _, obj := range artifact.Objects {
-			// Wrap the objects into a sub-folder.
 			filename := filepath.Join(artifactDir, fmt.Sprintf("%s.%s", obj.GetObjectKind().GroupVersionKind().Kind, "yaml"))
 			if artifact.SubFolder != "" {
 				subFolder := filepath.Join(artifactDir, artifact.SubFolder)
@@ -123,6 +110,7 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 	return pa.generateOutput(filepath.Join(profileRootdir, "profile-installation.yaml"), &installation)
 }
 
+// writeOutKustomizeResource writes out kustomization resource data if set to a specific file.
 func writeOutKustomizeResource(kustomize *types.Kustomization, filename string) error {
 	if kustomize == nil {
 		return nil
@@ -167,7 +155,11 @@ func (pa *ProfilesArtifactsMaker) getRepositoryLocalArtifacts(a artifact.Artifac
 			path = filepath.Dir(path)
 		}
 		fullPath := filepath.Join(tmp, a.SparseFolder, path)
-		if err := copy.Copy(fullPath, filepath.Join(artifactDir, path)); err != nil {
+		dest := filepath.Join(artifactDir, path)
+		if a.SubFolder != "" {
+			dest = filepath.Join(artifactDir, a.SubFolder, path)
+		}
+		if err := copy.Copy(fullPath, dest); err != nil {
 			return fmt.Errorf("failed to move folder: %w", err)
 		}
 	}

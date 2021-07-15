@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
-	"github.com/weaveworks/pctl/pkg/profile/builders"
+	"github.com/weaveworks/pctl/pkg/profile/builder"
 	"github.com/weaveworks/profiles/api/v1alpha1"
 )
 
@@ -119,4 +119,4 @@ func (fake *FakeBuilder) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ builders.Builder = new(FakeBuilder)
+var _ builder.Builder = new(FakeBuilder)

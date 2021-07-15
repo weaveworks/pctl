@@ -8,7 +8,9 @@ import (
 
 // Artifact contains the name and objects belonging to a profile artifact
 type Artifact struct {
-	Objects                  []runtime.Object
+	// Generated Kubernetes resources for this artifact
+	Objects []runtime.Object
+	// Kustomize resource which
 	Kustomize                *types.Kustomization
 	HelmWrapper              *types.Kustomization
 	HelmWrapperKustomization *kustomizev1.Kustomization

@@ -1,4 +1,4 @@
-package kustomize_test
+package builder_test
 
 import (
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
@@ -10,10 +10,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
-	"github.com/weaveworks/pctl/pkg/profile/builders/kustomize"
+	"github.com/weaveworks/pctl/pkg/profile/builder"
 )
 
-var _ = Describe("Builder", func() {
+var _ = Describe("ArtifactBuilder", func() {
 	var (
 		profileName            string
 		profileURL             string
@@ -82,8 +82,8 @@ var _ = Describe("Builder", func() {
 
 	Context("Build", func() {
 		It("creates an partifact from an install and a profile definition", func() {
-			builder := &kustomize.Builder{
-				Config: kustomize.Config{
+			builder := &builder.ArtifactBuilder{
+				Config: builder.Config{
 					GitRepositoryName:      gitRepositoryName,
 					GitRepositoryNamespace: gitRepositoryNamespace,
 					RootDir:                rootDir,
@@ -94,7 +94,7 @@ var _ = Describe("Builder", func() {
 			kustomization := &kustomizev1.Kustomization{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Kustomization",
-					APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
+					APIVersion: "builder.toolkit.fluxcd.io/v1beta1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-profile-weaveworks-nginx-kustomize",
@@ -138,8 +138,8 @@ var _ = Describe("Builder", func() {
 						},
 					},
 				}
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &builder.ArtifactBuilder{
+					Config: builder.Config{
 						GitRepositoryName:      gitRepositoryName,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						RootDir:                rootDir,
@@ -150,7 +150,7 @@ var _ = Describe("Builder", func() {
 				kustomization := &kustomizev1.Kustomization{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "Kustomization",
-						APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
+						APIVersion: "builder.toolkit.fluxcd.io/v1beta1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-profile-weaveworks-nginx-kustomize",
@@ -181,8 +181,8 @@ var _ = Describe("Builder", func() {
 		})
 		When("git-repository-name and git-repository-namespace aren't defined", func() {
 			It("returns an error", func() {
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &builder.ArtifactBuilder{
+					Config: builder.Config{
 						RootDir: rootDir,
 					},
 				}
@@ -225,8 +225,8 @@ var _ = Describe("Builder", func() {
 						Path: "https://not.empty",
 					},
 				}
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &builder.ArtifactBuilder{
+					Config: builder.Config{
 						RootDir:                rootDir,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						GitRepositoryName:      gitRepositoryName,
@@ -247,8 +247,8 @@ var _ = Describe("Builder", func() {
 						Path: "https://not.empty",
 					},
 				}
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &builder.ArtifactBuilder{
+					Config: builder.Config{
 						RootDir:                rootDir,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						GitRepositoryName:      gitRepositoryName,
@@ -260,8 +260,8 @@ var _ = Describe("Builder", func() {
 		})
 		When("depends on is defined for an artifact", func() {
 			It("creates a kustomize object with DependsOn set correctly", func() {
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &builder.ArtifactBuilder{
+					Config: builder.Config{
 						GitRepositoryName:      gitRepositoryName,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						RootDir:                rootDir,
@@ -304,7 +304,7 @@ var _ = Describe("Builder", func() {
 				kustomization := &kustomizev1.Kustomization{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "Kustomization",
-						APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
+						APIVersion: "builder.toolkit.fluxcd.io/v1beta1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-profile-weaveworks-nginx-kustomize",
@@ -341,8 +341,8 @@ var _ = Describe("Builder", func() {
 		})
 		When("depends on is defined for an artifact but the artifact is not in the list", func() {
 			It("returns a sensible error", func() {
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &builder.ArtifactBuilder{
+					Config: builder.Config{
 						GitRepositoryName:      gitRepositoryName,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						RootDir:                rootDir,

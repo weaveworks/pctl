@@ -1,7 +1,6 @@
 package profile
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -9,7 +8,6 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
-	"github.com/weaveworks/pctl/pkg/profile/builders"
 )
 
 // MakeArtifactsFunc defines a method to create artifacts from an installation using a maker.
@@ -34,8 +32,6 @@ func MakeArtifacts(pam *ProfilesArtifactsMaker, installation profilesv1.ProfileI
 		if pam.nestedName != "" {
 			a.Name = filepath.Join(pam.nestedName, a.Name)
 		}
-
-		var builder builders.Builder
 		if a.Profile != nil {
 			profileRepoName := profileRepo(installation)
 			if containsKey(pam.profileRepos, profileRepoName) {
@@ -64,14 +60,8 @@ func MakeArtifacts(pam *ProfilesArtifactsMaker, installation profilesv1.ProfileI
 			pam.nestedName = ""
 			pam.profileRepos = nil
 			continue
-		} else if a.Kustomize != nil {
-			builder = pam.Builders[builders.KUSTOMIZE]
-		} else if a.Chart != nil {
-			builder = pam.Builders[builders.CHART]
-		} else {
-			return nil, errors.New("no artifact set")
 		}
-		arts, err := builder.Build(a, installation, definition)
+		arts, err := pam.Builder.Build(a, installation, definition)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build artifact: %w", err)
 		}
