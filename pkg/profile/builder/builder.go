@@ -41,94 +41,89 @@ type Config struct {
 // ArtifactBuilder will build helm chart resources.
 type ArtifactBuilder struct {
 	Config
+	a *artifact.Artifact
 }
 
 // Build a single artifact from a profile artifact and installation.
-func (c *ArtifactBuilder) Build(att profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]artifact.Artifact, error) {
-	if att.Chart != nil {
-		return c.buildChartArtifact(att, installation, definition)
-	} else if att.Kustomize != nil {
-		return c.buildKustomizeArtifact(att, installation, definition)
-	}
-	return nil, errors.New("no artifact found")
-}
-
-func (c *ArtifactBuilder) buildChartArtifact(att profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]artifact.Artifact, error) {
-	if err := c.validateChartArtifact(att); err != nil {
-		return nil, fmt.Errorf("validation failed for artifact %s: %w", att.Name, err)
-	}
+func (c *ArtifactBuilder) Build(partifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]artifact.Artifact, error) {
 	var deps []profilesv1.Artifact
-	for _, dep := range att.DependsOn {
+	for _, dep := range partifact.DependsOn {
 		d, ok := c.containsArtifact(dep.Name, definition.Spec.Artifacts)
 		if !ok {
-			return nil, fmt.Errorf("%s's depending artifact %s not found in the list of artifacts", att.Name, dep.Name)
+			return nil, fmt.Errorf("%s's depending artifact %s not found in the list of artifacts", partifact.Name, dep.Name)
 		}
 
 		deps = append(deps, d)
 	}
-	a := artifact.Artifact{Name: att.Name, SubFolder: "helm-chart"}
-	helmRelease, cfgMap := c.makeHelmReleaseObjects(att, installation, definition.Name)
-	if cfgMap != nil {
-		a.Objects = append(a.Objects, cfgMap)
-	}
-	a.Objects = append(a.Objects, helmRelease)
-	if att.Chart.Path != "" {
-		if c.GitRepositoryNamespace == "" && c.GitRepositoryName == "" {
-			return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
+	c.a = &artifact.Artifact{Name: partifact.Name, KustomizeWrapper: &types.Kustomization{
+		Resources: []string{"kustomize-flux.yaml"},
+	}}
+	if partifact.Chart != nil {
+		if err := c.applyChartDetailsToArtifact(partifact, installation, definition, deps); err != nil {
+			return nil, err
 		}
-		helmRelease.Spec.Chart.Spec.Chart = filepath.Join(c.RootDir, "artifacts", att.Name, "helm-chart", att.Chart.Path)
+	} else if partifact.Kustomize != nil {
+		if err := c.applyKustomizationDetailsToArtifact(partifact, installation, definition, deps); err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, errors.New("no artifact found")
+	}
+	return []artifact.Artifact{*c.a}, nil
+}
+
+func (c *ArtifactBuilder) applyChartDetailsToArtifact(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition, deps []profilesv1.Artifact) error {
+	if err := c.validateChartArtifact(artifact); err != nil {
+		return fmt.Errorf("validation failed for artifact %s: %w", artifact.Name, err)
+	}
+	c.a.SubFolder = "helm-chart"
+	helmRelease, cfgMap := c.makeHelmReleaseObjects(artifact, installation, definition.Name)
+	if cfgMap != nil {
+		c.a.Objects = append(c.a.Objects, cfgMap)
+	}
+	c.a.Objects = append(c.a.Objects, helmRelease)
+	if artifact.Chart.Path != "" {
+		if c.GitRepositoryNamespace == "" && c.GitRepositoryName == "" {
+			return fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
+		}
+		helmRelease.Spec.Chart.Spec.Chart = filepath.Join(c.RootDir, "artifacts", artifact.Name, "helm-chart", artifact.Chart.Path)
 		branch := installation.Spec.Source.Branch
 		if installation.Spec.Source.Tag != "" {
 			branch = installation.Spec.Source.Tag
 		}
-		a.RepoURL = installation.Spec.Source.URL
-		a.SparseFolder = definition.Name
-		a.Branch = branch
-		a.PathsToCopy = append(a.PathsToCopy, att.Chart.Path)
-		a.Kustomize = &types.Kustomization{
+		c.a.RepoURL = installation.Spec.Source.URL
+		c.a.SparseFolder = definition.Name
+		c.a.Branch = branch
+		c.a.PathsToCopy = append(c.a.PathsToCopy, artifact.Chart.Path)
+		c.a.Kustomize = &types.Kustomization{
 			Resources: []string{"HelmRelease.yaml"},
 		}
 	}
-	if att.Chart.URL != "" {
-		helmRepository := c.makeHelmRepository(att.Chart.URL, att.Chart.Name, installation)
-		a.Objects = append(a.Objects, helmRepository)
+	if artifact.Chart.URL != "" {
+		helmRepository := c.makeHelmRepository(artifact.Chart.URL, artifact.Chart.Name, installation)
+		c.a.Objects = append(c.a.Objects, helmRepository)
 	}
-	a.HelmWrapper = &types.Kustomization{
-		Resources: []string{"kustomize-flux.yaml"},
-	}
-	a.HelmWrapperKustomization = c.makeKustomizeWrapper(att, installation, definition.Name, deps)
-	return []artifact.Artifact{a}, nil
+	c.a.KustomizeWrapperObject = c.makeKustomizeHelmReleaseWrapper(artifact, installation, definition.Name, deps)
+	return nil
 }
 
-func (c *ArtifactBuilder) buildKustomizeArtifact(att profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]artifact.Artifact, error) {
+func (c *ArtifactBuilder) applyKustomizationDetailsToArtifact(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition, deps []profilesv1.Artifact) error {
 	if c.GitRepositoryNamespace == "" && c.GitRepositoryName == "" {
-		return nil, fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
+		return fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 	}
-	if err := c.validateKustomizeArtifact(att); err != nil {
-		return nil, fmt.Errorf("validation failed for artifact %s: %w", att.Name, err)
+	if err := c.validateKustomizeArtifact(artifact); err != nil {
+		return fmt.Errorf("validation failed for artifact %s: %w", artifact.Name, err)
 	}
-	a := artifact.Artifact{Name: att.Name}
-	path := filepath.Join(c.RootDir, "artifacts", att.Name, att.Kustomize.Path)
-
-	var deps []profilesv1.Artifact
-	for _, dep := range att.DependsOn {
-		d, ok := c.containsArtifact(dep.Name, definition.Spec.Artifacts)
-		if !ok {
-			return nil, fmt.Errorf("%s's depending artifact %s not found in the list of artifacts", a.Name, dep.Name)
-		}
-		deps = append(deps, d)
-	}
-
-	a.Objects = append(a.Objects, c.makeKustomization(att, path, installation, definition.Name, deps))
 	branch := installation.Spec.Source.Branch
 	if installation.Spec.Source.Tag != "" {
 		branch = installation.Spec.Source.Tag
 	}
-	a.RepoURL = installation.Spec.Source.URL
-	a.SparseFolder = definition.Name
-	a.Branch = branch
-	a.PathsToCopy = append(a.PathsToCopy, att.Kustomize.Path)
-	return []artifact.Artifact{a}, nil
+	c.a.RepoURL = installation.Spec.Source.URL
+	c.a.SparseFolder = definition.Name
+	c.a.Branch = branch
+	c.a.PathsToCopy = append(c.a.PathsToCopy, artifact.Kustomize.Path)
+	c.a.KustomizeWrapperObject = c.makeKustomizeWrapper(artifact, installation, definition.Name, deps)
+	return nil
 }
 
 // validateChartArtifact validates that the artifact has valid chart properties.
@@ -214,15 +209,28 @@ func (c *ArtifactBuilder) makeHelmRepoName(name string, installation profilesv1.
 	return c.join(installation.Name, repoName, name)
 }
 
-func (c *ArtifactBuilder) makeKustomizeWrapper(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string, dependencies []profilesv1.Artifact) *kustomizev1.Kustomization {
+func (c *ArtifactBuilder) makeKustomizeHelmReleaseWrapper(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string, dependencies []profilesv1.Artifact) *kustomizev1.Kustomization {
 	path := filepath.Join(c.RootDir, "artifacts", artifact.Name, "helm-chart")
-	name := c.makeArtifactName(artifact.Name, installation.Name, definitionName)
 	wrapper := c.makeKustomization(artifact, path, installation, definitionName, dependencies)
 	wrapper.Spec.HealthChecks = []meta.NamespacedObjectKindReference{
 		{
 			APIVersion: helmv2.GroupVersion.String(),
 			Kind:       helmv2.HelmReleaseKind,
-			Name:       name,
+			Name:       c.makeArtifactName(artifact.Name, installation.Name, definitionName),
+			Namespace:  installation.ObjectMeta.Namespace,
+		},
+	}
+	return wrapper
+}
+
+func (c *ArtifactBuilder) makeKustomizeWrapper(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string, dependencies []profilesv1.Artifact) *kustomizev1.Kustomization {
+	path := filepath.Join(c.RootDir, "artifacts", artifact.Name, artifact.Kustomize.Path)
+	wrapper := c.makeKustomization(artifact, path, installation, definitionName, dependencies)
+	wrapper.Spec.HealthChecks = []meta.NamespacedObjectKindReference{
+		{
+			APIVersion: kustomizev1.GroupVersion.String(),
+			Kind:       kustomizev1.KustomizationKind,
+			Name:       c.makeArtifactName(artifact.Name, installation.Name, definitionName),
 			Namespace:  installation.ObjectMeta.Namespace,
 		},
 	}

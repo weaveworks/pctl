@@ -8,17 +8,19 @@ import (
 
 // Artifact contains the name and objects belonging to a profile artifact
 type Artifact struct {
-	// Generated Kubernetes resources for this artifact
+	// Generated Kubernetes resources for this artifact.
 	Objects []runtime.Object
-	// Kustomize resource which
-	Kustomize                *types.Kustomization
-	HelmWrapper              *types.Kustomization
-	HelmWrapperKustomization *kustomizev1.Kustomization
-	Name                     string
-	RepoURL                  string
-	PathsToCopy              []string
-	SparseFolder             string
-	Branch                   string
+	// Kustomize resource which limits the number of objects scanned by flux.
+	Kustomize *types.Kustomization
+	// KustomizeWrapper limits flux to only pick up a specific resource.
+	KustomizeWrapper *types.Kustomization
+	// KustomizeWrapperObject wraps any resource into a Kustomization object.
+	KustomizeWrapperObject *kustomizev1.Kustomization
+	Name                   string
+	RepoURL                string
+	PathsToCopy            []string
+	SparseFolder           string
+	Branch                 string
 	// If set, use this as folder for all artifacts generated from Objects.
 	SubFolder string
 }

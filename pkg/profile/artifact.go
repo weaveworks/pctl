@@ -92,19 +92,20 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 				return err
 			}
 		}
-		// This is helmRelease related so it must be inside the sub-folder for the helm release.
-		filename := filepath.Join(artifactDir, artifact.SubFolder, "kustomization.yaml")
-		if err := writeOutKustomizeResource(artifact.Kustomize, filename); err != nil {
-			return err
-		}
-		filename = filepath.Join(artifactDir, "kustomization.yaml")
-		if err := writeOutKustomizeResource(artifact.HelmWrapper, filename); err != nil {
-			return err
-		}
-		if artifact.HelmWrapperKustomization != nil {
-			if err := pa.generateOutput(filepath.Join(artifactDir, "kustomize-flux.yaml"), artifact.HelmWrapperKustomization); err != nil {
-				return fmt.Errorf("failed to write file kustomize-flux.yaml: %w", err)
+		// if we have a local resource, write out the kustomization yaml limiting its visibility.
+		if artifact.Kustomize != nil {
+			// This is helmRelease related so it must be inside the sub-folder for the helm release.
+			filename := filepath.Join(artifactDir, artifact.SubFolder, "kustomization.yaml")
+			if err := writeOutKustomizeResource(artifact.Kustomize, filename); err != nil {
+				return err
 			}
+		}
+		filename := filepath.Join(artifactDir, "kustomization.yaml")
+		if err := writeOutKustomizeResource(artifact.KustomizeWrapper, filename); err != nil {
+			return err
+		}
+		if err := pa.generateOutput(filepath.Join(artifactDir, "kustomize-flux.yaml"), artifact.KustomizeWrapperObject); err != nil {
+			return fmt.Errorf("failed to write file kustomize-flux.yaml: %w", err)
 		}
 	}
 	return pa.generateOutput(filepath.Join(profileRootdir, "profile-installation.yaml"), &installation)
@@ -112,9 +113,6 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 
 // writeOutKustomizeResource writes out kustomization resource data if set to a specific file.
 func writeOutKustomizeResource(kustomize *types.Kustomization, filename string) error {
-	if kustomize == nil {
-		return nil
-	}
 	data, err := yaml.Marshal(kustomize)
 	if err != nil {
 		return fmt.Errorf("failed to marshal kustomize resource: %w", err)

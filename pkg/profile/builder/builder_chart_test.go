@@ -3,8 +3,11 @@ package builder_test
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
+	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
+	"github.com/fluxcd/pkg/apis/meta"
 	"github.com/fluxcd/pkg/runtime/dependency"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	. "github.com/onsi/ginkgo"
@@ -145,10 +148,45 @@ var _ = Describe("ArtifactBuilder", func() {
 					},
 				}
 				expected := artifact.Artifact{
+					KustomizeWrapperObject: &kustomizev1.Kustomization{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-profile-weaveworks-nginx-dokuwiki",
+							Namespace: "default",
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       kustomizev1.KustomizationKind,
+							APIVersion: kustomizev1.GroupVersion.String(),
+						},
+						Spec: kustomizev1.KustomizationSpec{
+							Path:            "root-dir/artifacts/dokuwiki/helm-chart",
+							Prune:           true,
+							Interval:        metav1.Duration{Duration: time.Minute * 5},
+							TargetNamespace: "default",
+							SourceRef: kustomizev1.CrossNamespaceSourceReference{
+								Kind:      sourcev1.GitRepositoryKind,
+								Name:      gitRepositoryName,
+								Namespace: gitRepositoryNamespace,
+							},
+							HealthChecks: []meta.NamespacedObjectKindReference{
+								{
+									APIVersion: helmv2.GroupVersion.String(),
+									Kind:       helmv2.HelmReleaseKind,
+									Name:       "test-profile-weaveworks-nginx-dokuwiki",
+									Namespace:  "default",
+								},
+							},
+						},
+					},
+					KustomizeWrapper: &types.Kustomization{
+						Resources: []string{"kustomize-flux.yaml"},
+					},
 					Objects: []runtime.Object{helmRelease, helmRepository},
 					Name:    "dokuwiki",
 				}
-				Expect(artifacts).To(ConsistOf(expected))
+				Expect(len(artifacts)).To(Equal(1))
+				Expect(artifacts[0].Objects).To(ConsistOf(expected.Objects))
+				Expect(artifacts[0].KustomizeWrapperObject).To(Equal(expected.KustomizeWrapperObject))
+				Expect(artifacts[0].KustomizeWrapper).To(Equal(expected.KustomizeWrapper))
 			})
 		})
 		When("a dependency is defined", func() {
