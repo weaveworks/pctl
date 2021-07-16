@@ -92,7 +92,7 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 				}
 				filename = filepath.Join(subFolder, fmt.Sprintf("%s.%s", name, "yaml"))
 			}
-			if err := pa.generateOutput(filename, obj); err != nil {
+			if err := pa.generateOutput(filename, obj.Object); err != nil {
 				return err
 			}
 		}

@@ -56,7 +56,6 @@ func (c *ArtifactBuilder) Build(partifact profilesv1.Artifact, installation prof
 		if !ok {
 			return nil, fmt.Errorf("%s's depending artifact %s not found in the list of artifacts", partifact.Name, dep.Name)
 		}
-
 		deps = append(deps, d)
 	}
 	c.a = &artifact.Artifact{Name: partifact.Name, KustomizeWrapper: &types.Kustomization{
@@ -71,7 +70,7 @@ func (c *ArtifactBuilder) Build(partifact profilesv1.Artifact, installation prof
 			return nil, err
 		}
 	} else {
-		return nil, errors.New("no artifact found")
+		return nil, errors.New("no artifact set")
 	}
 	return []artifact.Artifact{*c.a}, nil
 }

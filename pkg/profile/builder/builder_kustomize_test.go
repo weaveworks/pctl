@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/kustomize/api/types"
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
 	"github.com/weaveworks/pctl/pkg/profile/builder"
@@ -81,7 +81,7 @@ var _ = Describe("ArtifactBuilder", func() {
 	})
 
 	Context("Build", func() {
-		It("creates an partifact from an install and a profile definition", func() {
+		It("creates an artifact from an install and a profile definition", func() {
 			builder := &builder.ArtifactBuilder{
 				Config: builder.Config{
 					GitRepositoryName:      gitRepositoryName,
@@ -94,7 +94,7 @@ var _ = Describe("ArtifactBuilder", func() {
 			kustomization := &kustomizev1.Kustomization{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Kustomization",
-					APIVersion: "builder.toolkit.fluxcd.io/v1beta1",
+					APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-profile-weaveworks-nginx-kustomize",
@@ -113,14 +113,17 @@ var _ = Describe("ArtifactBuilder", func() {
 				},
 			}
 			expected := artifact.Artifact{
-				Objects:      []runtime.Object{kustomization},
+				Objects:      []artifact.Object{{Object: kustomization, Name: "kustomize-flux"}},
 				Name:         "kustomize",
 				RepoURL:      "https://github.com/weaveworks/profiles-examples",
 				PathsToCopy:  []string{"nginx/deployment"},
 				SparseFolder: "weaveworks-nginx",
 				Branch:       "weaveworks-nginx/v0.0.1",
+				KustomizeWrapper: &types.Kustomization{
+					Resources: []string{"kustomize-flux.yaml"},
+				},
 			}
-			Expect(artifacts).To(ConsistOf(expected))
+			Expect(artifacts[0]).To(Equal(expected))
 		})
 		When("branch is defined instead of tag", func() {
 			It("will use the branch definition", func() {
@@ -150,7 +153,7 @@ var _ = Describe("ArtifactBuilder", func() {
 				kustomization := &kustomizev1.Kustomization{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "Kustomization",
-						APIVersion: "builder.toolkit.fluxcd.io/v1beta1",
+						APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-profile-weaveworks-nginx-kustomize",
@@ -169,12 +172,15 @@ var _ = Describe("ArtifactBuilder", func() {
 					},
 				}
 				expected := artifact.Artifact{
-					Objects:      []runtime.Object{kustomization},
+					Objects:      []artifact.Object{{Object: kustomization, Name: "kustomize-flux"}},
 					Name:         "kustomize",
 					RepoURL:      "https://github.com/weaveworks/profiles-examples",
 					PathsToCopy:  []string{"nginx/deployment"},
 					SparseFolder: "weaveworks-nginx",
 					Branch:       "custom-branch",
+					KustomizeWrapper: &types.Kustomization{
+						Resources: []string{"kustomize-flux.yaml"},
+					},
 				}
 				Expect(artifacts).To(ConsistOf(expected))
 			})
@@ -304,7 +310,7 @@ var _ = Describe("ArtifactBuilder", func() {
 				kustomization := &kustomizev1.Kustomization{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "Kustomization",
-						APIVersion: "builder.toolkit.fluxcd.io/v1beta1",
+						APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-profile-weaveworks-nginx-kustomize",
@@ -329,12 +335,15 @@ var _ = Describe("ArtifactBuilder", func() {
 					},
 				}
 				expected := artifact.Artifact{
-					Objects:      []runtime.Object{kustomization},
+					Objects:      []artifact.Object{{Object: kustomization, Name: "kustomize-flux"}},
 					Name:         "kustomize",
 					RepoURL:      "https://github.com/weaveworks/profiles-examples",
 					PathsToCopy:  []string{"nginx/deployment"},
 					SparseFolder: "weaveworks-nginx",
 					Branch:       "weaveworks-nginx/v0.0.1",
+					KustomizeWrapper: &types.Kustomization{
+						Resources: []string{"kustomize-flux.yaml"},
+					},
 				}
 				Expect(artifacts).To(ConsistOf(expected))
 			})

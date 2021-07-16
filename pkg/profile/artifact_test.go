@@ -7,16 +7,18 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
+	"github.com/fluxcd/pkg/apis/meta"
+	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/otiai10/copy"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/kustomize/api/types"
 
 	fakegit "github.com/weaveworks/pctl/pkg/git/fakes"
@@ -62,36 +64,66 @@ var _ = Describe("Profile", func() {
 		gitRepositoryNamespace = "git-repo-namespace"
 		artifacts := []artifact.Artifact{
 			{
-				Objects: []runtime.Object{&helmv2.HelmRelease{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "HelmRelease",
-						APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-profile-weaveworks-nginx-dokuwiki",
-						Namespace: "default",
-					},
-					Spec: helmv2.HelmReleaseSpec{
-						Chart: helmv2.HelmChartTemplate{
-							Spec: helmv2.HelmChartTemplateSpec{
-								Chart:   "dokuwiki",
-								Version: "11.1.6",
-								SourceRef: helmv2.CrossNamespaceObjectReference{
-									Kind:      "HelmRepository",
-									Name:      "test-profile-profiles-examples-dokuwiki",
-									Namespace: "default",
+				Objects: []artifact.Object{{
+					Object: &helmv2.HelmRelease{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "HelmRelease",
+							APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-profile-weaveworks-nginx-dokuwiki",
+							Namespace: "default",
+						},
+						Spec: helmv2.HelmReleaseSpec{
+							Chart: helmv2.HelmChartTemplate{
+								Spec: helmv2.HelmChartTemplateSpec{
+									Chart:   "dokuwiki",
+									Version: "11.1.6",
+									SourceRef: helmv2.CrossNamespaceObjectReference{
+										Kind:      "HelmRepository",
+										Name:      "test-profile-profiles-examples-dokuwiki",
+										Namespace: "default",
+									},
+								},
+							},
+							ValuesFrom: []helmv2.ValuesReference{
+								{
+									Name:     "nginx-values",
+									Kind:     "Secret",
+									Optional: true,
 								},
 							},
 						},
-						ValuesFrom: []helmv2.ValuesReference{
-							{
-								Name:     "nginx-values",
-								Kind:     "Secret",
-								Optional: true,
+					}, Path: "helm-chart"}, {
+					Object: &kustomizev1.Kustomization{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-profile-weaveworks-nginx-dokuwiki",
+							Namespace: "default",
+						},
+						TypeMeta: metav1.TypeMeta{
+							Kind:       kustomizev1.KustomizationKind,
+							APIVersion: kustomizev1.GroupVersion.String(),
+						},
+						Spec: kustomizev1.KustomizationSpec{
+							Path:            "root-dir/artifacts/dokuwiki/helm-chart",
+							Prune:           true,
+							Interval:        metav1.Duration{Duration: time.Minute * 5},
+							TargetNamespace: "default",
+							SourceRef: kustomizev1.CrossNamespaceSourceReference{
+								Kind:      sourcev1.GitRepositoryKind,
+								Name:      gitRepositoryName,
+								Namespace: gitRepositoryNamespace,
+							},
+							HealthChecks: []meta.NamespacedObjectKindReference{
+								{
+									APIVersion: helmv2.GroupVersion.String(),
+									Kind:       helmv2.HelmReleaseKind,
+									Name:       "test-profile-weaveworks-nginx-dokuwiki",
+									Namespace:  "default",
+								},
 							},
 						},
-					},
-				}},
+					}, Name: "kustomize-flux"}},
 				Name:         "test-artifact-1",
 				RepoURL:      "https://repo-url.com",
 				PathsToCopy:  []string{"nginx/chart"},
@@ -100,9 +132,13 @@ var _ = Describe("Profile", func() {
 				Kustomize: &types.Kustomization{
 					Resources: []string{"HelmRelease.yaml"},
 				},
+				KustomizeWrapper: &types.Kustomization{
+					Resources: []string{"kustomize-flux.yaml"},
+				},
+				SubFolder: "helm-chart",
 			},
 			{
-				Objects: []runtime.Object{&kustomizev1.Kustomization{
+				Objects: []artifact.Object{{Object: &kustomizev1.Kustomization{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "Kustomization",
 						APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
@@ -122,12 +158,15 @@ var _ = Describe("Profile", func() {
 						Prune:           true,
 						TargetNamespace: "default",
 					},
-				}},
+				}, Name: "kustomize-flux"}},
 				Name:         "test-artifact-2",
 				RepoURL:      "https://repo-url.com",
 				PathsToCopy:  []string{"nginx/deployment"},
 				SparseFolder: "weaveworks-nginx",
 				Branch:       "",
+				KustomizeWrapper: &types.Kustomization{
+					Resources: []string{"kustomize-flux.yaml"},
+				},
 			},
 		}
 		profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
@@ -159,10 +198,13 @@ var _ = Describe("Profile", func() {
 			Expect(err).NotTo(HaveOccurred())
 			consistsOf := []string{
 				filepath.Join(rootDir, "profile-installation.yaml"),
-				filepath.Join(rootDir, "artifacts", "test-artifact-1", "HelmRelease.yaml"),
+				filepath.Join(rootDir, "artifacts", "test-artifact-1", "helm-chart", "HelmRelease.yaml"),
+				filepath.Join(rootDir, "artifacts", "test-artifact-1", "helm-chart", "kustomization.yaml"),
+				filepath.Join(rootDir, "artifacts", "test-artifact-1", "helm-chart", "nginx", "chart.yaml"),
 				filepath.Join(rootDir, "artifacts", "test-artifact-1", "kustomization.yaml"),
-				filepath.Join(rootDir, "artifacts", "test-artifact-1", "nginx", "chart.yaml"),
-				filepath.Join(rootDir, "artifacts", "test-artifact-2", "Kustomization.yaml"),
+				filepath.Join(rootDir, "artifacts", "test-artifact-1", "kustomize-flux.yaml"),
+				filepath.Join(rootDir, "artifacts", "test-artifact-2", "kustomization.yaml"),
+				filepath.Join(rootDir, "artifacts", "test-artifact-2", "kustomize-flux.yaml"),
 				filepath.Join(rootDir, "artifacts", "test-artifact-2", "nginx", "deployment", "deployment.yaml"),
 			}
 			Expect(files).To(ConsistOf(consistsOf))
@@ -187,17 +229,22 @@ status: {}
 			})
 
 			By("generating the path based kustomization artifact", func() {
-				content, err := ioutil.ReadFile(files["test-artifact-2/Kustomization.yaml"])
+				content, err := ioutil.ReadFile(files["test-artifact-1/kustomize-flux.yaml"])
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(content)).To(Equal(`apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
 kind: Kustomization
 metadata:
   creationTimestamp: null
-  name: test-profile-weaveworks-nginx-kustomize
+  name: test-profile-weaveworks-nginx-dokuwiki
   namespace: default
 spec:
+  healthChecks:
+  - apiVersion: helm.toolkit.fluxcd.io/v2beta1
+    kind: HelmRelease
+    name: test-profile-weaveworks-nginx-dokuwiki
+    namespace: default
   interval: 5m0s
-  path: root-dir/artifacts/kustomize/nginx/deployment
+  path: root-dir/artifacts/dokuwiki/helm-chart
   prune: true
   sourceRef:
     kind: GitRepository
@@ -209,7 +256,7 @@ status: {}
 			})
 
 			By("generating a remote helm chart", func() {
-				content, err := ioutil.ReadFile(files["test-artifact-1/HelmRelease.yaml"])
+				content, err := ioutil.ReadFile(files["helm-chart/HelmRelease.yaml"])
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(content)).To(Equal(`apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
@@ -267,7 +314,7 @@ status: {}
 			It("creates files for all artifacts", func() {
 				artifacts := []artifact.Artifact{
 					{
-						Objects: []runtime.Object{&helmv2.HelmRelease{
+						Objects: []artifact.Object{{Object: &helmv2.HelmRelease{
 							TypeMeta: metav1.TypeMeta{
 								Kind:       "HelmRelease",
 								APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
@@ -299,7 +346,7 @@ status: {}
 									},
 								},
 							},
-						}},
+						}, Path: "helm-chart"}},
 						Name:         "test-artifact-1",
 						RepoURL:      "https://repo-url.com",
 						PathsToCopy:  []string{"nginx/chart"},
@@ -345,7 +392,7 @@ status: {}
 				Expect(err).NotTo(HaveOccurred())
 
 				profileFile := filepath.Join(tempDir, "generate-test", "profile-installation.yaml")
-				artifactHelmRelease := filepath.Join(tempDir, "generate-test", "artifacts", "test-artifact-1", "HelmRelease.yaml")
+				artifactHelmRelease := filepath.Join(tempDir, "generate-test", "artifacts", "test-artifact-1", "helm-chart", "HelmRelease.yaml")
 
 				Expect(hasCorrectFilePerms(profileFile)).To(BeTrue())
 				Expect(hasCorrectFilePerms(artifactHelmRelease)).To(BeTrue())
@@ -401,8 +448,8 @@ status: {}
 			BeforeEach(func() {
 				artifacts = []artifact.Artifact{
 					{
-						Objects: []runtime.Object{
-							&kustomizev1.Kustomization{
+						Objects: []artifact.Object{
+							{Object: &kustomizev1.Kustomization{
 								TypeMeta: metav1.TypeMeta{
 									Kind:       "Kustomization",
 									APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
@@ -422,7 +469,7 @@ status: {}
 									Prune:           true,
 									TargetNamespace: "default",
 								},
-							},
+							}, Path: "helm-chart"},
 						},
 						Name:         "test-artifact-1",
 						RepoURL:      "https://repo-url.com",
@@ -431,8 +478,8 @@ status: {}
 						Branch:       "main",
 					},
 					{
-						Objects: []runtime.Object{
-							&kustomizev1.Kustomization{
+						Objects: []artifact.Object{
+							{Object: &kustomizev1.Kustomization{
 								TypeMeta: metav1.TypeMeta{
 									Kind:       "Kustomization",
 									APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
@@ -452,7 +499,7 @@ status: {}
 									Prune:           true,
 									TargetNamespace: "default",
 								},
-							},
+							}, Path: "helm-chart"},
 						},
 						Name:         "test-artifact-2",
 						RepoURL:      "https://repo-url.com",

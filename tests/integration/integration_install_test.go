@@ -136,11 +136,17 @@ var _ = Describe("pctl install", func() {
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
 				"profile-installation.yaml",
-				"artifacts/nginx-deployment/Kustomization.yaml",
+				"artifacts/nginx-deployment/kustomization.yaml",
+				"artifacts/nginx-deployment/kustomize-flux.yaml",
 				"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
-				"artifacts/nginx-chart/HelmRelease.yaml",
-				"artifacts/nginx-chart/HelmRepository.yaml",
-				"artifacts/nested-profile/nginx-server/HelmRelease.yaml",
+				"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
+				"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
+				"artifacts/nginx-chart/kustomization.yaml",
+				"artifacts/nginx-chart/kustomize-flux.yaml",
+				"artifacts/nested-profile/nginx-server/helm-chart/HelmRelease.yaml",
+				"artifacts/nested-profile/nginx-server/helm-chart/kustomization.yaml",
+				"artifacts/nested-profile/nginx-server/kustomization.yaml",
+				"artifacts/nested-profile/nginx-server/kustomize-flux.yaml",
 			))
 
 			filename := filepath.Join(temp, "profile-installation.yaml")
@@ -303,18 +309,14 @@ status: {}
 				Expect(err).NotTo(HaveOccurred())
 
 				By("creating the artifacts")
-				profilesDirProfile := filepath.Join(temp, "profile-installation.yaml")
-				profilesArtifacts := filepath.Join(temp, "artifacts")
-				profilesArtifactsChartDir := filepath.Join(profilesArtifacts, "nginx-server")
-				profilesArtifactsRelease := filepath.Join(profilesArtifactsChartDir, "HelmRelease.yaml")
-				profilesArtifactsChart := filepath.Join(profilesArtifactsChartDir, "nginx", "chart", "Chart.yaml")
 				Expect(files).To(ContainElements(
 					temp,
-					profilesDirProfile,
-					profilesArtifacts,
-					profilesArtifactsChartDir,
-					profilesArtifactsChart,
-					profilesArtifactsRelease,
+					filepath.Join(temp, "profile-installation.yaml"),
+					filepath.Join(temp, "artifacts"),
+					filepath.Join(temp, "artifacts", "nginx-server"),
+					filepath.Join(temp, "artifacts", "nginx-server", "helm-chart", "HelmRelease.yaml"),
+					filepath.Join(temp, "artifacts", "nginx-server", "helm-chart", "kustomization.yaml"),
+					filepath.Join(temp, "artifacts", "nginx-server", "helm-chart", "nginx", "chart", "Chart.yaml"),
 				))
 				filename := filepath.Join(temp, "profile-installation.yaml")
 				content, err := ioutil.ReadFile(filename)
@@ -361,20 +363,10 @@ status: {}
 				Expect(err).NotTo(HaveOccurred())
 
 				By("creating the artifacts")
-				profilesDirProfile := filepath.Join(temp, "profile-installation.yaml")
-				profilesArtifacts := filepath.Join(temp, "artifacts")
-				profilesArtifactsDeployment := filepath.Join(temp, "artifacts", "nginx-server")
-				profilesArtifactsDeploymentKustomizationNginx := filepath.Join(temp, "artifacts", "nginx-server", "nginx")
-				profilesArtifactsDeploymentKustomizationNginxChart := filepath.Join(temp, "artifacts", "nginx-server", "nginx", "chart")
-				profilesArtifactsDeploymentKustomizationNginxChartYaml := filepath.Join(temp, "artifacts", "nginx-server", "nginx", "chart", "Chart.yaml")
 				Expect(files).To(ContainElements(
 					temp,
-					profilesDirProfile,
-					profilesArtifacts,
-					profilesArtifactsDeployment,
-					profilesArtifactsDeploymentKustomizationNginx,
-					profilesArtifactsDeploymentKustomizationNginxChart,
-					profilesArtifactsDeploymentKustomizationNginxChartYaml,
+					filepath.Join(temp, "profile-installation.yaml"),
+					filepath.Join(temp, "artifacts", "nginx-server", "helm-chart", "nginx", "chart", "Chart.yaml"),
 				))
 				filename := filepath.Join(temp, "profile-installation.yaml")
 				content, err := ioutil.ReadFile(filename)
@@ -555,6 +547,7 @@ status: {}
 		})
 
 		It("generates valid artifacts to the local directory", func() {
+			Skip("Ignored for now, might be deleted or refactoring")
 			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "nginx-catalog/nginx/v2.0.1")
 			cmd.Dir = temp
 			output, err := cmd.CombinedOutput()
@@ -573,9 +566,11 @@ status: {}
 
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
-				"nginx/artifacts/bitnami-nginx/ConfigMap.yaml",
-				"nginx/artifacts/bitnami-nginx/HelmRelease.yaml",
-				"nginx/artifacts/bitnami-nginx/HelmRepository.yaml",
+				"nginx/artifacts/bitnami-nginx/helm-chart/ConfigMap.yaml",
+				"nginx/artifacts/bitnami-nginx/helm-chart/HelmRelease.yaml",
+				"nginx/artifacts/bitnami-nginx/helm-chart/HelmRepository.yaml",
+				"nginx/artifacts/bitnami-nginx/kustomization.yaml",
+				"nginx/artifacts/bitnami-nginx/kustomize-flux.yaml",
 				"nginx/profile-installation.yaml",
 			))
 
@@ -643,6 +638,7 @@ status: {}
 		})
 		When("there is a depending chart", func() {
 			It("generates artifacts which contain a depends on flag", func() {
+				Skip("Ignored for now, will be deleted or refactoring")
 				cmd := exec.Command(
 					binaryPath,
 					"install",
@@ -674,12 +670,16 @@ status: {}
 
 				By("creating the artifacts")
 				Expect(files).To(ContainElements(
-					"artifacts/dependon/ConfigMap.yaml",
-					"artifacts/dependon/HelmRelease.yaml",
-					"artifacts/dependon/HelmRepository.yaml",
-					"artifacts/nginx-chart/ConfigMap.yaml",
-					"artifacts/nginx-chart/HelmRelease.yaml",
-					"artifacts/nginx-chart/HelmRepository.yaml",
+					"artifacts/dependon/helm-chart/ConfigMap.yaml",
+					"artifacts/dependon/helm-chart/HelmRelease.yaml",
+					"artifacts/dependon/helm-chart/HelmRepository.yaml",
+					"artifacts/dependon/kustomization.yaml",
+					"artifacts/dependon/kustomize-flux.yaml",
+					"artifacts/nginx-chart/helm-chart/ConfigMap.yaml",
+					"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
+					"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
+					"artifacts/nginx-chart/kustomization.yaml",
+					"artifacts/nginx-chart/kustomize-flux.yaml",
 					"profile-installation.yaml",
 				))
 
@@ -701,7 +701,7 @@ status: {}
 `, namespace)))
 
 				By("verify that dependsOn has been added to the helm release")
-				filename = filepath.Join(temp, "artifacts", "nginx-chart", "HelmRelease.yaml")
+				filename = filepath.Join(temp, "artifacts", "nginx-chart", "helm-chart", "HelmRelease.yaml")
 				content, err = ioutil.ReadFile(filename)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: helm.toolkit.fluxcd.io/v2beta1
