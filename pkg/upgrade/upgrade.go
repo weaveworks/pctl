@@ -41,6 +41,7 @@ func Upgrade(cfg UpgradeConfig) error {
 	catalogName := profileInstallation.Spec.Catalog.Catalog
 	profileName := profileInstallation.Spec.Catalog.Profile
 	currentVersion := profileInstallation.Spec.Catalog.Version
+
 	//check new version exists
 	_, err = cfg.CatalogManager.Show(cfg.CatalogClient, catalogName, profileName, cfg.Version)
 	if err != nil {

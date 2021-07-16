@@ -34,6 +34,10 @@ func searchCmd() *cli.Command {
 		Action: func(c *cli.Context) error {
 			var profiles []profilesv1.ProfileCatalogEntry
 			if c.Bool("all") {
+				if c.Args().Len() > 0 {
+					_ = cli.ShowCommandHelp(c, "search")
+					return fmt.Errorf("argument must not be provided")
+				}
 				catalogClient, err := getCatalogClient(c)
 				if err != nil {
 					_ = cli.ShowCommandHelp(c, "search")

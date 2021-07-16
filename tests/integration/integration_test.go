@@ -872,13 +872,13 @@ status: {}
 
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
-				"nginx/artifacts/bitnami-nginx/ConfigMap.yaml",
-				"nginx/artifacts/bitnami-nginx/HelmRelease.yaml",
-				"nginx/artifacts/bitnami-nginx/HelmRepository.yaml",
-				"nginx/profile-installation.yaml",
+				"artifacts/bitnami-nginx/ConfigMap.yaml",
+				"artifacts/bitnami-nginx/HelmRelease.yaml",
+				"artifacts/bitnami-nginx/HelmRepository.yaml",
+				"profile-installation.yaml",
 			))
 
-			filename := filepath.Join(temp, "nginx", "nginx", "profile-installation.yaml")
+			filename := filepath.Join(profilesDir, "profile-installation.yaml")
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
@@ -1001,8 +1001,8 @@ status: {}
 
 			files, err := ioutil.ReadDir(tmpDir)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(files)).To(Equal(5))
-			commands := []string{"install", "prepare", "list", "show", "search"}
+			Expect(len(files)).To(Equal(6))
+			commands := []string{"install", "prepare", "list", "show", "search", "upgrade"}
 			for _, cmd := range commands {
 				filename := filepath.Join(tmpDir, fmt.Sprintf("pctl-%s-cmd.md", cmd))
 				Expect(filename).To(BeAnExistingFile())
