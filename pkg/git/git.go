@@ -41,6 +41,8 @@ type Git interface {
 	Checkout(branch string) error
 	// GetDirectory returns the git directory
 	GetDirectory() string
+	// RemoveAll files from git repository
+	RemoveAll() error
 }
 
 // CLIGitConfig defines configuration options for CLIGit.
@@ -68,6 +70,23 @@ func NewCLIGit(cfg CLIGitConfig, r runner.Runner) *CLIGit {
 // Make sure CLIGit implements all the required methods.
 var _ Git = &CLIGit{}
 
+func (g *CLIGit) RemoveAll() error {
+	if err := g.Add(); err != nil {
+		return err
+	}
+
+	args := []string{
+		"--git-dir", filepath.Join(g.Directory, ".git"),
+		"--work-tree", g.Directory,
+		"rm",
+		"-rf",
+		".",
+	}
+	if err := g.runGitCmd(args...); err != nil {
+		return fmt.Errorf("failed to run rm: %w\n", err)
+	}
+	return nil
+}
 func (g *CLIGit) GetDirectory() string {
 	return g.Directory
 }
@@ -84,7 +103,7 @@ func (g *CLIGit) Clone(repo, branch, location string) error {
 		location,
 	}
 	if err := g.runGitCmd(args...); err != nil {
-		return fmt.Errorf("failed to run clone: %w\n%v\n", err, args)
+		return fmt.Errorf("failed to run clone: %w\n", err)
 	}
 	return nil
 }

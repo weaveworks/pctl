@@ -10,6 +10,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/runner"
 	upgr "github.com/weaveworks/pctl/pkg/upgrade"
+	"github.com/weaveworks/pctl/pkg/upgrade/branch"
 )
 
 func upgradeCmd() *cli.Command {
@@ -80,11 +81,12 @@ func upgrade(c *cli.Context) error {
 		Version:        profileVersion,
 		CatalogClient:  catalogClient,
 		CatalogManager: &catalog.Manager{},
-		GitClient: git.NewCLIGit(git.CLIGitConfig{
+		BranchManager: branch.NewManager(git.NewCLIGit(git.CLIGitConfig{
 			Directory: tmpDir,
-		}, &runner.CLIRunner{}),
+		}, &runner.CLIRunner{})),
 		GitRepoName:      gitRepoName,
 		GitRepoNamespace: gitRepoNamespace,
+		WorkingDir:       tmpDir,
 	}
 	err = upgr.Upgrade(cfg)
 	if err == nil {

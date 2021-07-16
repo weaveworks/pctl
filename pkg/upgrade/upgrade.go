@@ -7,7 +7,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/otiai10/copy"
+	copypkg "github.com/otiai10/copy"
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/profile"
@@ -22,9 +22,14 @@ type UpgradeConfig struct {
 	Version          string
 	CatalogClient    catalog.CatalogClient
 	CatalogManager   catalog.CatalogManager
-	GitClient        git.Git
+	BranchManager    branch.BranchManager
 	GitRepoName      string
 	GitRepoNamespace string
+	WorkingDir       string
+}
+
+var copy func(src, dest string) error = func(src, dest string) error {
+	return copypkg.Copy(src, dest)
 }
 
 func Upgrade(cfg UpgradeConfig) error {
@@ -48,77 +53,65 @@ func Upgrade(cfg UpgradeConfig) error {
 		return fmt.Errorf("failed to get profile %q in catalog %q version %q: %w", profileName, catalogName, cfg.Version, err)
 	}
 
-	if err := cfg.GitClient.Init(); err != nil {
-		return fmt.Errorf("failed to init git repo: %w", err)
-	}
-	//use a working directory inside the git directory, to prevent copying .git directory
-	workingDir := filepath.Join(cfg.GitClient.GetDirectory(), "content")
-
-	installConfig := catalog.InstallConfig{
-		Clients: catalog.Clients{
-			CatalogClient: cfg.CatalogClient,
-			ArtifactsMaker: profile.NewProfilesArtifactsMaker(profile.MakerConfig{
-				ProfileName:      profileName,
-				GitClient:        git.NewCLIGit(git.CLIGitConfig{}, &runner.CLIRunner{}),
-				RootDir:          workingDir,
-				GitRepoNamespace: cfg.GitRepoNamespace,
-				GitRepoName:      cfg.GitRepoName,
-			}),
-		},
-		ProfileConfig: catalog.ProfileConfig{
-			ProfileName: profileName,
-			CatalogName: catalogName,
-			Version:     currentVersion,
-			ConfigMap:   profileInstallation.Spec.ConfigMap,
-		},
-	}
-
-	branchManager := &branch.Manager{
-		WorkingDir: workingDir,
-		GitClient:  cfg.GitClient,
-	}
-
-	err = branchManager.CreateRepoWithBaseBranch(func() error {
+	err = cfg.BranchManager.CreateRepoWithContent(func() error {
+		installConfig := catalog.InstallConfig{
+			Clients: catalog.Clients{
+				CatalogClient: cfg.CatalogClient,
+				ArtifactsMaker: profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					ProfileName:      profileName,
+					GitClient:        git.NewCLIGit(git.CLIGitConfig{}, &runner.CLIRunner{}),
+					RootDir:          cfg.WorkingDir,
+					GitRepoNamespace: cfg.GitRepoNamespace,
+					GitRepoName:      cfg.GitRepoName,
+				}),
+			},
+			ProfileConfig: catalog.ProfileConfig{
+				ProfileName: profileName,
+				CatalogName: catalogName,
+				Version:     currentVersion,
+				ConfigMap:   profileInstallation.Spec.ConfigMap,
+			},
+		}
 		if err := cfg.CatalogManager.Install(installConfig); err != nil {
 			return fmt.Errorf("failed to install base profile: %w", err)
 		}
 		return nil
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create repository for upgrade: %w", err)
 	}
 
-	err = branchManager.CreateBranchWithContent("user-changes", func() error {
-		if err := copy.Copy(cfg.ProfileDir, workingDir); err != nil {
+	err = cfg.BranchManager.CreateBranchWithContentFromBase("user-changes", func() error {
+		if err := copy(cfg.ProfileDir, cfg.WorkingDir); err != nil {
 			return fmt.Errorf("failed to copy profile during upgrade: %w", err)
 		}
 		return nil
 	})
 
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create branch with user changes: %w", err)
 	}
 
-	installConfig = catalog.InstallConfig{
-		Clients: catalog.Clients{
-			CatalogClient: cfg.CatalogClient,
-			ArtifactsMaker: profile.NewProfilesArtifactsMaker(profile.MakerConfig{
-				ProfileName:      profileName,
-				GitClient:        git.NewCLIGit(git.CLIGitConfig{}, &runner.CLIRunner{}),
-				RootDir:          workingDir,
-				GitRepoNamespace: cfg.GitRepoNamespace,
-				GitRepoName:      cfg.GitRepoName,
-			}),
-		},
-		ProfileConfig: catalog.ProfileConfig{
-			ProfileName: profileName,
-			CatalogName: catalogName,
-			Version:     cfg.Version,
-			ConfigMap:   profileInstallation.Spec.ConfigMap,
-		},
-	}
+	err = cfg.BranchManager.CreateBranchWithContentFromBase("update-changes", func() error {
+		installConfig := catalog.InstallConfig{
+			Clients: catalog.Clients{
+				CatalogClient: cfg.CatalogClient,
+				ArtifactsMaker: profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+					ProfileName:      profileName,
+					GitClient:        git.NewCLIGit(git.CLIGitConfig{}, &runner.CLIRunner{}),
+					RootDir:          cfg.WorkingDir,
+					GitRepoNamespace: cfg.GitRepoNamespace,
+					GitRepoName:      cfg.GitRepoName,
+				}),
+			},
+			ProfileConfig: catalog.ProfileConfig{
+				ProfileName: profileName,
+				CatalogName: catalogName,
+				Version:     cfg.Version,
+				ConfigMap:   profileInstallation.Spec.ConfigMap,
+			},
+		}
 
-	err = branchManager.CreateBranchWithContent("update-changes", func() error {
 		if err := cfg.CatalogManager.Install(installConfig); err != nil {
 			return fmt.Errorf("failed to install update profile: %w", err)
 		}
@@ -126,23 +119,27 @@ func Upgrade(cfg UpgradeConfig) error {
 	})
 
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create branch with update changes: %w", err)
 	}
 
-	mergeConflict, err := cfg.GitClient.Merge("user-changes")
+	mergeConflict, err := cfg.BranchManager.MergeBranches("update-changes", "user-changes")
 	if err != nil {
-		return fmt.Errorf("failed to add: %w", err)
+		return fmt.Errorf("failed to merge updates with user changes: %w", err)
 	}
 	if mergeConflict {
 		fmt.Println("merge conflict")
 	}
 
 	if err := os.RemoveAll(cfg.ProfileDir); err != nil {
-		return err
+		return fmt.Errorf("failed to remove existing profile installation: %w", err)
 	}
 
-	if err := copy.Copy(workingDir, cfg.ProfileDir); err != nil {
-		return err
+	if err := os.RemoveAll(filepath.Join(cfg.WorkingDir, ".git/")); err != nil {
+		return fmt.Errorf("failed to remove git directory from upgrade directory: %w", err)
+	}
+
+	if err := copy(cfg.WorkingDir, cfg.ProfileDir); err != nil {
+		return fmt.Errorf("failed to copy upgraded installation into installation directory: %w", err)
 	}
 
 	return nil

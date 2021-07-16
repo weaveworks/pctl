@@ -2,62 +2,87 @@ package branch
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/weaveworks/pctl/pkg/git"
 )
 
-type Manager struct {
-	WorkingDir string
-	GitClient  git.Git
+//go:generate counterfeiter -o fakes/fake_branch_manager.go . BranchManager
+type BranchManager interface {
+	CreateRepoWithContent(contentWriter func() error) error
+	CreateBranchWithContentFromBase(branch string, contentWriter func() error) error
+	MergeBranches(branch1, branch2 string) (bool, error)
 }
 
-func (m *Manager) CreateRepoWithBaseBranch(writeContent func() error) error {
-	if err := os.Mkdir(m.WorkingDir, 0755); err != nil {
-		return fmt.Errorf("failed to create working directory: %w", err)
+type Manager struct {
+	workingDir string
+	gitClient  git.Git
+}
+
+func NewManager(gitClient git.Git) BranchManager {
+	return &Manager{
+		workingDir: gitClient.GetDirectory(),
+		gitClient:  gitClient,
+	}
+}
+
+func (m *Manager) CreateRepoWithContent(writeContent func() error) error {
+	if err := m.gitClient.Init(); err != nil {
+		return fmt.Errorf("failed to init git repo: %w", err)
 	}
 
 	if err := writeContent(); err != nil {
 		return fmt.Errorf("failed to copy profile during upgrade: %w", err)
 	}
 
-	if err := m.GitClient.Add(); err != nil {
+	if err := m.gitClient.Add(); err != nil {
 		return fmt.Errorf("failed to add: %w", err)
 	}
 
-	if err := m.GitClient.Commit(); err != nil {
+	if err := m.gitClient.Commit(); err != nil {
 		return fmt.Errorf("failed to add: %w", err)
 	}
 	return nil
 }
 
-func (m *Manager) CreateBranchWithContent(branch string, writeContent func() error) error {
-	if err := m.GitClient.Checkout("main"); err != nil {
+func (m *Manager) CreateBranchWithContentFromBase(branch string, writeContent func() error) error {
+	if err := m.gitClient.Checkout("main"); err != nil {
 		return fmt.Errorf("failed to checkout main: %w", err)
 	}
 
-	if err := m.GitClient.CreateNewBranch(branch); err != nil {
+	if err := m.gitClient.CreateNewBranch(branch); err != nil {
 		return fmt.Errorf("failed to add: %w", err)
 	}
 
-	if err := os.RemoveAll(m.WorkingDir); err != nil {
-		return fmt.Errorf("failed to add: %w", err)
-	}
-
-	if err := os.Mkdir(m.WorkingDir, 0755); err != nil {
-		return fmt.Errorf("failed to create working directory: %w", err)
+	if err := m.gitClient.RemoveAll(); err != nil {
+		return fmt.Errorf("failed to remove content: %w", err)
 	}
 
 	if err := writeContent(); err != nil {
 		return fmt.Errorf("failed to copy profile during upgrade: %w", err)
 	}
 
-	if err := m.GitClient.Add(); err != nil {
+	if err := m.gitClient.Add(); err != nil {
 		return fmt.Errorf("failed to add: %w", err)
 	}
 
-	if err := m.GitClient.Commit(); err != nil {
+	if err := m.gitClient.Commit(); err != nil {
 		return fmt.Errorf("failed to add: %w", err)
 	}
 	return nil
+}
+
+func (m *Manager) MergeBranches(branch1, branch2 string) (bool, error) {
+	if err := m.gitClient.Checkout(branch1); err != nil {
+		return false, fmt.Errorf("failed to checkout main: %w", err)
+	}
+
+	mergeConflict, err := m.gitClient.Merge("user-changes")
+	if err != nil {
+		return false, fmt.Errorf("failed to add: %w", err)
+	}
+
+	if mergeConflict {
+		fmt.Println("merge conflict")
+	}
+	return false, nil
 }
