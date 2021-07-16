@@ -32,4 +32,6 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.41.0
       - name: Test
         run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
           SKIP_CREDENTIAL_TESTS=true PATH=$PATH:$(go env GOPATH)/bin make test
