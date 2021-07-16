@@ -4,20 +4,20 @@ package fakes
 import (
 	"sync"
 
-	"github.com/weaveworks/pctl/pkg/upgrade/branch"
+	"github.com/weaveworks/pctl/pkg/upgrade/repo"
 )
 
-type FakeBranchManager struct {
-	CreateBranchWithContentFromBaseStub        func(string, func() error) error
-	createBranchWithContentFromBaseMutex       sync.RWMutex
-	createBranchWithContentFromBaseArgsForCall []struct {
+type FakeRepoManager struct {
+	CreateBranchWithContentFromMainStub        func(string, func() error) error
+	createBranchWithContentFromMainMutex       sync.RWMutex
+	createBranchWithContentFromMainArgsForCall []struct {
 		arg1 string
 		arg2 func() error
 	}
-	createBranchWithContentFromBaseReturns struct {
+	createBranchWithContentFromMainReturns struct {
 		result1 error
 	}
-	createBranchWithContentFromBaseReturnsOnCall map[int]struct {
+	createBranchWithContentFromMainReturnsOnCall map[int]struct {
 		result1 error
 	}
 	CreateRepoWithContentStub        func(func() error) error
@@ -49,17 +49,17 @@ type FakeBranchManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBranchManager) CreateBranchWithContentFromBase(arg1 string, arg2 func() error) error {
-	fake.createBranchWithContentFromBaseMutex.Lock()
-	ret, specificReturn := fake.createBranchWithContentFromBaseReturnsOnCall[len(fake.createBranchWithContentFromBaseArgsForCall)]
-	fake.createBranchWithContentFromBaseArgsForCall = append(fake.createBranchWithContentFromBaseArgsForCall, struct {
+func (fake *FakeRepoManager) CreateBranchWithContentFromMain(arg1 string, arg2 func() error) error {
+	fake.createBranchWithContentFromMainMutex.Lock()
+	ret, specificReturn := fake.createBranchWithContentFromMainReturnsOnCall[len(fake.createBranchWithContentFromMainArgsForCall)]
+	fake.createBranchWithContentFromMainArgsForCall = append(fake.createBranchWithContentFromMainArgsForCall, struct {
 		arg1 string
 		arg2 func() error
 	}{arg1, arg2})
-	stub := fake.CreateBranchWithContentFromBaseStub
-	fakeReturns := fake.createBranchWithContentFromBaseReturns
-	fake.recordInvocation("CreateBranchWithContentFromBase", []interface{}{arg1, arg2})
-	fake.createBranchWithContentFromBaseMutex.Unlock()
+	stub := fake.CreateBranchWithContentFromMainStub
+	fakeReturns := fake.createBranchWithContentFromMainReturns
+	fake.recordInvocation("CreateBranchWithContentFromMain", []interface{}{arg1, arg2})
+	fake.createBranchWithContentFromMainMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -69,49 +69,49 @@ func (fake *FakeBranchManager) CreateBranchWithContentFromBase(arg1 string, arg2
 	return fakeReturns.result1
 }
 
-func (fake *FakeBranchManager) CreateBranchWithContentFromBaseCallCount() int {
-	fake.createBranchWithContentFromBaseMutex.RLock()
-	defer fake.createBranchWithContentFromBaseMutex.RUnlock()
-	return len(fake.createBranchWithContentFromBaseArgsForCall)
+func (fake *FakeRepoManager) CreateBranchWithContentFromMainCallCount() int {
+	fake.createBranchWithContentFromMainMutex.RLock()
+	defer fake.createBranchWithContentFromMainMutex.RUnlock()
+	return len(fake.createBranchWithContentFromMainArgsForCall)
 }
 
-func (fake *FakeBranchManager) CreateBranchWithContentFromBaseCalls(stub func(string, func() error) error) {
-	fake.createBranchWithContentFromBaseMutex.Lock()
-	defer fake.createBranchWithContentFromBaseMutex.Unlock()
-	fake.CreateBranchWithContentFromBaseStub = stub
+func (fake *FakeRepoManager) CreateBranchWithContentFromMainCalls(stub func(string, func() error) error) {
+	fake.createBranchWithContentFromMainMutex.Lock()
+	defer fake.createBranchWithContentFromMainMutex.Unlock()
+	fake.CreateBranchWithContentFromMainStub = stub
 }
 
-func (fake *FakeBranchManager) CreateBranchWithContentFromBaseArgsForCall(i int) (string, func() error) {
-	fake.createBranchWithContentFromBaseMutex.RLock()
-	defer fake.createBranchWithContentFromBaseMutex.RUnlock()
-	argsForCall := fake.createBranchWithContentFromBaseArgsForCall[i]
+func (fake *FakeRepoManager) CreateBranchWithContentFromMainArgsForCall(i int) (string, func() error) {
+	fake.createBranchWithContentFromMainMutex.RLock()
+	defer fake.createBranchWithContentFromMainMutex.RUnlock()
+	argsForCall := fake.createBranchWithContentFromMainArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeBranchManager) CreateBranchWithContentFromBaseReturns(result1 error) {
-	fake.createBranchWithContentFromBaseMutex.Lock()
-	defer fake.createBranchWithContentFromBaseMutex.Unlock()
-	fake.CreateBranchWithContentFromBaseStub = nil
-	fake.createBranchWithContentFromBaseReturns = struct {
+func (fake *FakeRepoManager) CreateBranchWithContentFromMainReturns(result1 error) {
+	fake.createBranchWithContentFromMainMutex.Lock()
+	defer fake.createBranchWithContentFromMainMutex.Unlock()
+	fake.CreateBranchWithContentFromMainStub = nil
+	fake.createBranchWithContentFromMainReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeBranchManager) CreateBranchWithContentFromBaseReturnsOnCall(i int, result1 error) {
-	fake.createBranchWithContentFromBaseMutex.Lock()
-	defer fake.createBranchWithContentFromBaseMutex.Unlock()
-	fake.CreateBranchWithContentFromBaseStub = nil
-	if fake.createBranchWithContentFromBaseReturnsOnCall == nil {
-		fake.createBranchWithContentFromBaseReturnsOnCall = make(map[int]struct {
+func (fake *FakeRepoManager) CreateBranchWithContentFromMainReturnsOnCall(i int, result1 error) {
+	fake.createBranchWithContentFromMainMutex.Lock()
+	defer fake.createBranchWithContentFromMainMutex.Unlock()
+	fake.CreateBranchWithContentFromMainStub = nil
+	if fake.createBranchWithContentFromMainReturnsOnCall == nil {
+		fake.createBranchWithContentFromMainReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.createBranchWithContentFromBaseReturnsOnCall[i] = struct {
+	fake.createBranchWithContentFromMainReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeBranchManager) CreateRepoWithContent(arg1 func() error) error {
+func (fake *FakeRepoManager) CreateRepoWithContent(arg1 func() error) error {
 	fake.createRepoWithContentMutex.Lock()
 	ret, specificReturn := fake.createRepoWithContentReturnsOnCall[len(fake.createRepoWithContentArgsForCall)]
 	fake.createRepoWithContentArgsForCall = append(fake.createRepoWithContentArgsForCall, struct {
@@ -130,26 +130,26 @@ func (fake *FakeBranchManager) CreateRepoWithContent(arg1 func() error) error {
 	return fakeReturns.result1
 }
 
-func (fake *FakeBranchManager) CreateRepoWithContentCallCount() int {
+func (fake *FakeRepoManager) CreateRepoWithContentCallCount() int {
 	fake.createRepoWithContentMutex.RLock()
 	defer fake.createRepoWithContentMutex.RUnlock()
 	return len(fake.createRepoWithContentArgsForCall)
 }
 
-func (fake *FakeBranchManager) CreateRepoWithContentCalls(stub func(func() error) error) {
+func (fake *FakeRepoManager) CreateRepoWithContentCalls(stub func(func() error) error) {
 	fake.createRepoWithContentMutex.Lock()
 	defer fake.createRepoWithContentMutex.Unlock()
 	fake.CreateRepoWithContentStub = stub
 }
 
-func (fake *FakeBranchManager) CreateRepoWithContentArgsForCall(i int) func() error {
+func (fake *FakeRepoManager) CreateRepoWithContentArgsForCall(i int) func() error {
 	fake.createRepoWithContentMutex.RLock()
 	defer fake.createRepoWithContentMutex.RUnlock()
 	argsForCall := fake.createRepoWithContentArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeBranchManager) CreateRepoWithContentReturns(result1 error) {
+func (fake *FakeRepoManager) CreateRepoWithContentReturns(result1 error) {
 	fake.createRepoWithContentMutex.Lock()
 	defer fake.createRepoWithContentMutex.Unlock()
 	fake.CreateRepoWithContentStub = nil
@@ -158,7 +158,7 @@ func (fake *FakeBranchManager) CreateRepoWithContentReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeBranchManager) CreateRepoWithContentReturnsOnCall(i int, result1 error) {
+func (fake *FakeRepoManager) CreateRepoWithContentReturnsOnCall(i int, result1 error) {
 	fake.createRepoWithContentMutex.Lock()
 	defer fake.createRepoWithContentMutex.Unlock()
 	fake.CreateRepoWithContentStub = nil
@@ -172,7 +172,7 @@ func (fake *FakeBranchManager) CreateRepoWithContentReturnsOnCall(i int, result1
 	}{result1}
 }
 
-func (fake *FakeBranchManager) MergeBranches(arg1 string, arg2 string) (bool, error) {
+func (fake *FakeRepoManager) MergeBranches(arg1 string, arg2 string) (bool, error) {
 	fake.mergeBranchesMutex.Lock()
 	ret, specificReturn := fake.mergeBranchesReturnsOnCall[len(fake.mergeBranchesArgsForCall)]
 	fake.mergeBranchesArgsForCall = append(fake.mergeBranchesArgsForCall, struct {
@@ -192,26 +192,26 @@ func (fake *FakeBranchManager) MergeBranches(arg1 string, arg2 string) (bool, er
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeBranchManager) MergeBranchesCallCount() int {
+func (fake *FakeRepoManager) MergeBranchesCallCount() int {
 	fake.mergeBranchesMutex.RLock()
 	defer fake.mergeBranchesMutex.RUnlock()
 	return len(fake.mergeBranchesArgsForCall)
 }
 
-func (fake *FakeBranchManager) MergeBranchesCalls(stub func(string, string) (bool, error)) {
+func (fake *FakeRepoManager) MergeBranchesCalls(stub func(string, string) (bool, error)) {
 	fake.mergeBranchesMutex.Lock()
 	defer fake.mergeBranchesMutex.Unlock()
 	fake.MergeBranchesStub = stub
 }
 
-func (fake *FakeBranchManager) MergeBranchesArgsForCall(i int) (string, string) {
+func (fake *FakeRepoManager) MergeBranchesArgsForCall(i int) (string, string) {
 	fake.mergeBranchesMutex.RLock()
 	defer fake.mergeBranchesMutex.RUnlock()
 	argsForCall := fake.mergeBranchesArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeBranchManager) MergeBranchesReturns(result1 bool, result2 error) {
+func (fake *FakeRepoManager) MergeBranchesReturns(result1 bool, result2 error) {
 	fake.mergeBranchesMutex.Lock()
 	defer fake.mergeBranchesMutex.Unlock()
 	fake.MergeBranchesStub = nil
@@ -221,7 +221,7 @@ func (fake *FakeBranchManager) MergeBranchesReturns(result1 bool, result2 error)
 	}{result1, result2}
 }
 
-func (fake *FakeBranchManager) MergeBranchesReturnsOnCall(i int, result1 bool, result2 error) {
+func (fake *FakeRepoManager) MergeBranchesReturnsOnCall(i int, result1 bool, result2 error) {
 	fake.mergeBranchesMutex.Lock()
 	defer fake.mergeBranchesMutex.Unlock()
 	fake.MergeBranchesStub = nil
@@ -237,11 +237,11 @@ func (fake *FakeBranchManager) MergeBranchesReturnsOnCall(i int, result1 bool, r
 	}{result1, result2}
 }
 
-func (fake *FakeBranchManager) Invocations() map[string][][]interface{} {
+func (fake *FakeRepoManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.createBranchWithContentFromBaseMutex.RLock()
-	defer fake.createBranchWithContentFromBaseMutex.RUnlock()
+	fake.createBranchWithContentFromMainMutex.RLock()
+	defer fake.createBranchWithContentFromMainMutex.RUnlock()
 	fake.createRepoWithContentMutex.RLock()
 	defer fake.createRepoWithContentMutex.RUnlock()
 	fake.mergeBranchesMutex.RLock()
@@ -253,7 +253,7 @@ func (fake *FakeBranchManager) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *FakeBranchManager) recordInvocation(key string, args []interface{}) {
+func (fake *FakeRepoManager) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -265,4 +265,4 @@ func (fake *FakeBranchManager) recordInvocation(key string, args []interface{}) 
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ branch.BranchManager = new(FakeBranchManager)
+var _ repo.RepoManager = new(FakeRepoManager)

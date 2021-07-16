@@ -13,7 +13,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
 	"github.com/weaveworks/pctl/pkg/upgrade"
-	fakebranch "github.com/weaveworks/pctl/pkg/upgrade/branch/fakes"
+	repofakes "github.com/weaveworks/pctl/pkg/upgrade/repo/fakes"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"sigs.k8s.io/yaml"
 )
@@ -22,7 +22,7 @@ var _ = Describe("Upgrade", func() {
 	var (
 		fakeCatalogClient  *fakes.FakeCatalogClient
 		fakeCatalogManager *fakes.FakeCatalogManager
-		fakeBranchManager  *fakebranch.FakeBranchManager
+		fakeRepoManager    *repofakes.FakeRepoManager
 		cfg                upgrade.UpgradeConfig
 		version            string
 		profileDir         string
@@ -35,7 +35,7 @@ var _ = Describe("Upgrade", func() {
 		var err error
 		fakeCatalogClient = new(fakes.FakeCatalogClient)
 		fakeCatalogManager = new(fakes.FakeCatalogManager)
-		fakeBranchManager = new(fakebranch.FakeBranchManager)
+		fakeRepoManager = new(repofakes.FakeRepoManager)
 		version = "v0.1.1"
 		profileDir, err = ioutil.TempDir("", "upgrade-test")
 		Expect(err).NotTo(HaveOccurred())
@@ -70,7 +70,7 @@ var _ = Describe("Upgrade", func() {
 			Version:          version,
 			CatalogClient:    fakeCatalogClient,
 			CatalogManager:   fakeCatalogManager,
-			BranchManager:    fakeBranchManager,
+			RepoManager:      fakeRepoManager,
 			GitRepoName:      "foo",
 			GitRepoNamespace: "bar",
 			WorkingDir:       workingDir,
@@ -101,11 +101,11 @@ var _ = Describe("Upgrade", func() {
 		Expect(profileName).To(Equal("my-profile"))
 		Expect(desiredVersion).To(Equal("v0.1.1"))
 
-		Expect(fakeBranchManager.CreateRepoWithContentCallCount()).To(Equal(1))
+		Expect(fakeRepoManager.CreateRepoWithContentCallCount()).To(Equal(1))
 
 		By("installing the original profile in the repo")
 		Expect(fakeCatalogManager.InstallCallCount()).To(Equal(0))
-		createRepoWriteContentsFunc := fakeBranchManager.CreateRepoWithContentArgsForCall(0)
+		createRepoWriteContentsFunc := fakeRepoManager.CreateRepoWithContentArgsForCall(0)
 		Expect(createRepoWriteContentsFunc()).To(Succeed())
 		Expect(fakeCatalogManager.InstallCallCount()).To(Equal(1))
 		Expect(fakeCatalogManager.InstallArgsForCall(0).ProfileConfig).To(Equal(catalog.ProfileConfig{
@@ -116,8 +116,8 @@ var _ = Describe("Upgrade", func() {
 		}))
 
 		By("copying the user changes into the user-changes branch")
-		Expect(fakeBranchManager.CreateBranchWithContentFromBaseCallCount()).To(Equal(2))
-		branch, writeContentFunc := fakeBranchManager.CreateBranchWithContentFromBaseArgsForCall(0)
+		Expect(fakeRepoManager.CreateBranchWithContentFromMainCallCount()).To(Equal(2))
+		branch, writeContentFunc := fakeRepoManager.CreateBranchWithContentFromMainArgsForCall(0)
 		Expect(branch).To(Equal("user-changes"))
 		Expect(writeContentFunc()).To(Succeed())
 		Expect(copierCallCount).To(Equal(2))
@@ -125,7 +125,7 @@ var _ = Describe("Upgrade", func() {
 
 		By("install the updated profile into the updates branch")
 		Expect(fakeCatalogManager.InstallCallCount()).To(Equal(1))
-		branch, writeContentFunc = fakeBranchManager.CreateBranchWithContentFromBaseArgsForCall(1)
+		branch, writeContentFunc = fakeRepoManager.CreateBranchWithContentFromMainArgsForCall(1)
 		Expect(branch).To(Equal("update-changes"))
 		Expect(writeContentFunc()).To(Succeed())
 		Expect(fakeCatalogManager.InstallCallCount()).To(Equal(2))
@@ -137,8 +137,8 @@ var _ = Describe("Upgrade", func() {
 		}))
 
 		By("merging the two and copying the outcome into the profile installation")
-		Expect(fakeBranchManager.MergeBranchesCallCount()).To(Equal(1))
-		branch1, branch2 := fakeBranchManager.MergeBranchesArgsForCall(0)
+		Expect(fakeRepoManager.MergeBranchesCallCount()).To(Equal(1))
+		branch1, branch2 := fakeRepoManager.MergeBranchesArgsForCall(0)
 		Expect(branch1).To(Equal("update-changes"))
 		Expect(branch2).To(Equal("user-changes"))
 		Expect(copierArgs[0]).To(ConsistOf(workingDir, profileDir))
@@ -185,48 +185,48 @@ var _ = Describe("Upgrade", func() {
 
 	When("creating the repo fails", func() {
 		BeforeEach(func() {
-			fakeBranchManager.CreateRepoWithContentReturns(fmt.Errorf("foo"))
+			fakeRepoManager.CreateRepoWithContentReturns(fmt.Errorf("foo"))
 		})
 
 		It("returns an error", func() {
 			err := upgrade.Upgrade(cfg)
-			Expect(fakeBranchManager.CreateRepoWithContentCallCount()).To(Equal(1))
+			Expect(fakeRepoManager.CreateRepoWithContentCallCount()).To(Equal(1))
 			Expect(err).To(MatchError("failed to create repository for upgrade: foo"))
 		})
 	})
 
 	When("creating the user-changes branch fails", func() {
 		BeforeEach(func() {
-			fakeBranchManager.CreateBranchWithContentFromBaseReturns(fmt.Errorf("bar"))
+			fakeRepoManager.CreateBranchWithContentFromMainReturns(fmt.Errorf("bar"))
 		})
 
 		It("returns an error", func() {
 			err := upgrade.Upgrade(cfg)
-			Expect(fakeBranchManager.CreateBranchWithContentFromBaseCallCount()).To(Equal(1))
+			Expect(fakeRepoManager.CreateBranchWithContentFromMainCallCount()).To(Equal(1))
 			Expect(err).To(MatchError("failed to create branch with user changes: bar"))
 		})
 	})
 
 	When("creating the user-changes branch fails", func() {
 		BeforeEach(func() {
-			fakeBranchManager.CreateBranchWithContentFromBaseReturnsOnCall(1, fmt.Errorf("baz"))
+			fakeRepoManager.CreateBranchWithContentFromMainReturnsOnCall(1, fmt.Errorf("baz"))
 		})
 
 		It("returns an error", func() {
 			err := upgrade.Upgrade(cfg)
-			Expect(fakeBranchManager.CreateBranchWithContentFromBaseCallCount()).To(Equal(2))
+			Expect(fakeRepoManager.CreateBranchWithContentFromMainCallCount()).To(Equal(2))
 			Expect(err).To(MatchError("failed to create branch with update changes: baz"))
 		})
 	})
 
 	When("merging branches fails", func() {
 		BeforeEach(func() {
-			fakeBranchManager.MergeBranchesReturns(false, fmt.Errorf("bab"))
+			fakeRepoManager.MergeBranchesReturns(false, fmt.Errorf("bab"))
 		})
 
 		It("returns an error", func() {
 			err := upgrade.Upgrade(cfg)
-			Expect(fakeBranchManager.MergeBranchesCallCount()).To(Equal(1))
+			Expect(fakeRepoManager.MergeBranchesCallCount()).To(Equal(1))
 			Expect(err).To(MatchError("failed to merge updates with user changes: bab"))
 		})
 	})
