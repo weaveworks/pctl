@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	profileExamplesURL                = "https://github.com/weaveworks/profiles-examples"
+	profileExamplesURL                = "https://github.com/Skarlso/profiles-examples"
 	pctlPrivateProfilesRepositoryName = "git@github.com:weaveworks/profiles-examples-private.git"
 )
 
@@ -71,8 +71,8 @@ var _ = Describe("pctl install", func() {
 				Skip("Skipping this tests as it requires credentials")
 			}
 
-			profileBranch := "main"
-			subName := "pctl-profile"
+			profileBranch := "dep-with-wrap"
+			subName := "pprof"
 			gitRepoName := "pctl-repo"
 
 			// check out the branch
@@ -101,6 +101,11 @@ var _ = Describe("pctl install", func() {
 				Data: map[string]string{
 					"nginx-server": `replicas: 2`,
 					"nginx-chart":  `replicas: 2`,
+					"dependon-chart": `master:
+  persistence:
+    enabled: false
+  replica:
+    replicaCount: 0`,
 				},
 			}
 			Expect(kClient.Create(context.Background(), &configMap)).To(Succeed())
@@ -111,6 +116,8 @@ var _ = Describe("pctl install", func() {
 				"--git-repository",
 				fmt.Sprintf("%s/%s", namespace, gitRepoName),
 				"--namespace", namespace,
+				"--name",
+				subName,
 				"--profile-branch",
 				profileBranch,
 				"--profile-url", profileExamplesURL,
@@ -132,7 +139,6 @@ var _ = Describe("pctl install", func() {
 				return nil
 			})
 			Expect(err).NotTo(HaveOccurred())
-
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
 				"profile-installation.yaml",
@@ -143,6 +149,11 @@ var _ = Describe("pctl install", func() {
 				"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
 				"artifacts/nginx-chart/kustomization.yaml",
 				"artifacts/nginx-chart/kustomize-flux.yaml",
+				"artifacts/dependon-chart/helm-chart/ConfigMap.yaml",
+				"artifacts/dependon-chart/helm-chart/HelmRelease.yaml",
+				"artifacts/dependon-chart/helm-chart/HelmRepository.yaml",
+				"artifacts/dependon-chart/kustomization.yaml",
+				"artifacts/dependon-chart/kustomize-flux.yaml",
 				"artifacts/nested-profile/nginx-server/helm-chart/HelmRelease.yaml",
 				"artifacts/nested-profile/nginx-server/helm-chart/kustomization.yaml",
 				"artifacts/nested-profile/nginx-server/kustomization.yaml",
@@ -156,12 +167,12 @@ var _ = Describe("pctl install", func() {
 kind: ProfileInstallation
 metadata:
   creationTimestamp: null
-  name: pctl-profile
+  name: pprof
   namespace: %s
 spec:
   configMap: %s
   source:
-    branch: main
+    branch: dep-with-wrap
     path: weaveworks-nginx
     url: %s
 status: {}
@@ -244,7 +255,7 @@ status: {}
 			Expect(helmRelease.Spec.ValuesFrom).To(ConsistOf(
 				helmv2.ValuesReference{
 					Kind:      "ConfigMap",
-					Name:      "pctl-profile-nginx-chart-defaultvalues",
+					Name:      "pprof-nginx-chart-defaultvalues",
 					ValuesKey: "default-values.yaml",
 				},
 				helmv2.ValuesReference{
@@ -276,6 +287,35 @@ status: {}
 				Name:      configMapName,
 				ValuesKey: "nginx-server",
 			}))
+			By("successfully deploying the redis resource")
+			helmReleaseName = fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "dependon-chart")
+			Eventually(func() bool {
+				helmRelease = &helmv2.HelmRelease{}
+				err := kClient.Get(context.Background(), client.ObjectKey{Name: helmReleaseName, Namespace: namespace}, helmRelease)
+				if err != nil {
+					return false
+				}
+				for _, condition := range helmRelease.Status.Conditions {
+					if condition.Type == "Ready" && condition.Status == "True" {
+						return true
+					}
+				}
+				return false
+			}, 15*time.Minute, 5*time.Second).Should(BeTrue())
+
+			Expect(helmRelease.Spec.ValuesFrom).To(HaveLen(2))
+			Expect(helmRelease.Spec.ValuesFrom).To(ConsistOf(
+				helmv2.ValuesReference{
+					Kind:      "ConfigMap",
+					Name:      "pprof-dependon-chart-defaultvalues",
+					ValuesKey: "default-values.yaml",
+				},
+				helmv2.ValuesReference{
+					Kind:      "ConfigMap",
+					Name:      configMapName,
+					ValuesKey: "dependon-chart",
+				},
+			))
 		})
 
 		When("a url is provided with a branch and path", func() {
