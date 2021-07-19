@@ -15,6 +15,7 @@ import (
 var _ = Describe("Search", func() {
 	var (
 		fakeCatalogClient *fakes.FakeCatalogClient
+		manager           catalog.Manager
 	)
 
 	BeforeEach(func() {
@@ -37,7 +38,7 @@ var _ = Describe("Search", func() {
 		  `)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
-			resp, err := catalog.Search(fakeCatalogClient, "nginx")
+			resp, err := manager.Search(fakeCatalogClient, "nginx")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeCatalogClient.DoRequestCallCount()).To(Equal(1))
 			path, query := fakeCatalogClient.DoRequestArgsForCall(0)
@@ -82,7 +83,7 @@ var _ = Describe("Search", func() {
 		  `)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
-			resp, err := catalog.Search(fakeCatalogClient, "")
+			resp, err := manager.Search(fakeCatalogClient, "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeCatalogClient.DoRequestCallCount()).To(Equal(1))
 			path, _ := fakeCatalogClient.DoRequestArgsForCall(0)
@@ -113,7 +114,7 @@ var _ = Describe("Search", func() {
 	When("catalog client fails to make the request", func() {
 		It("returns an error", func() {
 			fakeCatalogClient.DoRequestReturns(nil, 502, fmt.Errorf("foo"))
-			_, err := catalog.Search(fakeCatalogClient, "dontexist")
+			_, err := manager.Search(fakeCatalogClient, "dontexist")
 			Expect(err).To(MatchError("failed to fetch catalog: foo"))
 		})
 	})
@@ -123,7 +124,7 @@ var _ = Describe("Search", func() {
 			httpBody := []byte(`[]`)
 			fakeCatalogClient.DoRequestReturns(httpBody, 500, nil)
 
-			_, err := catalog.Search(fakeCatalogClient, "dontexist")
+			_, err := manager.Search(fakeCatalogClient, "dontexist")
 			Expect(err).To(MatchError("failed to fetch profile from catalog, status code 500"))
 			path, query := fakeCatalogClient.DoRequestArgsForCall(0)
 			Expect(path).To(Equal("/profiles"))
@@ -138,7 +139,7 @@ var _ = Describe("Search", func() {
 			httpBody := []byte(`!20342 totally n:ot json "`)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
-			_, err := catalog.Search(fakeCatalogClient, "dontexist")
+			_, err := manager.Search(fakeCatalogClient, "dontexist")
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(ContainSubstring("failed to parse catalog")))
 		})

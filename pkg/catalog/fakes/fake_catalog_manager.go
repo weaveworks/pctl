@@ -6,6 +6,7 @@ import (
 
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/profiles/api/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type FakeCatalogManager struct {
@@ -19,6 +20,34 @@ type FakeCatalogManager struct {
 	}
 	installReturnsOnCall map[int]struct {
 		result1 error
+	}
+	ListStub        func(client.Client, catalog.CatalogClient) ([]catalog.ProfileData, error)
+	listMutex       sync.RWMutex
+	listArgsForCall []struct {
+		arg1 client.Client
+		arg2 catalog.CatalogClient
+	}
+	listReturns struct {
+		result1 []catalog.ProfileData
+		result2 error
+	}
+	listReturnsOnCall map[int]struct {
+		result1 []catalog.ProfileData
+		result2 error
+	}
+	SearchStub        func(catalog.CatalogClient, string) ([]v1alpha1.ProfileCatalogEntry, error)
+	searchMutex       sync.RWMutex
+	searchArgsForCall []struct {
+		arg1 catalog.CatalogClient
+		arg2 string
+	}
+	searchReturns struct {
+		result1 []v1alpha1.ProfileCatalogEntry
+		result2 error
+	}
+	searchReturnsOnCall map[int]struct {
+		result1 []v1alpha1.ProfileCatalogEntry
+		result2 error
 	}
 	ShowStub        func(catalog.CatalogClient, string, string, string) (v1alpha1.ProfileCatalogEntry, error)
 	showMutex       sync.RWMutex
@@ -101,6 +130,136 @@ func (fake *FakeCatalogManager) InstallReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakeCatalogManager) List(arg1 client.Client, arg2 catalog.CatalogClient) ([]catalog.ProfileData, error) {
+	fake.listMutex.Lock()
+	ret, specificReturn := fake.listReturnsOnCall[len(fake.listArgsForCall)]
+	fake.listArgsForCall = append(fake.listArgsForCall, struct {
+		arg1 client.Client
+		arg2 catalog.CatalogClient
+	}{arg1, arg2})
+	stub := fake.ListStub
+	fakeReturns := fake.listReturns
+	fake.recordInvocation("List", []interface{}{arg1, arg2})
+	fake.listMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeCatalogManager) ListCallCount() int {
+	fake.listMutex.RLock()
+	defer fake.listMutex.RUnlock()
+	return len(fake.listArgsForCall)
+}
+
+func (fake *FakeCatalogManager) ListCalls(stub func(client.Client, catalog.CatalogClient) ([]catalog.ProfileData, error)) {
+	fake.listMutex.Lock()
+	defer fake.listMutex.Unlock()
+	fake.ListStub = stub
+}
+
+func (fake *FakeCatalogManager) ListArgsForCall(i int) (client.Client, catalog.CatalogClient) {
+	fake.listMutex.RLock()
+	defer fake.listMutex.RUnlock()
+	argsForCall := fake.listArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeCatalogManager) ListReturns(result1 []catalog.ProfileData, result2 error) {
+	fake.listMutex.Lock()
+	defer fake.listMutex.Unlock()
+	fake.ListStub = nil
+	fake.listReturns = struct {
+		result1 []catalog.ProfileData
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeCatalogManager) ListReturnsOnCall(i int, result1 []catalog.ProfileData, result2 error) {
+	fake.listMutex.Lock()
+	defer fake.listMutex.Unlock()
+	fake.ListStub = nil
+	if fake.listReturnsOnCall == nil {
+		fake.listReturnsOnCall = make(map[int]struct {
+			result1 []catalog.ProfileData
+			result2 error
+		})
+	}
+	fake.listReturnsOnCall[i] = struct {
+		result1 []catalog.ProfileData
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeCatalogManager) Search(arg1 catalog.CatalogClient, arg2 string) ([]v1alpha1.ProfileCatalogEntry, error) {
+	fake.searchMutex.Lock()
+	ret, specificReturn := fake.searchReturnsOnCall[len(fake.searchArgsForCall)]
+	fake.searchArgsForCall = append(fake.searchArgsForCall, struct {
+		arg1 catalog.CatalogClient
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.SearchStub
+	fakeReturns := fake.searchReturns
+	fake.recordInvocation("Search", []interface{}{arg1, arg2})
+	fake.searchMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeCatalogManager) SearchCallCount() int {
+	fake.searchMutex.RLock()
+	defer fake.searchMutex.RUnlock()
+	return len(fake.searchArgsForCall)
+}
+
+func (fake *FakeCatalogManager) SearchCalls(stub func(catalog.CatalogClient, string) ([]v1alpha1.ProfileCatalogEntry, error)) {
+	fake.searchMutex.Lock()
+	defer fake.searchMutex.Unlock()
+	fake.SearchStub = stub
+}
+
+func (fake *FakeCatalogManager) SearchArgsForCall(i int) (catalog.CatalogClient, string) {
+	fake.searchMutex.RLock()
+	defer fake.searchMutex.RUnlock()
+	argsForCall := fake.searchArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeCatalogManager) SearchReturns(result1 []v1alpha1.ProfileCatalogEntry, result2 error) {
+	fake.searchMutex.Lock()
+	defer fake.searchMutex.Unlock()
+	fake.SearchStub = nil
+	fake.searchReturns = struct {
+		result1 []v1alpha1.ProfileCatalogEntry
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeCatalogManager) SearchReturnsOnCall(i int, result1 []v1alpha1.ProfileCatalogEntry, result2 error) {
+	fake.searchMutex.Lock()
+	defer fake.searchMutex.Unlock()
+	fake.SearchStub = nil
+	if fake.searchReturnsOnCall == nil {
+		fake.searchReturnsOnCall = make(map[int]struct {
+			result1 []v1alpha1.ProfileCatalogEntry
+			result2 error
+		})
+	}
+	fake.searchReturnsOnCall[i] = struct {
+		result1 []v1alpha1.ProfileCatalogEntry
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeCatalogManager) Show(arg1 catalog.CatalogClient, arg2 string, arg3 string, arg4 string) (v1alpha1.ProfileCatalogEntry, error) {
 	fake.showMutex.Lock()
 	ret, specificReturn := fake.showReturnsOnCall[len(fake.showArgsForCall)]
@@ -173,6 +332,10 @@ func (fake *FakeCatalogManager) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.installMutex.RLock()
 	defer fake.installMutex.RUnlock()
+	fake.listMutex.RLock()
+	defer fake.listMutex.RUnlock()
+	fake.searchMutex.RLock()
+	defer fake.searchMutex.RUnlock()
 	fake.showMutex.RLock()
 	defer fake.showMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
