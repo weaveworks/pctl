@@ -87,7 +87,7 @@ var _ = Describe("pctl install", func() {
 			output, err = cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("git push failed : %s", string(output)))
 			// setup the gitrepository resources. Requires the branch to exist first
-			cmd = exec.Command("flux", "create", "source", "git", gitRepoName, "--url", "https://github.com/weaveworks/pctl-test-repo", "--branch", branch, "--namespace", namespace)
+			cmd = exec.Command("flux", "create", "source", "git", gitRepoName, "--url", pctlTestRepositoryHTTP, "--branch", branch, "--namespace", namespace)
 			cmd.Dir = temp
 			output, err = cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create source git failed: %s", string(output)))
@@ -163,9 +163,9 @@ spec:
   source:
     branch: main
     path: weaveworks-nginx
-    url: https://github.com/weaveworks/profiles-examples
+    url: %s
 status: {}
-`, namespace, configMapName)))
+`, namespace, configMapName, profileExamplesURL)))
 
 			By("the artifacts being deployable")
 			// Generate the resources into the flux repo, and push them up the repo?
@@ -291,7 +291,7 @@ status: {}
 					"--namespace",
 					namespace,
 					"--profile-url",
-					"https://github.com/weaveworks/profiles-examples",
+					profileExamplesURL,
 					"--profile-branch",
 					branch,
 					"--profile-path",
@@ -331,9 +331,9 @@ spec:
   source:
     branch: main
     path: bitnami-nginx
-    url: https://github.com/weaveworks/profiles-examples
+    url: %s
 status: {}
-`, namespace)))
+`, namespace, profileExamplesURL)))
 			})
 		})
 
@@ -401,7 +401,7 @@ status: {}
 					"--namespace",
 					namespace,
 					"--profile-url",
-					"https://github.com/weaveworks/profiles-examples",
+					profileExamplesURL,
 					"--profile-branch",
 					branch,
 					"--profile-path",
@@ -450,7 +450,7 @@ status: {}
 					"--out",
 					repoLocation,
 					"--pr-repo",
-					"weaveworks/pctl-test-repo",
+					pctlTestRepositoryOrgName,
 					"nginx-catalog/weaveworks-nginx")
 				output, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
@@ -646,14 +646,14 @@ status: {}
 					"--namespace",
 					namespace,
 					"--profile-url",
-					"https://github.com/weaveworks/profiles-examples",
+					profileExamplesURL,
 					"--profile-path",
 					"dependson-nginx",
 				)
 				cmd.Dir = temp
 				output, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
-				Expect(string(output)).To(ContainSubstring("generating profile installation from source: repository https://github.com/weaveworks/profiles-examples, path: dependson-nginx and branch main"))
+				Expect(string(output)).To(ContainSubstring(fmt.Sprintf("generating profile installation from source: repository %s, path: dependson-nginx and branch main", profileExamplesURL)))
 
 				var files []string
 				profilesDir := filepath.Join(temp)
@@ -695,9 +695,9 @@ spec:
   source:
     branch: main
     path: dependson-nginx
-    url: https://github.com/weaveworks/profiles-examples
+    url: %s
 status: {}
-`, namespace)))
+`, namespace, profileExamplesURL)))
 
 				By("verify that dependsOn has been added to the kustomize resource")
 				filename = filepath.Join(temp, "artifacts", "nginx-chart", "kustomize-flux.yaml")

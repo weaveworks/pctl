@@ -1,7 +1,11 @@
 package integration_test
 
 import (
+	"fmt"
 	"os"
+	"path"
+	"regexp"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -24,7 +28,11 @@ var (
 	binaryPath                      string
 	skipTestsThatRequireCredentials bool
 	pctlTestRepositoryName          = "git@github.com:weaveworks/pctl-test-repo.git"
-	kClient                         client.Client
+	// used when creating a pr
+	pctlTestRepositoryOrgName = "weaveworks/pctl-test-repo"
+	// used for flux repository branch creation
+	pctlTestRepositoryHTTP = "https://github.com/weaveworks/pctl-test-repo"
+	kClient                client.Client
 )
 
 func TestIntegration(t *testing.T) {
@@ -40,6 +48,16 @@ var _ = BeforeSuite(func() {
 	// overwrite the default test repository location if set
 	if v := os.Getenv("PCTL_TEST_REPOSITORY_URL"); v != "" {
 		pctlTestRepositoryName = v
+		repoName := path.Base(pctlTestRepositoryName)
+		repoName = strings.TrimSuffix(repoName, ".git")
+		re := regexp.MustCompile("^(https|git)(://|@)([^/:]+)[/:]([^/:]+)/(.+)$")
+		m := re.FindAllStringSubmatch(pctlTestRepositoryName, -1)
+		if len(m) == 0 || len(m[0]) < 5 {
+			Fail("failed to extract repo user from the url, only github with https or git format is supported atm")
+		}
+		repoUser := m[0][4]
+		pctlTestRepositoryHTTP = fmt.Sprintf("https://github.com/%s/%s", repoUser, repoName)
+		pctlTestRepositoryOrgName = fmt.Sprintf("%s/%s", repoUser, repoName)
 	}
 
 	if v := os.Getenv("SKIP_CREDENTIAL_TESTS"); v == "true" {
