@@ -80,7 +80,7 @@ func (m *Manager) CreateBranchWithContentFromMain(branch string, writeContent fu
 	return nil
 }
 
-//MergeBranches merges two branches
+// MergeBranches merges two branches
 func (m *Manager) MergeBranches(branch1, branch2 string) (bool, error) {
 	if err := m.gitClient.Checkout(branch1); err != nil {
 		return false, fmt.Errorf("failed to checkout main: %w", err)
