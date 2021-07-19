@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -57,8 +58,10 @@ func upgrade(c *cli.Context) error {
 		return err
 	}
 	defer func() {
-		// os.RemoveAll(tmpDir)
-		fmt.Println("would of deleted: ", tmpDir)
+		err := os.RemoveAll(tmpDir)
+		if err != nil {
+			fmt.Printf("warning: failed to cleanup temp directory %q: %v", tmpDir, err)
+		}
 	}()
 
 	var (
