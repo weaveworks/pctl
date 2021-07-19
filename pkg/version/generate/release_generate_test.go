@@ -10,64 +10,24 @@ import (
 )
 
 var _ = Describe("generate release", func() {
-	Context("release generate functions", func() {
+	Context("when release_generate binary is called with various arguments", func() {
 		BeforeEach(func() {
 			version.Version = "0.5.0"
 			version.PreReleaseID = "dev"
 		})
-
-		It("produces a release without a pre-release id", func() {
-			v, p := prepareRelease()
-
-			Expect(v).To(Equal("0.5.0"))
-			Expect(p).To(BeEmpty())
-		})
-
-		It("produces the correct release for 2 digit minor versions", func() {
-			version.Version = "0.25.0"
-			v, p := prepareRelease()
-
-			Expect(v).To(Equal("0.25.0"))
-			Expect(p).To(BeEmpty())
-		})
-
-		It("increases minor version for the next development iteration from a release", func() {
-			version.PreReleaseID = ""
-
-			v, p := nextDevelopmentIteration()
-
-			Expect(v).To(Equal("0.6.0"))
-			Expect(p).To(Equal("dev"))
-		})
-
-		It("increases minor version for the next development iteration from an rc", func() {
-			version.PreReleaseID = "rc.1"
-
-			v, p := nextDevelopmentIteration()
-
-			Expect(v).To(Equal("0.6.0"))
-			Expect(p).To(Equal("dev"))
-		})
-	})
-
-	Context("release generate binary", func() {
-		BeforeEach(func() {
-			version.Version = "0.5.0"
-			version.PreReleaseID = "dev"
-		})
-		It("produces a release version with release arguement", func() {
+		It("produces a release version with release argument", func() {
 			cmd := exec.Command(binaryPath, "release")
 			session, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(session)).To(ContainSubstring("0.5.0"))
 		})
-		It("produces a release version with development arguement", func() {
+		It("produces a release version with development argument", func() {
 			cmd := exec.Command(binaryPath, "development")
 			session, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(session)).To(ContainSubstring("0.6.0"))
 		})
-		It("produces a release version with full-version arguement", func() {
+		It("produces a release version with full-version argument", func() {
 			cmd := exec.Command(binaryPath, "full-version")
 			session, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred())
@@ -84,6 +44,28 @@ var _ = Describe("generate release", func() {
 			session, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(session)).To(ContainSubstring("usage: generate <release|development|full-version>"))
+		})
+		It("produces the correct release for 2 digit minor versions", func() {
+			version.Version = "0.25.0"
+			cmd := exec.Command(binaryPath, "release")
+			session, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(session)).To(ContainSubstring("0.25.0"))
+		})
+		It("increases minor version for the next development iteration from a release", func() {
+			version.PreReleaseID = ""
+			cmd := exec.Command(binaryPath, "development")
+			session, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(session)).To(ContainSubstring("0.6.0"))
+		})
+
+		It("increases minor version for the next development iteration from an rc", func() {
+			version.PreReleaseID = "rc.1"
+			cmd := exec.Command(binaryPath, "development")
+			session, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(session)).To(ContainSubstring("0.6.0"))
 		})
 	})
 })
