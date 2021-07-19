@@ -45,8 +45,10 @@ type Config struct {
 // ArtifactBuilder will build helm chart resources.
 type ArtifactBuilder struct {
 	Config
-	a *artifact.Artifact
+	artifact *artifact.Artifact
 }
+
+var _ Builder = &ArtifactBuilder{}
 
 // Build a single artifact from a profile artifact and installation.
 func (c *ArtifactBuilder) Build(partifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition) ([]artifact.Artifact, error) {
@@ -58,7 +60,7 @@ func (c *ArtifactBuilder) Build(partifact profilesv1.Artifact, installation prof
 		}
 		deps = append(deps, d)
 	}
-	c.a = &artifact.Artifact{Name: partifact.Name, Kustomize: artifact.Kustomize{
+	c.artifact = &artifact.Artifact{Name: partifact.Name, Kustomize: artifact.Kustomize{
 		ObjectWrapper: &types.Kustomization{
 			Resources: []string{"kustomize-flux.yaml"},
 		},
@@ -74,19 +76,19 @@ func (c *ArtifactBuilder) Build(partifact profilesv1.Artifact, installation prof
 	} else {
 		return nil, errors.New("no artifact set")
 	}
-	return []artifact.Artifact{*c.a}, nil
+	return []artifact.Artifact{*c.artifact}, nil
 }
 
 func (c *ArtifactBuilder) updateArtifactWithChartDetails(partifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition, deps []profilesv1.Artifact) error {
 	if err := c.validateChartArtifact(partifact); err != nil {
 		return fmt.Errorf("validation failed for artifact %s: %w", partifact.Name, err)
 	}
-	c.a.SubFolder = helmChartLocation
+	c.artifact.SubFolder = helmChartLocation
 	helmRelease, cfgMap := c.makeHelmReleaseObjects(partifact, installation, definition.Name)
 	if cfgMap != nil {
-		c.a.Objects = append(c.a.Objects, artifact.Object{Object: cfgMap, Path: helmChartLocation})
+		c.artifact.Objects = append(c.artifact.Objects, artifact.Object{Object: cfgMap, Path: helmChartLocation})
 	}
-	c.a.Objects = append(c.a.Objects, artifact.Object{Object: helmRelease, Path: helmChartLocation})
+	c.artifact.Objects = append(c.artifact.Objects, artifact.Object{Object: helmRelease, Path: helmChartLocation})
 	if partifact.Chart.Path != "" {
 		if c.GitRepositoryNamespace == "" && c.GitRepositoryName == "" {
 			return fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
@@ -96,20 +98,20 @@ func (c *ArtifactBuilder) updateArtifactWithChartDetails(partifact profilesv1.Ar
 		if installation.Spec.Source.Tag != "" {
 			branch = installation.Spec.Source.Tag
 		}
-		c.a.RepoURL = installation.Spec.Source.URL
-		c.a.SparseFolder = definition.Name
-		c.a.Branch = branch
-		c.a.PathsToCopy = append(c.a.PathsToCopy, partifact.Chart.Path)
-		c.a.Kustomize.LocalResourceLimiter = &types.Kustomization{
+		c.artifact.RepoURL = installation.Spec.Source.URL
+		c.artifact.SparseFolder = definition.Name
+		c.artifact.Branch = branch
+		c.artifact.PathsToCopy = append(c.artifact.PathsToCopy, partifact.Chart.Path)
+		c.artifact.Kustomize.LocalResourceLimiter = &types.Kustomization{
 			Resources: []string{"HelmRelease.yaml"},
 		}
 	}
 	if partifact.Chart.URL != "" {
 		helmRepository := c.makeHelmRepository(partifact.Chart.URL, partifact.Chart.Name, installation)
-		c.a.Objects = append(c.a.Objects, artifact.Object{Object: helmRepository, Path: helmChartLocation})
+		c.artifact.Objects = append(c.artifact.Objects, artifact.Object{Object: helmRepository, Path: helmChartLocation})
 	}
 	kustomizationWrapper := c.makeKustomizeHelmReleaseWrapper(partifact, installation, definition.Name, deps)
-	c.a.Objects = append(c.a.Objects, artifact.Object{Object: kustomizationWrapper, Name: kustomizeWrapperObjectName})
+	c.artifact.Objects = append(c.artifact.Objects, artifact.Object{Object: kustomizationWrapper, Name: kustomizeWrapperObjectName})
 	return nil
 }
 
@@ -124,13 +126,13 @@ func (c *ArtifactBuilder) updateArtifactWithKustomizationDetails(partifact profi
 	if installation.Spec.Source.Tag != "" {
 		branch = installation.Spec.Source.Tag
 	}
-	c.a.RepoURL = installation.Spec.Source.URL
-	c.a.SparseFolder = definition.Name
-	c.a.Branch = branch
-	c.a.PathsToCopy = append(c.a.PathsToCopy, partifact.Kustomize.Path)
+	c.artifact.RepoURL = installation.Spec.Source.URL
+	c.artifact.SparseFolder = definition.Name
+	c.artifact.Branch = branch
+	c.artifact.PathsToCopy = append(c.artifact.PathsToCopy, partifact.Kustomize.Path)
 	path := filepath.Join(c.RootDir, "artifacts", partifact.Name, partifact.Kustomize.Path)
 	wrapper := c.makeKustomization(partifact, path, installation, definition.Name, deps)
-	c.a.Objects = append(c.a.Objects, artifact.Object{Object: wrapper, Name: kustomizeWrapperObjectName})
+	c.artifact.Objects = append(c.artifact.Objects, artifact.Object{Object: wrapper, Name: kustomizeWrapperObjectName})
 	return nil
 }
 
