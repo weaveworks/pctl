@@ -31,6 +31,22 @@ const (
 )
 
 var _ = Describe("PCTL", func() {
+	Context("version", func() {
+		It("returns information about the version of pctl", func() {
+			cmd := exec.Command(binaryPath, "--version")
+			session, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(session)).To(ContainSubstring("0.1.0"))
+		})
+
+		It("returns information about the version of pctl with shorthand flag", func() {
+			cmd := exec.Command(binaryPath, "-v")
+			session, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(session)).To(ContainSubstring("0.1.0"))
+		})
+	})
+
 	Context("search", func() {
 		It("returns the matching profiles", func() {
 			cmd := exec.Command(binaryPath, "search", "nginx")
