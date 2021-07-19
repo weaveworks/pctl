@@ -52,7 +52,6 @@ func upgrade(c *cli.Context) error {
 		return fmt.Errorf("failed to create catalog client: %w", err)
 	}
 
-	fmt.Printf("upgrading profile %q to version %q\n", profilePath, profileVersion)
 	tmpDir, err := ioutil.TempDir("", "profile-upgrade")
 	if err != nil {
 		return err
@@ -86,14 +85,11 @@ func upgrade(c *cli.Context) error {
 		CatalogManager: &catalog.Manager{},
 		RepoManager: repo.NewManager(git.NewCLIGit(git.CLIGitConfig{
 			Directory: tmpDir,
+			Quiet:     true,
 		}, &runner.CLIRunner{})),
 		GitRepoName:      gitRepoName,
 		GitRepoNamespace: gitRepoNamespace,
 		WorkingDir:       tmpDir,
 	}
-	err = upgr.Upgrade(cfg)
-	if err == nil {
-		fmt.Println("upgrade completed successfully")
-	}
-	return err
+	return upgr.Upgrade(cfg)
 }

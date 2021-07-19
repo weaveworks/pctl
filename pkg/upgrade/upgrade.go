@@ -43,6 +43,8 @@ func Upgrade(cfg UpgradeConfig) error {
 		return fmt.Errorf("failed to parse profile installation: %w", err)
 	}
 
+	fmt.Printf("upgrading profile %q from version %q to %q\n", profileInstallation.Name, profileInstallation.Spec.Catalog.Version, cfg.Version)
+
 	catalogName := profileInstallation.Spec.Catalog.Catalog
 	profileName := profileInstallation.Spec.Catalog.Profile
 	currentVersion := profileInstallation.Spec.Catalog.Version
@@ -127,7 +129,9 @@ func Upgrade(cfg UpgradeConfig) error {
 		return fmt.Errorf("failed to merge updates with user changes: %w", err)
 	}
 	if mergeConflict {
-		fmt.Println("merge conflict")
+		fmt.Println("upgrade succeeded but merge conflict have occured, please resolve manually")
+	} else {
+		fmt.Println("upgrade completed successfully")
 	}
 
 	if err := os.RemoveAll(cfg.ProfileDir); err != nil {

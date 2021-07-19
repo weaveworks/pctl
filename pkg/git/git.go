@@ -51,6 +51,7 @@ type CLIGitConfig struct {
 	Branch    string
 	Remote    string
 	Base      string
+	Quiet     bool
 }
 
 // CLIGit is a new command line based Git.
@@ -135,7 +136,7 @@ func (g *CLIGit) CreateBranch() error {
 	if g.Base == g.Branch {
 		return nil
 	}
-	fmt.Println("creating new branch")
+	g.printf("creating new branch\n")
 	args := []string{
 		"--git-dir", filepath.Join(g.Directory, ".git"),
 		"--work-tree", g.Directory,
@@ -191,7 +192,7 @@ func (g *CLIGit) HasChanges() (bool, error) {
 
 // Push will push to a remote.
 func (g *CLIGit) Push() error {
-	fmt.Println("pushing to remote")
+	g.printf("pushing to remote\n")
 	args := []string{
 		"--git-dir", filepath.Join(g.Directory, ".git"),
 		"--work-tree", g.Directory,
@@ -207,7 +208,7 @@ func (g *CLIGit) Push() error {
 
 // Add will add any changes to the generated file.
 func (g *CLIGit) Add() error {
-	fmt.Println("adding unstaged changes")
+	g.printf("adding unstaged changes\n")
 	args := []string{
 		"--git-dir", filepath.Join(g.Directory, ".git"),
 		"--work-tree", g.Directory,
@@ -225,7 +226,7 @@ func (g *CLIGit) Add() error {
 func (g *CLIGit) runGitCmd(args ...string) error {
 	out, err := g.Runner.Run(gitCmd, args...)
 	if err != nil {
-		fmt.Printf("failed to run git with output: %s\n", string(out))
+		g.printf("failed to run git with output: %s\n", string(out))
 	}
 	return err
 }
@@ -277,4 +278,10 @@ func (g *CLIGit) Checkout(branch string) error {
 		return fmt.Errorf("failed to checkout branch %s: %w", branch, err)
 	}
 	return nil
+}
+
+func (g *CLIGit) printf(format string, a ...interface{}) {
+	if !g.Quiet {
+		fmt.Printf(format, a...)
+	}
 }

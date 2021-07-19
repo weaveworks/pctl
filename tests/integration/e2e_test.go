@@ -147,7 +147,7 @@ status: {}
 		cmd.Dir = temp
 		output, err = cmd.CombinedOutput()
 		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed: %s", string(output)))
-		Expect(string(output)).To(ContainSubstring(fmt.Sprintf("upgrading profile %q to version %q", profileDir, "v0.1.1")))
+		Expect(string(output)).To(ContainSubstring(`upgrading profile "pctl-profile" from version "v0.1.0" to "v0.1.1"`))
 		Expect(string(output)).To(ContainSubstring("upgrade completed successfully"))
 
 		By("updating the artifacts")
