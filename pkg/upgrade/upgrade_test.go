@@ -54,6 +54,10 @@ var _ = Describe("Upgrade", func() {
 					Catalog: "my-catalog",
 				},
 				ConfigMap: "my-config-map",
+				GitRepository: &profilesv1.GitRepository{
+					Name:      "foo",
+					Namespace: "bar",
+				},
 			},
 		}
 		bytes, err := yaml.Marshal(installation)
@@ -66,14 +70,12 @@ var _ = Describe("Upgrade", func() {
 		}, nil)
 
 		cfg = upgrade.UpgradeConfig{
-			ProfileDir:       profileDir,
-			Version:          version,
-			CatalogClient:    fakeCatalogClient,
-			CatalogManager:   fakeCatalogManager,
-			RepoManager:      fakeRepoManager,
-			GitRepoName:      "foo",
-			GitRepoNamespace: "bar",
-			WorkingDir:       workingDir,
+			ProfileDir:     profileDir,
+			Version:        version,
+			CatalogClient:  fakeCatalogClient,
+			CatalogManager: fakeCatalogManager,
+			RepoManager:    fakeRepoManager,
+			WorkingDir:     workingDir,
 		}
 
 		copierCallCount = 0
@@ -109,10 +111,12 @@ var _ = Describe("Upgrade", func() {
 		Expect(createRepoWriteContentsFunc()).To(Succeed())
 		Expect(fakeCatalogManager.InstallCallCount()).To(Equal(1))
 		Expect(fakeCatalogManager.InstallArgsForCall(0).ProfileConfig).To(Equal(catalog.ProfileConfig{
-			CatalogName: "my-catalog",
-			ProfileName: "my-profile",
-			Version:     "v0.1.0",
-			ConfigMap:   "my-config-map",
+			CatalogName:      "my-catalog",
+			ProfileName:      "my-profile",
+			Version:          "v0.1.0",
+			ConfigMap:        "my-config-map",
+			GitRepoName:      "foo",
+			GitRepoNamespace: "bar",
 		}))
 
 		By("copying the user changes into the user-changes branch")
@@ -130,10 +134,12 @@ var _ = Describe("Upgrade", func() {
 		Expect(writeContentFunc()).To(Succeed())
 		Expect(fakeCatalogManager.InstallCallCount()).To(Equal(2))
 		Expect(fakeCatalogManager.InstallArgsForCall(1).ProfileConfig).To(Equal(catalog.ProfileConfig{
-			CatalogName: "my-catalog",
-			ProfileName: "my-profile",
-			Version:     "v0.1.1",
-			ConfigMap:   "my-config-map",
+			CatalogName:      "my-catalog",
+			ProfileName:      "my-profile",
+			Version:          "v0.1.1",
+			ConfigMap:        "my-config-map",
+			GitRepoName:      "foo",
+			GitRepoNamespace: "bar",
 		}))
 
 		By("merging the two and copying the outcome into the profile installation")

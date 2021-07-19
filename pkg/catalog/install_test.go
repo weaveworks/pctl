@@ -52,13 +52,15 @@ var _ = Describe("Install", func() {
 		fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 		cfg = catalog.InstallConfig{
 			ProfileConfig: catalog.ProfileConfig{
-				CatalogName:   "nginx",
-				Namespace:     "default",
-				ProfileBranch: "main",
-				ProfileName:   "nginx-1",
-				SubName:       "mysub",
-				Version:       "v0.0.1",
-				ConfigMap:     "config-map",
+				CatalogName:      "nginx",
+				Namespace:        "default",
+				ProfileBranch:    "main",
+				ProfileName:      "nginx-1",
+				SubName:          "mysub",
+				Version:          "v0.0.1",
+				ConfigMap:        "config-map",
+				GitRepoName:      "git-name",
+				GitRepoNamespace: "git-namespace",
 			},
 			Clients: catalog.Clients{
 				CatalogClient:  fakeCatalogClient,
@@ -100,6 +102,10 @@ var _ = Describe("Install", func() {
 							Catalog: "nginx",
 							Profile: "nginx-1",
 						},
+						GitRepository: &profilesv1.GitRepository{
+							Name:      "git-name",
+							Namespace: "git-namespace",
+						},
 					},
 				}))
 			})
@@ -109,13 +115,15 @@ var _ = Describe("Install", func() {
 			BeforeEach(func() {
 				cfg = catalog.InstallConfig{
 					ProfileConfig: catalog.ProfileConfig{
-						Namespace:     "default",
-						ProfileBranch: "main",
-						Path:          "nginx-1",
-						URL:           "https://github.com/weaveworks/nginx-profile",
-						SubName:       "mysub",
-						Version:       "v0.0.1",
-						ConfigMap:     "config-map",
+						Namespace:        "default",
+						ProfileBranch:    "main",
+						Path:             "nginx-1",
+						URL:              "https://github.com/weaveworks/nginx-profile",
+						SubName:          "mysub",
+						Version:          "v0.0.1",
+						ConfigMap:        "config-map",
+						GitRepoName:      "git-name",
+						GitRepoNamespace: "git-namespace",
 					},
 					Clients: catalog.Clients{
 						CatalogClient:  fakeCatalogClient,
@@ -143,6 +151,10 @@ var _ = Describe("Install", func() {
 							URL:    "https://github.com/weaveworks/nginx-profile",
 							Branch: "main",
 							Path:   "nginx-1",
+						},
+						GitRepository: &profilesv1.GitRepository{
+							Name:      "git-name",
+							Namespace: "git-namespace",
 						},
 					},
 				}))

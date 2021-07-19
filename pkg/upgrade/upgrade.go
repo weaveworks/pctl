@@ -20,14 +20,12 @@ import (
 
 // UpgradeCfg holds the fields used during upgrades a installation
 type UpgradeConfig struct {
-	ProfileDir       string
-	Version          string
-	CatalogClient    catalog.CatalogClient
-	CatalogManager   catalog.CatalogManager
-	RepoManager      repo.RepoManager
-	GitRepoName      string
-	GitRepoNamespace string
-	WorkingDir       string
+	ProfileDir     string
+	Version        string
+	CatalogClient  catalog.CatalogClient
+	CatalogManager catalog.CatalogManager
+	RepoManager    repo.RepoManager
+	WorkingDir     string
 }
 
 var copy func(src, dest string) error = func(src, dest string) error {
@@ -48,9 +46,14 @@ func Upgrade(cfg UpgradeConfig) error {
 
 	fmt.Printf("upgrading profile %q from version %q to %q\n", profileInstallation.Name, profileInstallation.Spec.Catalog.Version, cfg.Version)
 
+	var gitRepoName, gitRepoNamespace string
 	catalogName := profileInstallation.Spec.Catalog.Catalog
 	profileName := profileInstallation.Spec.Catalog.Profile
 	currentVersion := profileInstallation.Spec.Catalog.Version
+	if profileInstallation.Spec.GitRepository != nil {
+		gitRepoName = profileInstallation.Spec.GitRepository.Name
+		gitRepoNamespace = profileInstallation.Spec.GitRepository.Namespace
+	}
 
 	//check new version exists
 	_, err = cfg.CatalogManager.Show(cfg.CatalogClient, catalogName, profileName, cfg.Version)
@@ -66,15 +69,17 @@ func Upgrade(cfg UpgradeConfig) error {
 					ProfileName:      profileName,
 					GitClient:        git.NewCLIGit(git.CLIGitConfig{}, &runner.CLIRunner{}),
 					RootDir:          cfg.WorkingDir,
-					GitRepoNamespace: cfg.GitRepoNamespace,
-					GitRepoName:      cfg.GitRepoName,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
 				}),
 			},
 			ProfileConfig: catalog.ProfileConfig{
-				ProfileName: profileName,
-				CatalogName: catalogName,
-				Version:     currentVersion,
-				ConfigMap:   profileInstallation.Spec.ConfigMap,
+				ProfileName:      profileName,
+				CatalogName:      catalogName,
+				Version:          currentVersion,
+				ConfigMap:        profileInstallation.Spec.ConfigMap,
+				GitRepoNamespace: gitRepoNamespace,
+				GitRepoName:      gitRepoName,
 			},
 		}
 		if err := cfg.CatalogManager.Install(installConfig); err != nil {
@@ -105,15 +110,17 @@ func Upgrade(cfg UpgradeConfig) error {
 					ProfileName:      profileName,
 					GitClient:        git.NewCLIGit(git.CLIGitConfig{}, &runner.CLIRunner{}),
 					RootDir:          cfg.WorkingDir,
-					GitRepoNamespace: cfg.GitRepoNamespace,
-					GitRepoName:      cfg.GitRepoName,
+					GitRepoNamespace: gitRepoNamespace,
+					GitRepoName:      gitRepoName,
 				}),
 			},
 			ProfileConfig: catalog.ProfileConfig{
-				ProfileName: profileName,
-				CatalogName: catalogName,
-				Version:     cfg.Version,
-				ConfigMap:   profileInstallation.Spec.ConfigMap,
+				ProfileName:      profileName,
+				CatalogName:      catalogName,
+				Version:          cfg.Version,
+				ConfigMap:        profileInstallation.Spec.ConfigMap,
+				GitRepoNamespace: gitRepoNamespace,
+				GitRepoName:      gitRepoName,
 			},
 		}
 
