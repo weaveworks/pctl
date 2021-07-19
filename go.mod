@@ -3,14 +3,17 @@ module github.com/weaveworks/pctl
 go 1.16
 
 require (
+	github.com/Masterminds/semver/v3 v3.1.1
+	github.com/dave/jennifer v1.4.1
 	github.com/fluxcd/helm-controller/api v0.11.1
 	github.com/fluxcd/kustomize-controller/api v0.13.2
 	github.com/fluxcd/pkg/apis/meta v0.10.1
 	github.com/fluxcd/pkg/runtime v0.12.1
+	github.com/fluxcd/pkg/version v0.1.0
 	github.com/fluxcd/source-controller/api v0.15.3
 	github.com/google/uuid v1.3.0
 	github.com/jenkins-x/go-scm v1.10.8
-	github.com/mattn/go-runewidth v0.0.10 // indirect
+	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.14.0
