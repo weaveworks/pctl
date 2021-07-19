@@ -97,15 +97,15 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 			}
 		}
 		// if we have a local resource, write out the kustomization yaml limiting its visibility.
-		if artifact.Kustomize != nil {
+		if artifact.Kustomize.LocalResourceLimiter != nil {
 			// This is helmRelease related so it must be inside the sub-folder for the helm release.
 			filename := filepath.Join(artifactDir, artifact.SubFolder, "kustomization.yaml")
-			if err := writeOutKustomizeResource(artifact.Kustomize, filename); err != nil {
+			if err := writeOutKustomizeResource(artifact.Kustomize.LocalResourceLimiter, filename); err != nil {
 				return err
 			}
 		}
 		filename := filepath.Join(artifactDir, "kustomization.yaml")
-		if err := writeOutKustomizeResource(artifact.KustomizeWrapper, filename); err != nil {
+		if err := writeOutKustomizeResource(artifact.Kustomize.ObjectWrapper, filename); err != nil {
 			return err
 		}
 	}
@@ -118,8 +118,7 @@ func writeOutKustomizeResource(kustomize *types.Kustomization, filename string) 
 	if err != nil {
 		return fmt.Errorf("failed to marshal kustomize resource: %w", err)
 	}
-	err = os.WriteFile(filename, data, 0644)
-	if err != nil {
+	if err = os.WriteFile(filename, data, 0644); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", filename, err)
 	}
 	return nil

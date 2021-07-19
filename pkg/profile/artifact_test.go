@@ -129,11 +129,13 @@ var _ = Describe("Profile", func() {
 				PathsToCopy:  []string{"nginx/chart"},
 				SparseFolder: "bitnami-nginx",
 				Branch:       "",
-				Kustomize: &types.Kustomization{
-					Resources: []string{"HelmRelease.yaml"},
-				},
-				KustomizeWrapper: &types.Kustomization{
-					Resources: []string{"kustomize-flux.yaml"},
+				Kustomize: artifact.Kustomize{
+					LocalResourceLimiter: &types.Kustomization{
+						Resources: []string{"HelmRelease.yaml"},
+					},
+					ObjectWrapper: &types.Kustomization{
+						Resources: []string{"kustomize-flux.yaml"},
+					},
 				},
 				SubFolder: "helm-chart",
 			},
@@ -164,8 +166,10 @@ var _ = Describe("Profile", func() {
 				PathsToCopy:  []string{"nginx/deployment"},
 				SparseFolder: "weaveworks-nginx",
 				Branch:       "",
-				KustomizeWrapper: &types.Kustomization{
-					Resources: []string{"kustomize-flux.yaml"},
+				Kustomize: artifact.Kustomize{
+					ObjectWrapper: &types.Kustomization{
+						Resources: []string{"kustomize-flux.yaml"},
+					},
 				},
 			},
 		}

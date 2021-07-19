@@ -119,8 +119,10 @@ var _ = Describe("ArtifactBuilder", func() {
 				PathsToCopy:  []string{"nginx/deployment"},
 				SparseFolder: "weaveworks-nginx",
 				Branch:       "weaveworks-nginx/v0.0.1",
-				KustomizeWrapper: &types.Kustomization{
-					Resources: []string{"kustomize-flux.yaml"},
+				Kustomize: artifact.Kustomize{
+					ObjectWrapper: &types.Kustomization{
+						Resources: []string{"kustomize-flux.yaml"},
+					},
 				},
 			}
 			Expect(artifacts[0]).To(Equal(expected))
@@ -178,8 +180,10 @@ var _ = Describe("ArtifactBuilder", func() {
 					PathsToCopy:  []string{"nginx/deployment"},
 					SparseFolder: "weaveworks-nginx",
 					Branch:       "custom-branch",
-					KustomizeWrapper: &types.Kustomization{
-						Resources: []string{"kustomize-flux.yaml"},
+					Kustomize: artifact.Kustomize{
+						ObjectWrapper: &types.Kustomization{
+							Resources: []string{"kustomize-flux.yaml"},
+						},
 					},
 				}
 				Expect(artifacts).To(ConsistOf(expected))
@@ -341,8 +345,10 @@ var _ = Describe("ArtifactBuilder", func() {
 					PathsToCopy:  []string{"nginx/deployment"},
 					SparseFolder: "weaveworks-nginx",
 					Branch:       "weaveworks-nginx/v0.0.1",
-					KustomizeWrapper: &types.Kustomization{
-						Resources: []string{"kustomize-flux.yaml"},
+					Kustomize: artifact.Kustomize{
+						ObjectWrapper: &types.Kustomization{
+							Resources: []string{"kustomize-flux.yaml"},
+						},
 					},
 				}
 				Expect(artifacts).To(ConsistOf(expected))

@@ -58,15 +58,17 @@ func (c *ArtifactBuilder) Build(partifact profilesv1.Artifact, installation prof
 		}
 		deps = append(deps, d)
 	}
-	c.a = &artifact.Artifact{Name: partifact.Name, KustomizeWrapper: &types.Kustomization{
-		Resources: []string{"kustomize-flux.yaml"},
+	c.a = &artifact.Artifact{Name: partifact.Name, Kustomize: artifact.Kustomize{
+		ObjectWrapper: &types.Kustomization{
+			Resources: []string{"kustomize-flux.yaml"},
+		},
 	}}
 	if partifact.Chart != nil {
-		if err := c.applyChartDetailsToArtifact(partifact, installation, definition, deps); err != nil {
+		if err := c.updateArtifactWithChartDetails(partifact, installation, definition, deps); err != nil {
 			return nil, err
 		}
 	} else if partifact.Kustomize != nil {
-		if err := c.applyKustomizationDetailsToArtifact(partifact, installation, definition, deps); err != nil {
+		if err := c.updateArtifactWithKustomizationDetails(partifact, installation, definition, deps); err != nil {
 			return nil, err
 		}
 	} else {
@@ -75,7 +77,7 @@ func (c *ArtifactBuilder) Build(partifact profilesv1.Artifact, installation prof
 	return []artifact.Artifact{*c.a}, nil
 }
 
-func (c *ArtifactBuilder) applyChartDetailsToArtifact(partifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition, deps []profilesv1.Artifact) error {
+func (c *ArtifactBuilder) updateArtifactWithChartDetails(partifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition, deps []profilesv1.Artifact) error {
 	if err := c.validateChartArtifact(partifact); err != nil {
 		return fmt.Errorf("validation failed for artifact %s: %w", partifact.Name, err)
 	}
@@ -98,7 +100,7 @@ func (c *ArtifactBuilder) applyChartDetailsToArtifact(partifact profilesv1.Artif
 		c.a.SparseFolder = definition.Name
 		c.a.Branch = branch
 		c.a.PathsToCopy = append(c.a.PathsToCopy, partifact.Chart.Path)
-		c.a.Kustomize = &types.Kustomization{
+		c.a.Kustomize.LocalResourceLimiter = &types.Kustomization{
 			Resources: []string{"HelmRelease.yaml"},
 		}
 	}
@@ -111,7 +113,7 @@ func (c *ArtifactBuilder) applyChartDetailsToArtifact(partifact profilesv1.Artif
 	return nil
 }
 
-func (c *ArtifactBuilder) applyKustomizationDetailsToArtifact(partifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition, deps []profilesv1.Artifact) error {
+func (c *ArtifactBuilder) updateArtifactWithKustomizationDetails(partifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definition profilesv1.ProfileDefinition, deps []profilesv1.Artifact) error {
 	if c.GitRepositoryNamespace == "" && c.GitRepositoryName == "" {
 		return fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 	}

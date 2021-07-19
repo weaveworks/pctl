@@ -85,7 +85,7 @@ var _ = Describe("MakeArtifactsFunc", func() {
 			Expect(nestedProfile.SparseFolder).To(Equal("bitnami-nginx"))
 			Expect(nestedProfile.Branch).To(Equal("bitnami-nginx/v0.0.1"))
 			Expect(nestedProfile.Objects).To(HaveLen(2)) // we test the object's generation in their respective builder tests
-			Expect(*nestedProfile.Kustomize).To(Equal(types.Kustomization{
+			Expect(*nestedProfile.Kustomize.LocalResourceLimiter).To(Equal(types.Kustomization{
 				Resources: []string{"HelmRelease.yaml"},
 			}))
 

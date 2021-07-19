@@ -15,19 +15,23 @@ type Object struct {
 	Name string
 }
 
+// Kustomize contains resources which direct flux to what to install.
+type Kustomize struct {
+	// LocalResourceLimiter resource which limits the number of objects scanned by flux.
+	LocalResourceLimiter *types.Kustomization
+	// ObjectWrapper is the top most Kubernetes object wrapper for all resources.
+	ObjectWrapper *types.Kustomization
+}
+
 // Artifact contains the name and objects belonging to a profile artifact
 type Artifact struct {
 	// Generated Kubernetes resources for this artifact.
-	Objects []Object
-	// Kustomize resource which limits the number of objects scanned by flux.
-	Kustomize *types.Kustomization
-	// KustomizeWrapper limits flux to only pick up a specific resource.
-	KustomizeWrapper *types.Kustomization
-	Name             string
-	RepoURL          string
-	PathsToCopy      []string
-	SparseFolder     string
-	Branch           string
-	// If set, use this as folder for all artifacts generated from Objects.
-	SubFolder string
+	Objects      []Object
+	Kustomize    Kustomize
+	Name         string
+	RepoURL      string
+	PathsToCopy  []string
+	SparseFolder string
+	Branch       string
+	SubFolder    string
 }

@@ -176,8 +176,10 @@ var _ = Describe("ArtifactBuilder", func() {
 					},
 				}
 				expected := artifact.Artifact{
-					KustomizeWrapper: &types.Kustomization{
-						Resources: []string{"kustomize-flux.yaml"},
+					Kustomize: artifact.Kustomize{
+						ObjectWrapper: &types.Kustomization{
+							Resources: []string{"kustomize-flux.yaml"},
+						},
 					},
 					Objects:   []artifact.Object{{Object: helmRelease, Path: "helm-chart"}, {Object: helmRepository, Path: "helm-chart"}, {Object: kustomizationWrapper, Name: "kustomize-flux"}},
 					Name:      "dokuwiki",
@@ -185,7 +187,7 @@ var _ = Describe("ArtifactBuilder", func() {
 				}
 				Expect(len(artifacts)).To(Equal(1))
 				Expect(artifacts[0].Objects).To(ConsistOf(expected.Objects))
-				Expect(artifacts[0].KustomizeWrapper).To(Equal(expected.KustomizeWrapper))
+				Expect(artifacts[0].Kustomize.ObjectWrapper).To(Equal(expected.Kustomize.ObjectWrapper))
 			})
 		})
 		When("a dependency is defined", func() {
@@ -284,8 +286,10 @@ var _ = Describe("ArtifactBuilder", func() {
 					},
 				}
 				expected := artifact.Artifact{
-					KustomizeWrapper: &types.Kustomization{
-						Resources: []string{"kustomize-flux.yaml"},
+					Kustomize: artifact.Kustomize{
+						ObjectWrapper: &types.Kustomization{
+							Resources: []string{"kustomize-flux.yaml"},
+						},
 					},
 					Objects:   []artifact.Object{{Object: helmRelease, Path: "helm-chart"}, {Object: helmRepository, Path: "helm-chart"}, {Object: kustomizationWrapper, Name: "kustomize-flux"}},
 					Name:      "dokuwiki",
@@ -392,10 +396,10 @@ var _ = Describe("ArtifactBuilder", func() {
 				Expect(artifacts[0].Branch).To(Equal("main"))
 				Expect(artifacts[0].PathsToCopy).To(ConsistOf("my/chart"))
 				Expect(artifacts[0].SubFolder).To(Equal("helm-chart"))
-				Expect(*artifacts[0].Kustomize).To(Equal(types.Kustomization{
+				Expect(*artifacts[0].Kustomize.LocalResourceLimiter).To(Equal(types.Kustomization{
 					Resources: []string{"HelmRelease.yaml"},
 				}))
-				Expect(*artifacts[0].KustomizeWrapper).To(Equal(types.Kustomization{
+				Expect(*artifacts[0].Kustomize.ObjectWrapper).To(Equal(types.Kustomization{
 					Resources: []string{"kustomize-flux.yaml"},
 				}))
 				Expect(artifacts[0].Objects).To(ConsistOf(artifact.Object{Object: helmRelease, Path: "helm-chart"}, artifact.Object{Object: kustomizationWrapper, Name: "kustomize-flux"}))
@@ -605,8 +609,10 @@ var _ = Describe("ArtifactBuilder", func() {
 					},
 					Name:      "dokuwiki",
 					SubFolder: "helm-chart",
-					KustomizeWrapper: &types.Kustomization{
-						Resources: []string{"kustomize-flux.yaml"},
+					Kustomize: artifact.Kustomize{
+						ObjectWrapper: &types.Kustomization{
+							Resources: []string{"kustomize-flux.yaml"},
+						},
 					},
 				}
 				Expect(artifacts).To(ConsistOf(expected))
