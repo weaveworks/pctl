@@ -17,7 +17,7 @@ require (
 	github.com/weaveworks/profiles v0.0.13
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.21.3
-	k8s.io/apiextensions-apiserver v0.21.2
+	k8s.io/apiextensions-apiserver v0.21.3
 	k8s.io/apimachinery v0.21.3
 	k8s.io/client-go v0.21.3
 	knative.dev/pkg v0.0.0-20210412173742-b51994e3b312
