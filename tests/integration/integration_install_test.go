@@ -587,10 +587,31 @@ status: {}
 		})
 
 		It("generates valid artifacts to the local directory", func() {
-			Skip("Ignored for now, might be deleted or refactoring")
-			cmd := exec.Command(binaryPath, "install", "--namespace", namespace, "nginx-catalog/nginx/v2.0.1")
-			cmd.Dir = temp
+			By("creating the flux repository")
+			gitRepoName := "pctl-repo"
+			branch := "flux_repo_test_" + uuid.NewString()[:6]
+
+			// check out the branch
+			cmd := exec.Command("git", "clone", pctlTestRepositoryName, temp)
 			output, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("clone failed: %s", string(output)))
+			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "checkout", "-b", branch)
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("checkout branch failed: %s", string(output)))
+
+			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "push", "-u", "origin", branch)
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("git push failed : %s", string(output)))
+			// setup the gitrepository resources. Requires the branch to exist first
+			cmd = exec.Command("flux", "create", "source", "git", gitRepoName, "--url", pctlTestRepositoryHTTP, "--branch", branch, "--namespace", namespace)
+			cmd.Dir = temp
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create source git failed: %s", string(output)))
+
+			By("running the install")
+			cmd = exec.Command(binaryPath, "install", "--namespace", namespace, "--git-repository", fmt.Sprintf("%s/%s", namespace, gitRepoName), "nginx-catalog/nginx/v2.0.1")
+			cmd.Dir = temp
+			output, err = cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
 			Expect(string(output)).To(ContainSubstring("generating profile installation from source: catalog entry nginx-catalog/nginx/v2.0.1"))
 
@@ -606,15 +627,15 @@ status: {}
 
 			By("creating the artifacts")
 			Expect(files).To(ContainElements(
-				"nginx/artifacts/bitnami-nginx/helm-chart/ConfigMap.yaml",
-				"nginx/artifacts/bitnami-nginx/helm-chart/HelmRelease.yaml",
-				"nginx/artifacts/bitnami-nginx/helm-chart/HelmRepository.yaml",
-				"nginx/artifacts/bitnami-nginx/kustomization.yaml",
-				"nginx/artifacts/bitnami-nginx/kustomize-flux.yaml",
-				"nginx/profile-installation.yaml",
+				"artifacts/bitnami-nginx/helm-chart/ConfigMap.yaml",
+				"artifacts/bitnami-nginx/helm-chart/HelmRelease.yaml",
+				"artifacts/bitnami-nginx/helm-chart/HelmRepository.yaml",
+				"artifacts/bitnami-nginx/kustomization.yaml",
+				"artifacts/bitnami-nginx/kustomize-flux.yaml",
+				"profile-installation.yaml",
 			))
 
-			filename := filepath.Join(temp, "nginx", "nginx", "profile-installation.yaml")
+			filename := filepath.Join(temp, "nginx", "profile-installation.yaml")
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
@@ -636,11 +657,26 @@ status: {}
 `, namespace)))
 
 			By("the artifacts being deployable")
+			// Generate the resources into the flux repo, and push them up the repo?
+			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "add", ".")
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("git add . failed: %s", string(output)))
+			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "commit", "-am", "new content")
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("git commit failed : %s", string(output)))
+			cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "push", "-u", "origin", branch)
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("git push failed : %s", string(output)))
 
-			cmd = exec.Command("kubectl", "apply", "-R", "-f", profilesDir)
+			cmd = exec.Command("flux", "reconcile", "source", "git", gitRepoName, "--namespace", namespace)
 			cmd.Dir = temp
 			output, err = cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("kubectl apply failed : %s", string(output)))
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux reconcile source git failed : %s", string(output)))
+
+			cmd = exec.Command("flux", "create", "kustomization", "kustomization", "--source", fmt.Sprintf("GitRepository/%s", gitRepoName), "--path", ".", "--namespace", namespace)
+			cmd.Dir = temp
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create kustomization failed : %s", string(output)))
 
 			By("successfully deploying the kustomize resource")
 			helmReleaseName := fmt.Sprintf("%s-%s-%s", subName, "nginx", "bitnami-nginx")

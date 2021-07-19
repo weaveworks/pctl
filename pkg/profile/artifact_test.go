@@ -395,8 +395,8 @@ status: {}
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				profileFile := filepath.Join(tempDir, "generate-test", "profile-installation.yaml")
-				artifactHelmRelease := filepath.Join(tempDir, "generate-test", "artifacts", "test-artifact-1", "helm-chart", "HelmRelease.yaml")
+				profileFile := filepath.Join(tempDir, "profile-installation.yaml")
+				artifactHelmRelease := filepath.Join(tempDir, "artifacts", "test-artifact-1", "helm-chart", "HelmRelease.yaml")
 
 				Expect(hasCorrectFilePerms(profileFile)).To(BeTrue())
 				Expect(hasCorrectFilePerms(artifactHelmRelease)).To(BeTrue())
