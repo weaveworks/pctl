@@ -8,7 +8,7 @@ require (
 	github.com/fluxcd/pkg/apis/meta v0.10.1 // indirect
 	github.com/fluxcd/pkg/runtime v0.12.1
 	github.com/fluxcd/source-controller/api v0.15.3
-	github.com/google/uuid v1.2.0
+	github.com/google/uuid v1.3.0
 	github.com/jenkins-x/go-scm v1.10.8
 	github.com/mattn/go-runewidth v0.0.10 // indirect
 	github.com/olekukonko/tablewriter v0.0.5
@@ -18,10 +18,10 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/weaveworks/profiles v0.0.13
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.21.2
-	k8s.io/apiextensions-apiserver v0.21.2
-	k8s.io/apimachinery v0.21.2
-	k8s.io/client-go v0.21.2
+	k8s.io/api v0.21.3
+	k8s.io/apiextensions-apiserver v0.21.3
+	k8s.io/apimachinery v0.21.3
+	k8s.io/client-go v0.21.3
 	knative.dev/pkg v0.0.0-20210412173742-b51994e3b312
 	sigs.k8s.io/cli-utils v0.25.1-0.20210608181808-f3974341173a
 	sigs.k8s.io/controller-runtime v0.9.2
