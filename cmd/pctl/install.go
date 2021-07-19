@@ -239,5 +239,5 @@ func createPullRequest(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create scm client: %w", err)
 	}
-	return catalog.CreatePullRequest(scmClient, g)
+	return catalog.CreatePullRequest(scmClient, g, branch)
 }

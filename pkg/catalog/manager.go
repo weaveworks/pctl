@@ -6,6 +6,7 @@ import (
 )
 
 //go:generate counterfeiter -o fakes/fake_catalog_manager.go . CatalogManager
+// CatalogManager inteface for interacting with catalog API
 type CatalogManager interface {
 	Show(CatalogClient, string, string, string) (profilesv1.ProfileCatalogEntry, error)
 	Search(CatalogClient, string) ([]profilesv1.ProfileCatalogEntry, error)
@@ -13,4 +14,5 @@ type CatalogManager interface {
 	List(runtimeclient.Client, CatalogClient) ([]ProfileData, error)
 }
 
+// Manager is responsible for manager interactions with the catalog API
 type Manager struct{}

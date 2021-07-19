@@ -52,25 +52,15 @@ type FakeGit struct {
 	commitReturnsOnCall map[int]struct {
 		result1 error
 	}
-	CreateBranchStub        func() error
+	CreateBranchStub        func(string) error
 	createBranchMutex       sync.RWMutex
 	createBranchArgsForCall []struct {
+		arg1 string
 	}
 	createBranchReturns struct {
 		result1 error
 	}
 	createBranchReturnsOnCall map[int]struct {
-		result1 error
-	}
-	CreateNewBranchStub        func(string) error
-	createNewBranchMutex       sync.RWMutex
-	createNewBranchArgsForCall []struct {
-		arg1 string
-	}
-	createNewBranchReturns struct {
-		result1 error
-	}
-	createNewBranchReturnsOnCall map[int]struct {
 		result1 error
 	}
 	GetDirectoryStub        func() string
@@ -382,17 +372,18 @@ func (fake *FakeGit) CommitReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeGit) CreateBranch() error {
+func (fake *FakeGit) CreateBranch(arg1 string) error {
 	fake.createBranchMutex.Lock()
 	ret, specificReturn := fake.createBranchReturnsOnCall[len(fake.createBranchArgsForCall)]
 	fake.createBranchArgsForCall = append(fake.createBranchArgsForCall, struct {
-	}{})
+		arg1 string
+	}{arg1})
 	stub := fake.CreateBranchStub
 	fakeReturns := fake.createBranchReturns
-	fake.recordInvocation("CreateBranch", []interface{}{})
+	fake.recordInvocation("CreateBranch", []interface{}{arg1})
 	fake.createBranchMutex.Unlock()
 	if stub != nil {
-		return stub()
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
@@ -406,10 +397,17 @@ func (fake *FakeGit) CreateBranchCallCount() int {
 	return len(fake.createBranchArgsForCall)
 }
 
-func (fake *FakeGit) CreateBranchCalls(stub func() error) {
+func (fake *FakeGit) CreateBranchCalls(stub func(string) error) {
 	fake.createBranchMutex.Lock()
 	defer fake.createBranchMutex.Unlock()
 	fake.CreateBranchStub = stub
+}
+
+func (fake *FakeGit) CreateBranchArgsForCall(i int) string {
+	fake.createBranchMutex.RLock()
+	defer fake.createBranchMutex.RUnlock()
+	argsForCall := fake.createBranchArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeGit) CreateBranchReturns(result1 error) {
@@ -431,67 +429,6 @@ func (fake *FakeGit) CreateBranchReturnsOnCall(i int, result1 error) {
 		})
 	}
 	fake.createBranchReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeGit) CreateNewBranch(arg1 string) error {
-	fake.createNewBranchMutex.Lock()
-	ret, specificReturn := fake.createNewBranchReturnsOnCall[len(fake.createNewBranchArgsForCall)]
-	fake.createNewBranchArgsForCall = append(fake.createNewBranchArgsForCall, struct {
-		arg1 string
-	}{arg1})
-	stub := fake.CreateNewBranchStub
-	fakeReturns := fake.createNewBranchReturns
-	fake.recordInvocation("CreateNewBranch", []interface{}{arg1})
-	fake.createNewBranchMutex.Unlock()
-	if stub != nil {
-		return stub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeGit) CreateNewBranchCallCount() int {
-	fake.createNewBranchMutex.RLock()
-	defer fake.createNewBranchMutex.RUnlock()
-	return len(fake.createNewBranchArgsForCall)
-}
-
-func (fake *FakeGit) CreateNewBranchCalls(stub func(string) error) {
-	fake.createNewBranchMutex.Lock()
-	defer fake.createNewBranchMutex.Unlock()
-	fake.CreateNewBranchStub = stub
-}
-
-func (fake *FakeGit) CreateNewBranchArgsForCall(i int) string {
-	fake.createNewBranchMutex.RLock()
-	defer fake.createNewBranchMutex.RUnlock()
-	argsForCall := fake.createNewBranchArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeGit) CreateNewBranchReturns(result1 error) {
-	fake.createNewBranchMutex.Lock()
-	defer fake.createNewBranchMutex.Unlock()
-	fake.CreateNewBranchStub = nil
-	fake.createNewBranchReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeGit) CreateNewBranchReturnsOnCall(i int, result1 error) {
-	fake.createNewBranchMutex.Lock()
-	defer fake.createNewBranchMutex.Unlock()
-	fake.CreateNewBranchStub = nil
-	if fake.createNewBranchReturnsOnCall == nil {
-		fake.createNewBranchReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.createNewBranchReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -894,8 +831,6 @@ func (fake *FakeGit) Invocations() map[string][][]interface{} {
 	defer fake.commitMutex.RUnlock()
 	fake.createBranchMutex.RLock()
 	defer fake.createBranchMutex.RUnlock()
-	fake.createNewBranchMutex.RLock()
-	defer fake.createNewBranchMutex.RUnlock()
 	fake.getDirectoryMutex.RLock()
 	defer fake.getDirectoryMutex.RUnlock()
 	fake.hasChangesMutex.RLock()

@@ -185,41 +185,6 @@ var _ = Describe("git", func() {
 		})
 	})
 
-	Context("CreateNewBranch", func() {
-		It("creates a branch", func() {
-			g := git.NewCLIGit(git.CLIGitConfig{
-				Directory: "location",
-				Branch:    "test01",
-				Remote:    "origin",
-				Base:      "main",
-			}, runner)
-			err := g.CreateBranch()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(runner.RunCallCount()).To(Equal(1))
-			arg, args := runner.RunArgsForCall(0)
-			Expect(arg).To(Equal("git"))
-			Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "checkout", "-b", "test01"}))
-
-		})
-		When("an error occurs", func() {
-			It("returns an error", func() {
-				runner.RunReturns([]byte(""), errors.New("nope"))
-				g := git.NewCLIGit(git.CLIGitConfig{
-					Directory: "location",
-					Branch:    "test01",
-					Remote:    "origin",
-					Base:      "main",
-				}, runner)
-				err := g.CreateBranch()
-				Expect(err).To(MatchError(`failed to create new branch test01: nope`))
-				Expect(runner.RunCallCount()).To(Equal(1))
-				arg, args := runner.RunArgsForCall(0)
-				Expect(arg).To(Equal("git"))
-				Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "checkout", "-b", "test01"}))
-			})
-		})
-	})
-
 	Context("CreateBranch", func() {
 		When("normal flow operations", func() {
 			It("creates a branch if it differs from base", func() {
@@ -229,7 +194,7 @@ var _ = Describe("git", func() {
 					Remote:    "origin",
 					Base:      "main",
 				}, runner)
-				err := g.CreateBranch()
+				err := g.CreateBranch("test01")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(runner.RunCallCount()).To(Equal(1))
 				arg, args := runner.RunArgsForCall(0)
@@ -244,7 +209,7 @@ var _ = Describe("git", func() {
 					Remote:    "origin",
 					Base:      "main",
 				}, runner)
-				err := g.CreateBranch()
+				err := g.CreateBranch("main")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(runner.RunCallCount()).To(Equal(0))
 			})
@@ -258,7 +223,7 @@ var _ = Describe("git", func() {
 					Remote:    "origin",
 					Base:      "main",
 				}, runner)
-				err := g.CreateBranch()
+				err := g.CreateBranch("test01")
 				Expect(err).To(MatchError(`failed to create new branch test01: nope`))
 				Expect(runner.RunCallCount()).To(Equal(1))
 				arg, args := runner.RunArgsForCall(0)

@@ -21,9 +21,7 @@ type Git interface {
 	// Commit changes.
 	Commit() error
 	// CreateBranch create a branch if it's needed.
-	CreateBranch() error
-	// CreateNewBranch create a branch if it's needed.
-	CreateNewBranch(string) error
+	CreateBranch(string) error
 	// IsRepository returns whether a location is a git repository or not.
 	IsRepository() error
 	// HasChanges returns whether a location has uncommitted changes or not.
@@ -132,25 +130,11 @@ func (g *CLIGit) Commit() error {
 }
 
 // CreateBranch creates a branch if it differs from the base.
-func (g *CLIGit) CreateBranch() error {
-	if g.Base == g.Branch {
+func (g *CLIGit) CreateBranch(branch string) error {
+	if branch == g.Base {
 		return nil
 	}
 	g.printf("creating new branch\n")
-	args := []string{
-		"--git-dir", filepath.Join(g.Directory, ".git"),
-		"--work-tree", g.Directory,
-		"checkout",
-		"-b",
-		g.Branch,
-	}
-	if err := g.runGitCmd(args...); err != nil {
-		return fmt.Errorf("failed to create new branch %s: %w", g.Branch, err)
-	}
-	return nil
-}
-
-func (g *CLIGit) CreateNewBranch(branch string) error {
 	args := []string{
 		"--git-dir", filepath.Join(g.Directory, ".git"),
 		"--work-tree", g.Directory,

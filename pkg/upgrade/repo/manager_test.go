@@ -89,8 +89,8 @@ var _ = Describe("Manager", func() {
 			Expect(called).To(BeTrue())
 			Expect(fakeGitClient.CheckoutCallCount()).To(Equal(1))
 			Expect(fakeGitClient.CheckoutArgsForCall(0)).To(Equal("main"))
-			Expect(fakeGitClient.CreateNewBranchCallCount()).To(Equal(1))
-			Expect(fakeGitClient.CreateNewBranchArgsForCall(0)).To(Equal("my-branch"))
+			Expect(fakeGitClient.CreateBranchCallCount()).To(Equal(1))
+			Expect(fakeGitClient.CreateBranchArgsForCall(0)).To(Equal("my-branch"))
 			Expect(fakeGitClient.RemoveAllCallCount()).To(Equal(1))
 			Expect(fakeGitClient.AddCallCount()).To(Equal(1))
 			Expect(fakeGitClient.CommitCallCount()).To(Equal(1))
@@ -108,9 +108,9 @@ var _ = Describe("Manager", func() {
 			})
 		})
 
-		When("CreateNewBranch fails", func() {
+		When("CreateBranch fails", func() {
 			BeforeEach(func() {
-				fakeGitClient.CreateNewBranchReturns(fmt.Errorf("failed"))
+				fakeGitClient.CreateBranchReturns(fmt.Errorf("failed"))
 			})
 
 			It("returns an error", func() {

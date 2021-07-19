@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+// UpgradeCfg holds the fields used during upgrades a installation
 type UpgradeConfig struct {
 	ProfileDir       string
 	Version          string
@@ -32,6 +33,7 @@ var copy func(src, dest string) error = func(src, dest string) error {
 	return copypkg.Copy(src, dest)
 }
 
+// Upgrade the profiel installation to a new version
 func Upgrade(cfg UpgradeConfig) error {
 	out, err := ioutil.ReadFile(path.Join(cfg.ProfileDir, "profile-installation.yaml"))
 	if err != nil {

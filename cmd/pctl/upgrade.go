@@ -25,11 +25,9 @@ func upgradeCmd() *cli.Command {
 			Usage: "The namespace and name of the GitRepository object governing the flux repo.",
 		}),
 		Action: func(c *cli.Context) error {
-			// Run upgradeation main
 			if err := upgrade(c); err != nil {
 				return err
 			}
-			// Create a pull request if desired
 			if c.Bool("create-pr") {
 				if err := createPullRequest(c); err != nil {
 					return err
@@ -57,8 +55,7 @@ func upgrade(c *cli.Context) error {
 		return err
 	}
 	defer func() {
-		err := os.RemoveAll(tmpDir)
-		if err != nil {
+		if err := os.RemoveAll(tmpDir); err != nil {
 			fmt.Printf("warning: failed to cleanup temp directory %q: %v", tmpDir, err)
 		}
 	}()

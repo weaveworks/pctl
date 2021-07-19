@@ -100,12 +100,12 @@ func (m *Manager) getProfileSpec(cfg InstallConfig) (profilesv1.ProfileInstallat
 }
 
 // CreatePullRequest creates a pull request from the current changes.
-func CreatePullRequest(scm git.SCMClient, g git.Git) error {
+func CreatePullRequest(scm git.SCMClient, g git.Git, branch string) error {
 	if err := g.IsRepository(); err != nil {
 		return fmt.Errorf("directory is not a git repository: %w", err)
 	}
 
-	if err := g.CreateBranch(); err != nil {
+	if err := g.CreateBranch(branch); err != nil {
 		return fmt.Errorf("failed to create branch: %w", err)
 	}
 
