@@ -91,8 +91,7 @@ $ pctl install --git-repository flux-system/flux-system nginx-catalog/weaveworks
 generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0
 installation completed successfully
 
-$ tree install10/weaveworks-nginx
-install10/weaveworks-nginx
+$ tree weaveworks-nginx
 └── weaveworks-nginx
     ├── artifacts
     │   ├── nested-profile
@@ -123,7 +122,7 @@ install10/weaveworks-nginx
     └── profile-installation.yaml
 ```
 
-The `profile-installation.yaml` is the top-level Profile installation object. It describes the profile installation. The artifacts
+The `profile-installation.yaml` is the top-level Profile installation object. It describes the profile installation. The artifact's
 directory contains all the resources required for deploying the profile. Each of the artifacts corresponds to a
 [Flux 2 resource](https://fluxcd.io/docs/components/). The kustomization.yaml files make sure that only the resources
 related to the profile, are handled by flux directly. For example, it makes sure that the locally copied nginx/chart files

@@ -638,7 +638,6 @@ status: {}
 		})
 		When("there is a depending chart", func() {
 			It("generates artifacts which contain a depends on flag", func() {
-				Skip("Ignored for now, will be deleted or refactoring")
 				cmd := exec.Command(
 					binaryPath,
 					"install",
@@ -648,15 +647,13 @@ status: {}
 					namespace,
 					"--profile-url",
 					"https://github.com/weaveworks/profiles-examples",
-					"--profile-branch",
-					"dependson",
 					"--profile-path",
 					"dependson-nginx",
 				)
 				cmd.Dir = temp
 				output, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
-				Expect(string(output)).To(ContainSubstring("generating profile installation from source: repository https://github.com/weaveworks/profiles-examples, path: dependson-nginx and branch dependson"))
+				Expect(string(output)).To(ContainSubstring("generating profile installation from source: repository https://github.com/weaveworks/profiles-examples, path: dependson-nginx and branch main"))
 
 				var files []string
 				profilesDir := filepath.Join(temp)
@@ -667,14 +664,16 @@ status: {}
 					return nil
 				})
 				Expect(err).NotTo(HaveOccurred())
-
 				By("creating the artifacts")
 				Expect(files).To(ContainElements(
-					"artifacts/dependon/helm-chart/ConfigMap.yaml",
-					"artifacts/dependon/helm-chart/HelmRelease.yaml",
-					"artifacts/dependon/helm-chart/HelmRepository.yaml",
+					"artifacts/dependon/nginx/deployment/deployment.yaml",
 					"artifacts/dependon/kustomization.yaml",
 					"artifacts/dependon/kustomize-flux.yaml",
+					"artifacts/dependon2/helm-chart/ConfigMap.yaml",
+					"artifacts/dependon2/helm-chart/HelmRelease.yaml",
+					"artifacts/dependon2/helm-chart/HelmRepository.yaml",
+					"artifacts/dependon2/kustomization.yaml",
+					"artifacts/dependon2/kustomize-flux.yaml",
 					"artifacts/nginx-chart/helm-chart/ConfigMap.yaml",
 					"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
 					"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
@@ -694,81 +693,44 @@ metadata:
   namespace: %s
 spec:
   source:
-    branch: dependson
+    branch: main
     path: dependson-nginx
     url: https://github.com/weaveworks/profiles-examples
 status: {}
 `, namespace)))
 
-				By("verify that dependsOn has been added to the helm release")
-				filename = filepath.Join(temp, "artifacts", "nginx-chart", "helm-chart", "HelmRelease.yaml")
+				By("verify that dependsOn has been added to the kustomize resource")
+				filename = filepath.Join(temp, "artifacts", "nginx-chart", "kustomize-flux.yaml")
 				content, err = ioutil.ReadFile(filename)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: helm.toolkit.fluxcd.io/v2beta1
-kind: HelmRelease
+				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
+kind: Kustomization
 metadata:
   creationTimestamp: null
   name: pctl-profile-dependson-nginx-nginx-chart
   namespace: %s
 spec:
-  chart:
-    spec:
-      chart: nginx
-      sourceRef:
-        kind: HelmRepository
-        name: pctl-profile-profiles-examples-nginx
-        namespace: %s
-      version: 9.3.0
   dependsOn:
   - name: pctl-profile-dependson-nginx-dependon
     namespace: %s
-  interval: 0s
-  valuesFrom:
-  - kind: ConfigMap
-    name: pctl-profile-nginx-chart-defaultvalues
-    valuesKey: default-values.yaml
+  - name: pctl-profile-dependson-nginx-dependon2
+    namespace: %s
+  healthChecks:
+  - apiVersion: helm.toolkit.fluxcd.io/v2beta1
+    kind: HelmRelease
+    name: pctl-profile-dependson-nginx-nginx-chart
+    namespace: %s
+  interval: 5m0s
+  path: artifacts/nginx-chart/helm-chart
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: git-repo-name
+    namespace: %s
+  targetNamespace: %s
 status: {}
-`, namespace, namespace, namespace)))
-
-				By("the artifacts being deployable")
-
-				cmd = exec.Command("kubectl", "apply", "-R", "-f", profilesDir)
-				cmd.Dir = temp
-				output, err = cmd.CombinedOutput()
-				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("kubectl apply failed : %s", string(output)))
-
-				By("successfully deploying the chart resource")
-				helmReleaseName := fmt.Sprintf("%s-%s-%s", subName, "dependson-nginx", "nginx-chart")
-				var helmRelease *helmv2.HelmRelease
-				Eventually(func() bool {
-					helmRelease = &helmv2.HelmRelease{}
-					err := kClient.Get(context.Background(), client.ObjectKey{Name: helmReleaseName, Namespace: namespace}, helmRelease)
-					if err != nil {
-						return false
-					}
-					for _, condition := range helmRelease.Status.Conditions {
-						if condition.Type == "Ready" && condition.Status == "True" {
-							return true
-						}
-					}
-					return false
-				}, 5*time.Minute, 5*time.Second).Should(BeTrue())
-				// it's enough to verify the nginx installation because it wouldn't start up if redis wouldn't be running.
-				helmReleaseOpts := []client.ListOption{
-					client.InNamespace(namespace),
-					client.MatchingLabels{"helm.sh/chart": "nginx-9.3.0"},
-				}
-				podList := &v1.PodList{}
-				Eventually(func() v1.PodPhase {
-					podList = &v1.PodList{}
-					err := kClient.List(context.Background(), podList, helmReleaseOpts...)
-					Expect(err).NotTo(HaveOccurred())
-					if len(podList.Items) == 0 {
-						return v1.PodPhase("no pods found")
-					}
-					return podList.Items[0].Status.Phase
-				}, 2*time.Minute, 5*time.Second).Should(Equal(v1.PodPhase("Running")))
-				Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("docker.io/bitnami/nginx:1.21.0-debian-10-r0"))
+`, namespace, namespace, namespace, namespace, namespace, namespace)))
+				// This is a bit more involved since kubectl apply -r no longer works. Depends on only works with Flux.
 			})
 		})
 	})
