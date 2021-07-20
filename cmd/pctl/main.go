@@ -7,6 +7,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 	"github.com/weaveworks/pctl/pkg/client"
+	"github.com/weaveworks/pctl/pkg/version"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/clientcmd"
@@ -20,8 +21,9 @@ const (
 
 func main() {
 	app := &cli.App{
-		Usage: "A cli tool for interacting with profiles",
-		Flags: globalFlags(),
+		Version: version.GetVersion(),
+		Usage:   "A cli tool for interacting with profiles",
+		Flags:   globalFlags(),
 		Commands: []*cli.Command{
 			searchCmd(),
 			showCmd(),
