@@ -10,6 +10,7 @@ const main = "main"
 
 //go:generate counterfeiter -o fakes/fake_repo_manager.go . RepoManager
 // RepoManager for managing a git repository
+//go:generate counterfeiter -o fakes/fake_repo_manager.go . RepoManager
 type RepoManager interface {
 	CreateRepoWithContent(contentWriter func() error) error
 	CreateBranchWithContentFromMain(branch string, contentWriter func() error) error
