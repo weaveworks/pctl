@@ -145,7 +145,7 @@ func Upgrade(cfg UpgradeConfig) error {
 	}
 
 	if len(mergeConflictFiles) > 0 {
-		msg := "upgrade succeeded but merge conflict have occured, please resolve manually. Files containing conflicts:\n"
+		msg := "upgrade succeeded but merge conflicts have occurred, please resolve manually. Files containing conflicts:\n"
 		for _, mergeConflictFile := range mergeConflictFiles {
 			msg = fmt.Sprintf("%s- %s\n", msg, filepath.Join(cfg.ProfileDir, mergeConflictFile))
 		}
