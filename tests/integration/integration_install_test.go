@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	profileExamplesURL                = "https://github.com/Skarlso/profiles-examples"
+	profileExamplesURL                = "https://github.com/weaveworks/profiles-examples"
 	pctlPrivateProfilesRepositoryName = "git@github.com:weaveworks/profiles-examples-private.git"
 )
 
@@ -71,7 +71,7 @@ var _ = Describe("pctl install", func() {
 				Skip("Skipping this tests as it requires credentials")
 			}
 
-			profileBranch := "dep-with-wrap"
+			profileBranch := "main"
 			subName := "pprof"
 			gitRepoName := "pctl-repo"
 
@@ -172,7 +172,7 @@ metadata:
 spec:
   configMap: %s
   source:
-    branch: dep-with-wrap
+    branch: main
     path: weaveworks-nginx
     url: %s
 status: {}
