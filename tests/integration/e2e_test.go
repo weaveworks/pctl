@@ -95,13 +95,13 @@ var _ = Describe("install and upgrade", func() {
 			"artifacts/nginx-deployment/kustomization.yaml",
 			"artifacts/nginx-deployment/kustomize-flux.yaml",
 			"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
-			"artifacts/nginx-chart/helm-chart/helm-chart/HelmRelease.yaml",
-			"artifacts/nginx-chart/helm-chart/helm-chart/HelmRepository.yaml",
-			"artifacts/nginx-chart/helm-chart/kustomization.yaml",
-			"artifacts/nginx-chart/helm-chart/kustomize-flux.yaml",
-			"artifacts/nested-profile/nginx-server/helm-chart/helm-chart/HelmRelease.yaml",
-			"artifacts/nested-profile/nginx-server/helm-chart/kustomization.yaml",
-			"artifacts/nested-profile/nginx-server/helm-chart/kustomize-flux.yaml",
+			"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
+			"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
+			"artifacts/nginx-chart/kustomization.yaml",
+			"artifacts/nginx-chart/kustomize-flux.yaml",
+			"artifacts/nested-profile/nginx-server/helm-chart/HelmRelease.yaml",
+			"artifacts/nested-profile/nginx-server/kustomization.yaml",
+			"artifacts/nested-profile/nginx-server/kustomize-flux.yaml",
 		))
 
 		filename := filepath.Join(profileDir, "profile-installation.yaml")
@@ -161,11 +161,13 @@ status: {}
 			"artifacts/nginx-deployment/kustomization.yaml",
 			"artifacts/nginx-deployment/kustomize-flux.yaml",
 			"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
-			"artifacts/nginx-chart/helm-chart/helm-chart/HelmRelease.yaml",
-			"artifacts/nginx-chart/helm-chart/helm-chart/HelmRepository.yaml",
-			"artifacts/nginx-chart/helm-chart/kustomize-flux.yaml",
-			"artifacts/nginx-chart/helm-chart/kustomization.yaml",
-			"artifacts/nested-profile/nginx-server/helm-chart/helm-chart/HelmRelease.yaml",
+			"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
+			"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
+			"artifacts/nginx-chart/kustomization.yaml",
+			"artifacts/nginx-chart/kustomize-flux.yaml",
+			"artifacts/nested-profile/nginx-server/helm-chart/HelmRelease.yaml",
+			"artifacts/nested-profile/nginx-server/kustomization.yaml",
+			"artifacts/nested-profile/nginx-server/kustomize-flux.yaml",
 		))
 
 		content, err = ioutil.ReadFile(filename)
@@ -232,10 +234,15 @@ status: {}
 			Expect(files).To(ContainElements(
 				"profile-installation.yaml",
 				"artifacts/nginx-deployment/kustomization.yaml",
+				"artifacts/nginx-deployment/kustomize-flux.yaml",
 				"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
 				"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
 				"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
+				"artifacts/nginx-chart/kustomization.yaml",
+				"artifacts/nginx-chart/kustomize-flux.yaml",
 				"artifacts/nested-profile/nginx-server/helm-chart/HelmRelease.yaml",
+				"artifacts/nested-profile/nginx-server/kustomization.yaml",
+				"artifacts/nested-profile/nginx-server/kustomize-flux.yaml",
 			))
 
 			filename := filepath.Join(profileDir, "profile-installation.yaml")
@@ -287,7 +294,7 @@ status: {}
 			Expect(strings.Split(string(output), "\n")).To(
 				ConsistOf(
 					`upgrading profile "pctl-profile" from version "v0.1.0" to "v0.1.1"`,
-					"upgrade succeeded but merge conflict have occured, please resolve manually. Files containing conflicts:",
+					"upgrade succeeded but merge conflicts have occurred, please resolve manually. Files containing conflicts:",
 					fmt.Sprintf("- %s", deploymentFile),
 					"",
 				),
@@ -297,10 +304,15 @@ status: {}
 			Expect(files).To(ContainElements(
 				"profile-installation.yaml",
 				"artifacts/nginx-deployment/kustomization.yaml",
+				"artifacts/nginx-deployment/kustomize-flux.yaml",
 				"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
 				"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
 				"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
+				"artifacts/nginx-chart/kustomization.yaml",
+				"artifacts/nginx-chart/kustomize-flux.yaml",
 				"artifacts/nested-profile/nginx-server/helm-chart/HelmRelease.yaml",
+				"artifacts/nested-profile/nginx-server/kustomization.yaml",
+				"artifacts/nested-profile/nginx-server/kustomize-flux.yaml",
 			))
 
 			content, err = ioutil.ReadFile(filename)
