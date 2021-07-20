@@ -7,6 +7,8 @@ require (
 	github.com/dave/jennifer v1.4.1
 	github.com/fluxcd/helm-controller/api v0.11.1
 	github.com/fluxcd/kustomize-controller/api v0.13.2
+	github.com/fluxcd/pkg/apis/meta v0.10.1
+	github.com/fluxcd/pkg/runtime v0.12.1
 	github.com/fluxcd/pkg/version v0.1.0
 	github.com/fluxcd/source-controller/api v0.15.3
 	github.com/google/uuid v1.3.0

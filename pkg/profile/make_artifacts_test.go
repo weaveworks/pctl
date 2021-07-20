@@ -84,8 +84,8 @@ var _ = Describe("MakeArtifactsFunc", func() {
 			Expect(nestedProfile.PathsToCopy).To(Equal([]string{"nginx/chart"}))
 			Expect(nestedProfile.SparseFolder).To(Equal("bitnami-nginx"))
 			Expect(nestedProfile.Branch).To(Equal("bitnami-nginx/v0.0.1"))
-			Expect(nestedProfile.Objects).To(HaveLen(1)) // we test the object's generation in their respective builder tests
-			Expect(*nestedProfile.Kustomize).To(Equal(types.Kustomization{
+			Expect(nestedProfile.Objects).To(HaveLen(2)) // we test the object's generation in their respective builder tests
+			Expect(*nestedProfile.Kustomize.LocalResourceLimiter).To(Equal(types.Kustomization{
 				Resources: []string{"HelmRelease.yaml"},
 			}))
 
@@ -99,9 +99,8 @@ var _ = Describe("MakeArtifactsFunc", func() {
 
 			nginxChart := artifacts[2]
 			Expect(nginxChart.Name).To(Equal("nginx-chart"))
-			Expect(nginxChart.Objects).To(HaveLen(3)) // we test the object's generation in their respective builder tests
+			Expect(nginxChart.Objects).To(HaveLen(4)) // we test the object's generation in their respective builder tests
 		})
-
 		When("fetching the nested profile definition fails", func() {
 			It("returns an error", func() {
 				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
@@ -162,7 +161,7 @@ var _ = Describe("MakeArtifactsFunc", func() {
 					GitRepoName:      gitRepoName,
 				})
 				_, err := profile.MakeArtifacts(maker, pSub)
-				Expect(err).To(MatchError(ContainSubstring("no artifact set")))
+				Expect(err).To(MatchError(ContainSubstring("failed to build artifact: no artifact set")))
 			})
 		})
 	})

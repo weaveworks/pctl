@@ -87,38 +87,55 @@ pctl install nginx-catalog/weaveworks-nginx
 This results in a profile installation folder being created (defaults to the name of the profile). Example:
 
 ```
-$ pctl install nginx-catalog/weaveworks-nginx/v0.1.0
-generating a profile installation for nginx-catalog/weaveworks-nginx:
+$ pctl install --git-repository flux-system/flux-system nginx-catalog/weaveworks-nginx/v0.1.0
+generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0
+installation completed successfully
 
 $ tree weaveworks-nginx
-weaveworks-nginx
-├── artifacts
-│   ├── dokuwiki
-│   │   ├── HelmRelease.yaml
-│   │   └── HelmRepository.yaml
-│   ├── nested-profile
-│   │   └── nginx-server
-│   │       ├── GitRepository.yaml
-│   │       └── HelmRelease.yaml
-│   └── nginx-deployment
-│       ├── GitRepository.yaml
-│       └── Kustomization.yaml
-└── profile-installation.yaml
-
+└── weaveworks-nginx
+    ├── artifacts
+    │   ├── nested-profile
+    │   │   └── nginx-server
+    │   │       ├── helm-chart
+    │   │       │   ├── HelmRelease.yaml
+    │   │       │   ├── kustomization.yaml
+    │   │       │   └── nginx
+    │   │       │       └── chart
+    │   │       │           ├── Chart.lock
+    │   │       │           ├── Chart.yaml
+    │   │       │           ├── ...
+    │   │       ├── kustomization.yaml
+    │   │       └── kustomize-flux.yaml
+    │   ├── nginx-chart
+    │   │   ├── helm-chart
+    │   │   │   ├── ConfigMap.yaml
+    │   │   │   ├── HelmRelease.yaml
+    │   │   │   └── HelmRepository.yaml
+    │   │   ├── kustomization.yaml
+    │   │   └── kustomize-flux.yaml
+    │   └── nginx-deployment
+    │       ├── kustomization.yaml
+    │       ├── kustomize-flux.yaml
+    │       └── nginx
+    │           └── deployment
+    │               └── deployment.yaml
+    └── profile-installation.yaml
 ```
 
-The `profile-installation.yaml` is the top-level Profile installation object. It describes the profile installation. The artifacts
-directory contains all of the resources required for deploying the profile. Each of the artifacts corresponds to a
-[Flux 2 resource](https://fluxcd.io/docs/components/).
+The `profile-installation.yaml` is the top-level Profile installation object. It describes the profile installation. The artifact's
+directory contains all the resources required for deploying the profile. Each of the artifacts corresponds to a
+[Flux 2 resource](https://fluxcd.io/docs/components/). The kustomization.yaml files make sure that only the resources
+related to the profile, are handled by flux directly. For example, it makes sure that the locally copied nginx/chart files
+aren't installed by flux, but by the HelmRelease object.
 
-This can be applied directly to the cluster `kubectl apply -R -f weaveworks-nginx/` or by comitting it to your
-flux repository. If you are using a flux repository the `--create-pr` flags provides an automated way for creating a PR
-against your flux repository. See `pctl install --help` for more details.
+This can be applied to the cluster by committing it to your flux repository. Since it contains non-kubernetes objects,
+applying it by hand isn't supported at the moment. If you are using a flux repository, the `--create-pr` flags provides
+an automated way for creating a PR against it. See `pctl install --help` for more details.
 
 #### Install via URL
 
-It's also possible to install from a specific location given a url, branch and a path. For example, consider the following
-profiles folder structure:
+It's also possible to install from a specific location given a URL, branch and a path. For example, consider the following
+`profiles` folder structure:
 
 ```
 tree
@@ -131,13 +148,13 @@ tree
 │   │       ├── Chart.lock
 │   │       ├── ...
 │   │       └── values.yaml
-│   └── profile-installation.yaml
+│   └── profile.yaml
 └── weaveworks-nginx
     ├── README.md
     ├── nginx
     │   └── deployment
     │       └── deployment.yaml
-    └── profile-installation.yaml
+    └── profile.yaml
 ```
 
 Given a development branch called `devel` to install the `bitnami-nginx` profile from this repository, call `install`
@@ -149,7 +166,7 @@ pctl install --name pctl-profile \
              --profile-branch devel \
              --profile-url https://github.com/<usr>/<repo> \
              --profile-path bitnami-nginx \
-             --out <location of my flux repository>
+             --out <optional sub-folder inside the flux repository>
 ```
 
 It's the user's responsibility to make sure that the local `git` setup has access to the url provided with `profile-url`.
@@ -183,7 +200,7 @@ pass this config map into pctl install by providing the `--config-map my-profile
 pctl clones all repository local resources and puts them into the target flux repository. This is done so that the user doesn't
 have to include access credentials for all private repositories, including nested profiles. However, for repository local
 resources to work, the user has to provide the location of the GitRepository object that flux creates when bootstrapping or
-creating a flux repository. This resources is usually under the namespace `flux-system` named `flux-system` and of type
+creating a flux repository. This resource is usually under the namespace `flux-system` named `flux-system` and of type
 GitRepository.
 
 Provide the following information when running install: `--git-repository <namespace>/<name>`.
@@ -313,6 +330,7 @@ the `go get` again to update to the latest version of profiles. The better way i
 
 #### Using doki and the Makefile targets
 
+@Deprecated -- this approach isn't supported until we figure out a way to create dev tags for forks on main.
 There is a convenient tool for all of these operations called [Doki](https://github.com/weaveworks/doki) and a new
 `make` target called `update-modules` which works together nicely. Also, the new make target allows for an extra check
 to be executed by CI so the developer doesn't forget to update to latest before merging new code.

@@ -92,11 +92,16 @@ var _ = Describe("install and upgrade", func() {
 		By("creating the artifacts")
 		Expect(files).To(ContainElements(
 			"profile-installation.yaml",
-			"artifacts/nginx-deployment/Kustomization.yaml",
+			"artifacts/nginx-deployment/kustomization.yaml",
+			"artifacts/nginx-deployment/kustomize-flux.yaml",
 			"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
-			"artifacts/nginx-chart/HelmRelease.yaml",
-			"artifacts/nginx-chart/HelmRepository.yaml",
-			"artifacts/nested-profile/nginx-server/HelmRelease.yaml",
+			"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
+			"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
+			"artifacts/nginx-chart/kustomization.yaml",
+			"artifacts/nginx-chart/kustomize-flux.yaml",
+			"artifacts/nested-profile/nginx-server/helm-chart/HelmRelease.yaml",
+			"artifacts/nested-profile/nginx-server/kustomization.yaml",
+			"artifacts/nested-profile/nginx-server/kustomize-flux.yaml",
 		))
 
 		filename := filepath.Join(profileDir, "profile-installation.yaml")
@@ -153,11 +158,14 @@ status: {}
 		By("updating the artifacts")
 		Expect(files).To(ContainElements(
 			"profile-installation.yaml",
-			"artifacts/nginx-deployment/Kustomization.yaml",
+			"artifacts/nginx-deployment/kustomization.yaml",
+			"artifacts/nginx-deployment/kustomize-flux.yaml",
 			"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
-			"artifacts/nginx-chart/HelmRelease.yaml",
-			"artifacts/nginx-chart/HelmRepository.yaml",
-			"artifacts/nested-profile/nginx-server/HelmRelease.yaml",
+			"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
+			"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
+			"artifacts/nginx-chart/kustomize-flux.yaml",
+			"artifacts/nginx-chart/kustomization.yaml",
+			"artifacts/nested-profile/nginx-server/helm-chart/HelmRelease.yaml",
 		))
 
 		content, err = ioutil.ReadFile(filename)

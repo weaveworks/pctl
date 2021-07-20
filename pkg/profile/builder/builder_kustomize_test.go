@@ -1,18 +1,19 @@
-package kustomize_test
+package builder_test
 
 import (
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
+	"github.com/fluxcd/pkg/runtime/dependency"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/kustomize/api/types"
 
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
-	"github.com/weaveworks/pctl/pkg/profile/kustomize"
+	"github.com/weaveworks/pctl/pkg/profile/builder"
 )
 
-var _ = Describe("Builder", func() {
+var _ = Describe("ArtifactBuilder", func() {
 	var (
 		profileName            string
 		profileURL             string
@@ -80,9 +81,9 @@ var _ = Describe("Builder", func() {
 	})
 
 	Context("Build", func() {
-		It("creates an partifact from an install and a profile definition", func() {
-			builder := &kustomize.Builder{
-				Config: kustomize.Config{
+		It("creates an artifact from an install and a profile definition", func() {
+			builder := &builder.ArtifactBuilder{
+				Config: builder.Config{
 					GitRepositoryName:      gitRepositoryName,
 					GitRepositoryNamespace: gitRepositoryNamespace,
 					RootDir:                rootDir,
@@ -112,14 +113,19 @@ var _ = Describe("Builder", func() {
 				},
 			}
 			expected := artifact.Artifact{
-				Objects:      []runtime.Object{kustomization},
+				Objects:      []artifact.Object{{Object: kustomization, Name: "kustomize-flux"}},
 				Name:         "kustomize",
 				RepoURL:      "https://github.com/weaveworks/profiles-examples",
 				PathsToCopy:  []string{"nginx/deployment"},
 				SparseFolder: "weaveworks-nginx",
 				Branch:       "weaveworks-nginx/v0.0.1",
+				Kustomize: artifact.Kustomize{
+					ObjectWrapper: &types.Kustomization{
+						Resources: []string{"kustomize-flux.yaml"},
+					},
+				},
 			}
-			Expect(artifacts).To(ConsistOf(expected))
+			Expect(artifacts[0]).To(Equal(expected))
 		})
 		When("branch is defined instead of tag", func() {
 			It("will use the branch definition", func() {
@@ -137,8 +143,8 @@ var _ = Describe("Builder", func() {
 						},
 					},
 				}
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &builder.ArtifactBuilder{
+					Config: builder.Config{
 						GitRepositoryName:      gitRepositoryName,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						RootDir:                rootDir,
@@ -168,20 +174,25 @@ var _ = Describe("Builder", func() {
 					},
 				}
 				expected := artifact.Artifact{
-					Objects:      []runtime.Object{kustomization},
+					Objects:      []artifact.Object{{Object: kustomization, Name: "kustomize-flux"}},
 					Name:         "kustomize",
 					RepoURL:      "https://github.com/weaveworks/profiles-examples",
 					PathsToCopy:  []string{"nginx/deployment"},
 					SparseFolder: "weaveworks-nginx",
 					Branch:       "custom-branch",
+					Kustomize: artifact.Kustomize{
+						ObjectWrapper: &types.Kustomization{
+							Resources: []string{"kustomize-flux.yaml"},
+						},
+					},
 				}
 				Expect(artifacts).To(ConsistOf(expected))
 			})
 		})
 		When("git-repository-name and git-repository-namespace aren't defined", func() {
 			It("returns an error", func() {
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &builder.ArtifactBuilder{
+					Config: builder.Config{
 						RootDir: rootDir,
 					},
 				}
@@ -224,8 +235,8 @@ var _ = Describe("Builder", func() {
 						Path: "https://not.empty",
 					},
 				}
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &builder.ArtifactBuilder{
+					Config: builder.Config{
 						RootDir:                rootDir,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						GitRepositoryName:      gitRepositoryName,
@@ -246,8 +257,8 @@ var _ = Describe("Builder", func() {
 						Path: "https://not.empty",
 					},
 				}
-				builder := &kustomize.Builder{
-					Config: kustomize.Config{
+				builder := &builder.ArtifactBuilder{
+					Config: builder.Config{
 						RootDir:                rootDir,
 						GitRepositoryNamespace: gitRepositoryNamespace,
 						GitRepositoryName:      gitRepositoryName,
@@ -255,6 +266,131 @@ var _ = Describe("Builder", func() {
 				}
 				_, err := builder.Build(a, pSub, pDef)
 				Expect(err).To(MatchError(ContainSubstring("validation failed for artifact test: expected exactly one, got both: chart, kustomize")))
+			})
+		})
+		When("depends on is defined for an artifact", func() {
+			It("creates a kustomize object with DependsOn set correctly", func() {
+				builder := &builder.ArtifactBuilder{
+					Config: builder.Config{
+						GitRepositoryName:      gitRepositoryName,
+						GitRepositoryNamespace: gitRepositoryNamespace,
+						RootDir:                rootDir,
+					},
+				}
+				partifact = profilesv1.Artifact{
+					Name: "kustomize",
+					Kustomize: &profilesv1.Kustomize{
+						Path: "nginx/deployment",
+					},
+					DependsOn: []profilesv1.DependsOn{
+						{
+							Name: "depends-on",
+						},
+					},
+				}
+				partifacts := []profilesv1.Artifact{{
+					Name: "depends-on",
+					Kustomize: &profilesv1.Kustomize{
+						Path: "nginx/deployment",
+					},
+				}, partifact}
+				pDef = profilesv1.ProfileDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: profileName1,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Profile",
+						APIVersion: "packages.weave.works/profilesv1",
+					},
+					Spec: profilesv1.ProfileDefinitionSpec{
+						ProfileDescription: profilesv1.ProfileDescription{
+							Description: "foo",
+						},
+						Artifacts: partifacts,
+					},
+				}
+				artifacts, err := builder.Build(partifact, pSub, pDef)
+				Expect(err).NotTo(HaveOccurred())
+				kustomization := &kustomizev1.Kustomization{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Kustomization",
+						APIVersion: "kustomize.toolkit.fluxcd.io/v1beta1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-profile-weaveworks-nginx-kustomize",
+						Namespace: "default",
+					},
+					Spec: kustomizev1.KustomizationSpec{
+						Path: "root-dir/artifacts/kustomize/nginx/deployment",
+						SourceRef: kustomizev1.CrossNamespaceSourceReference{
+							Kind:      "GitRepository",
+							Namespace: gitRepositoryNamespace,
+							Name:      gitRepositoryName,
+						},
+						Interval:        metav1.Duration{Duration: 300000000000},
+						Prune:           true,
+						TargetNamespace: "default",
+						DependsOn: []dependency.CrossNamespaceDependencyReference{
+							{
+								Namespace: "default",
+								Name:      "test-profile-weaveworks-nginx-depends-on",
+							},
+						},
+					},
+				}
+				expected := artifact.Artifact{
+					Objects:      []artifact.Object{{Object: kustomization, Name: "kustomize-flux"}},
+					Name:         "kustomize",
+					RepoURL:      "https://github.com/weaveworks/profiles-examples",
+					PathsToCopy:  []string{"nginx/deployment"},
+					SparseFolder: "weaveworks-nginx",
+					Branch:       "weaveworks-nginx/v0.0.1",
+					Kustomize: artifact.Kustomize{
+						ObjectWrapper: &types.Kustomization{
+							Resources: []string{"kustomize-flux.yaml"},
+						},
+					},
+				}
+				Expect(artifacts).To(ConsistOf(expected))
+			})
+		})
+		When("depends on is defined for an artifact but the artifact is not in the list", func() {
+			It("returns a sensible error", func() {
+				builder := &builder.ArtifactBuilder{
+					Config: builder.Config{
+						GitRepositoryName:      gitRepositoryName,
+						GitRepositoryNamespace: gitRepositoryNamespace,
+						RootDir:                rootDir,
+					},
+				}
+				partifact = profilesv1.Artifact{
+					Name: "kustomize",
+					Kustomize: &profilesv1.Kustomize{
+						Path: "nginx/deployment",
+					},
+					DependsOn: []profilesv1.DependsOn{
+						{
+							Name: "depends-on",
+						},
+					},
+				}
+				pDef = profilesv1.ProfileDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: profileName1,
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Profile",
+						APIVersion: "packages.weave.works/profilesv1",
+					},
+					Spec: profilesv1.ProfileDefinitionSpec{
+						ProfileDescription: profilesv1.ProfileDescription{
+							Description: "foo",
+						},
+						Artifacts: []profilesv1.Artifact{partifact},
+					},
+				}
+				_, err := builder.Build(partifact, pSub, pDef)
+				Expect(err).To(MatchError("kustomize's depending artifact depends-on not found in the list of artifacts"))
 			})
 		})
 	})

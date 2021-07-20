@@ -1,7 +1,6 @@
 package profile
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -29,32 +28,30 @@ func MakeArtifacts(pam *ProfilesArtifactsMaker, installation profilesv1.ProfileI
 	}
 	var artifacts []artifact.Artifact
 
-	for _, artifact := range definition.Spec.Artifacts {
+	for _, a := range definition.Spec.Artifacts {
 		if pam.nestedName != "" {
-			artifact.Name = filepath.Join(pam.nestedName, artifact.Name)
+			a.Name = filepath.Join(pam.nestedName, a.Name)
 		}
-
-		var builder Builder
-		if artifact.Profile != nil {
+		if a.Profile != nil {
 			profileRepoName := profileRepo(installation)
 			if containsKey(pam.profileRepos, profileRepoName) {
-				return nil, fmt.Errorf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", artifact.Profile.Source.URL, artifact.Profile.Source.Branch)
+				return nil, fmt.Errorf("recursive artifact detected: profile %s on branch %s contains an artifact that points recursively back at itself", a.Profile.Source.URL, a.Profile.Source.Branch)
 			}
 			pam.profileRepos = append(pam.profileRepos, profileRepoName)
 			nestedProfile := installation.DeepCopyObject().(*profilesv1.ProfileInstallation)
-			nestedProfile.Spec.Source.URL = artifact.Profile.Source.URL
-			nestedProfile.Spec.Source.Branch = artifact.Profile.Source.Branch
-			nestedProfile.Spec.Source.Tag = artifact.Profile.Source.Tag
-			nestedProfile.Spec.Source.Path = artifact.Profile.Source.Path
-			if artifact.Profile.Source.Tag != "" {
+			nestedProfile.Spec.Source.URL = a.Profile.Source.URL
+			nestedProfile.Spec.Source.Branch = a.Profile.Source.Branch
+			nestedProfile.Spec.Source.Tag = a.Profile.Source.Tag
+			nestedProfile.Spec.Source.Path = a.Profile.Source.Path
+			if a.Profile.Source.Tag != "" {
 				path := "."
-				splitTag := strings.Split(artifact.Profile.Source.Tag, "/")
+				splitTag := strings.Split(a.Profile.Source.Tag, "/")
 				if len(splitTag) > 1 {
 					path = splitTag[0]
 				}
 				nestedProfile.Spec.Source.Path = path
 			}
-			pam.nestedName = artifact.Name
+			pam.nestedName = a.Name
 			nestedArtifacts, err := MakeArtifacts(pam, *nestedProfile)
 			if err != nil {
 				return nil, err
@@ -63,14 +60,8 @@ func MakeArtifacts(pam *ProfilesArtifactsMaker, installation profilesv1.ProfileI
 			pam.nestedName = ""
 			pam.profileRepos = nil
 			continue
-		} else if artifact.Kustomize != nil {
-			builder = pam.Builders[KUSTOMIZE]
-		} else if artifact.Chart != nil {
-			builder = pam.Builders[CHART]
-		} else {
-			return nil, errors.New("no artifact set")
 		}
-		arts, err := builder.Build(artifact, installation, definition)
+		arts, err := pam.Builder.Build(a, installation, definition)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build artifact: %w", err)
 		}

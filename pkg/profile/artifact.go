@@ -13,11 +13,11 @@ import (
 	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/runtime"
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"sigs.k8s.io/kustomize/api/types"
 
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/profile/artifact"
-	"github.com/weaveworks/pctl/pkg/profile/chart"
-	"github.com/weaveworks/pctl/pkg/profile/kustomize"
+	"github.com/weaveworks/pctl/pkg/profile/builder"
 )
 
 // ArtifactsMaker can create a list of artifacts.
@@ -39,7 +39,7 @@ type MakerConfig struct {
 type ProfilesArtifactsMaker struct {
 	MakerConfig
 
-	Builders     map[int]Builder
+	Builder      builder.Builder
 	nestedName   string
 	profileRepos []string
 	cloneCache   map[string]string
@@ -47,26 +47,16 @@ type ProfilesArtifactsMaker struct {
 
 // NewProfilesArtifactsMaker creates a new profiles artifacts maker.
 func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
-	builders := map[int]Builder{
-		KUSTOMIZE: &kustomize.Builder{
-			Config: kustomize.Config{
-				GitRepositoryName:      cfg.GitRepoName,
-				GitRepositoryNamespace: cfg.GitRepoNamespace,
-				RootDir:                cfg.RootDir,
-			},
-		},
-		CHART: &chart.Builder{
-			Config: chart.Config{
-				GitRepositoryName:      cfg.GitRepoName,
-				GitRepositoryNamespace: cfg.GitRepoNamespace,
-				RootDir:                cfg.RootDir,
-			},
-		},
-	}
 	return &ProfilesArtifactsMaker{
 		MakerConfig: cfg,
-		Builders:    builders,
-		cloneCache:  make(map[string]string),
+		Builder: &builder.ArtifactBuilder{
+			Config: builder.Config{
+				GitRepositoryName:      cfg.GitRepoName,
+				GitRepositoryNamespace: cfg.GitRepoNamespace,
+				RootDir:                cfg.RootDir,
+			},
+		},
+		cloneCache: make(map[string]string),
 	}
 }
 
@@ -81,7 +71,7 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 	defer pa.cleanCloneCache()
 	for _, artifact := range artifacts {
 		artifactDir := filepath.Join(artifactsRootDir, artifact.Name)
-		if err := os.MkdirAll(artifactDir, 0755); err != nil {
+		if err := os.MkdirAll(artifactDir, 0755); err != nil && !os.IsExist(err) {
 			return fmt.Errorf("failed to create directory")
 		}
 		if artifact.RepoURL != "" {
@@ -90,24 +80,48 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 			}
 		}
 		for _, obj := range artifact.Objects {
-			filename := filepath.Join(artifactDir, fmt.Sprintf("%s.%s", obj.GetObjectKind().GroupVersionKind().Kind, "yaml"))
-			if err := pa.generateOutput(filename, obj); err != nil {
+			name := obj.GetObjectKind().GroupVersionKind().Kind
+			if obj.Name != "" {
+				name = obj.Name
+			}
+			filename := filepath.Join(artifactDir, fmt.Sprintf("%s.%s", name, "yaml"))
+			if obj.Path != "" {
+				subFolder := filepath.Join(artifactDir, obj.Path)
+				if err := os.MkdirAll(subFolder, 0755); err != nil && !os.IsExist(err) {
+					return fmt.Errorf("failed to create directory")
+				}
+				filename = filepath.Join(subFolder, fmt.Sprintf("%s.%s", name, "yaml"))
+			}
+			if err := pa.generateOutput(filename, obj.Object); err != nil {
 				return err
 			}
 		}
-		if artifact.Kustomize != nil {
-			data, err := yaml.Marshal(artifact.Kustomize)
-			if err != nil {
+		// if we have a local resource, write out the kustomization yaml limiting its visibility.
+		if artifact.Kustomize.LocalResourceLimiter != nil {
+			// This is helmRelease related so it must be inside the sub-folder for the helm release.
+			filename := filepath.Join(artifactDir, artifact.SubFolder, "kustomization.yaml")
+			if err := writeOutKustomizeResource(artifact.Kustomize.LocalResourceLimiter, filename); err != nil {
 				return err
 			}
-			filename := filepath.Join(artifactDir, "kustomization.yaml")
-			err = os.WriteFile(filename, data, 0644)
-			if err != nil {
-				return err
-			}
+		}
+		filename := filepath.Join(artifactDir, "kustomization.yaml")
+		if err := writeOutKustomizeResource(artifact.Kustomize.ObjectWrapper, filename); err != nil {
+			return err
 		}
 	}
 	return pa.generateOutput(filepath.Join(profileRootdir, "profile-installation.yaml"), &installation)
+}
+
+// writeOutKustomizeResource writes out kustomization resource data if set to a specific file.
+func writeOutKustomizeResource(kustomize *types.Kustomization, filename string) error {
+	data, err := yaml.Marshal(kustomize)
+	if err != nil {
+		return fmt.Errorf("failed to marshal kustomize resource: %w", err)
+	}
+	if err = os.WriteFile(filename, data, 0644); err != nil {
+		return fmt.Errorf("failed to write file %s: %w", filename, err)
+	}
+	return nil
 }
 
 // getRepositoryLocalArtifacts clones all repository local artifacts so they can be copied over to the flux repository.
@@ -139,7 +153,11 @@ func (pa *ProfilesArtifactsMaker) getRepositoryLocalArtifacts(a artifact.Artifac
 			path = filepath.Dir(path)
 		}
 		fullPath := filepath.Join(tmp, a.SparseFolder, path)
-		if err := copy.Copy(fullPath, filepath.Join(artifactDir, path)); err != nil {
+		dest := filepath.Join(artifactDir, path)
+		if a.SubFolder != "" {
+			dest = filepath.Join(artifactDir, a.SubFolder, path)
+		}
+		if err := copy.Copy(fullPath, dest); err != nil {
 			return fmt.Errorf("failed to move folder: %w", err)
 		}
 	}
