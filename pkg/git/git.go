@@ -1,10 +1,10 @@
 package git
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/weaveworks/pctl/pkg/runner"
 )
@@ -21,9 +21,7 @@ type Git interface {
 	// Commit changes.
 	Commit() error
 	// CreateBranch create a branch if it's needed.
-	CreateBranch() error
-	// CreateRepository bootstraps a plain repository at a given location.
-	CreateRepository() error
+	CreateBranch(string) error
 	// IsRepository returns whether a location is a git repository or not.
 	IsRepository() error
 	// HasChanges returns whether a location has uncommitted changes or not.
@@ -32,6 +30,17 @@ type Git interface {
 	Push() error
 	// Clone will take a repo location and clone it into a given folder.
 	Clone(repo, branch, location string) error
+	// Init will create a git repository
+	Init() error
+	// Merge will merge the branch into the currently checked out branch
+	// return true when merge succeeds but conflicts occur
+	Merge(branch string) (bool, error)
+	// Checkout the target branch
+	Checkout(branch string) error
+	// GetDirectory returns the git directory
+	GetDirectory() string
+	// RemoveAll files from git repository
+	RemoveAll() error
 }
 
 // CLIGitConfig defines configuration options for CLIGit.
@@ -40,6 +49,7 @@ type CLIGitConfig struct {
 	Branch    string
 	Remote    string
 	Base      string
+	Quiet     bool
 }
 
 // CLIGit is a new command line based Git.
@@ -59,6 +69,27 @@ func NewCLIGit(cfg CLIGitConfig, r runner.Runner) *CLIGit {
 // Make sure CLIGit implements all the required methods.
 var _ Git = &CLIGit{}
 
+func (g *CLIGit) RemoveAll() error {
+	if err := g.Add(); err != nil {
+		return err
+	}
+
+	args := []string{
+		"--git-dir", filepath.Join(g.Directory, ".git"),
+		"--work-tree", g.Directory,
+		"rm",
+		"-rf",
+		".",
+	}
+	if err := g.runGitCmd(args...); err != nil {
+		return fmt.Errorf("failed to run rm: %w\n", err)
+	}
+	return nil
+}
+func (g *CLIGit) GetDirectory() string {
+	return g.Directory
+}
+
 // Clone will take a repo location and clone it into a given folder.
 func (g *CLIGit) Clone(repo, branch, location string) error {
 	args := []string{
@@ -71,7 +102,7 @@ func (g *CLIGit) Clone(repo, branch, location string) error {
 		location,
 	}
 	if err := g.runGitCmd(args...); err != nil {
-		return fmt.Errorf("failed to run clone: %w", err)
+		return fmt.Errorf("failed to run clone: %w\n", err)
 	}
 	return nil
 }
@@ -99,27 +130,22 @@ func (g *CLIGit) Commit() error {
 }
 
 // CreateBranch creates a branch if it differs from the base.
-func (g *CLIGit) CreateBranch() error {
-	if g.Base == g.Branch {
+func (g *CLIGit) CreateBranch(branch string) error {
+	if branch == g.Base {
 		return nil
 	}
-	fmt.Println("creating new branch")
+	g.printf("creating new branch\n")
 	args := []string{
 		"--git-dir", filepath.Join(g.Directory, ".git"),
 		"--work-tree", g.Directory,
 		"checkout",
 		"-b",
-		g.Branch,
+		branch,
 	}
 	if err := g.runGitCmd(args...); err != nil {
-		return fmt.Errorf("failed to create new branch %s: %w", g.Branch, err)
+		return fmt.Errorf("failed to create new branch %s: %w", branch, err)
 	}
 	return nil
-}
-
-// CreateRepository bootstraps a plain repository at a given location.
-func (g *CLIGit) CreateRepository() error {
-	return errors.New("implement me")
 }
 
 // IsRepository returns whether a location is a git repository or not.
@@ -150,7 +176,7 @@ func (g *CLIGit) HasChanges() (bool, error) {
 
 // Push will push to a remote.
 func (g *CLIGit) Push() error {
-	fmt.Println("pushing to remote")
+	g.printf("pushing to remote\n")
 	args := []string{
 		"--git-dir", filepath.Join(g.Directory, ".git"),
 		"--work-tree", g.Directory,
@@ -166,7 +192,7 @@ func (g *CLIGit) Push() error {
 
 // Add will add any changes to the generated file.
 func (g *CLIGit) Add() error {
-	fmt.Println("adding unstaged changes")
+	g.printf("adding unstaged changes\n")
 	args := []string{
 		"--git-dir", filepath.Join(g.Directory, ".git"),
 		"--work-tree", g.Directory,
@@ -184,7 +210,62 @@ func (g *CLIGit) Add() error {
 func (g *CLIGit) runGitCmd(args ...string) error {
 	out, err := g.Runner.Run(gitCmd, args...)
 	if err != nil {
-		fmt.Printf("failed to run git with output: %s\n", string(out))
+		g.printf("failed to run git with output: %s\n", string(out))
 	}
 	return err
+}
+
+// Init will initalise the git repository
+func (g *CLIGit) Init() error {
+	args := []string{
+		"init",
+		g.Directory,
+		"-b",
+		"main",
+	}
+	if err := g.runGitCmd(args...); err != nil {
+		return fmt.Errorf("failed to init: %w", err)
+	}
+	return nil
+}
+
+// Merge will merge the branch into the currently checked out branch.
+// returns (true, nil) when merge conflict occurs.
+func (g *CLIGit) Merge(branch string) (bool, error) {
+	args := []string{
+		"--git-dir", filepath.Join(g.Directory, ".git"),
+		"--work-tree", g.Directory,
+		"merge",
+		branch,
+	}
+
+	out, err := g.Runner.Run("git", args...)
+	if err != nil {
+		if strings.Contains(string(out), "Merge conflict") {
+			return true, nil
+		}
+		return false, fmt.Errorf("failed to run merge: %w", err)
+	}
+	return false, nil
+}
+
+// Checkout the target branch
+func (g *CLIGit) Checkout(branch string) error {
+	args := []string{
+		"--git-dir", filepath.Join(g.Directory, ".git"),
+		"--work-tree", g.Directory,
+		"checkout",
+		branch,
+	}
+
+	if err := g.runGitCmd(args...); err != nil {
+		return fmt.Errorf("failed to checkout branch %s: %w", branch, err)
+	}
+	return nil
+}
+
+func (g *CLIGit) printf(format string, a ...interface{}) {
+	if !g.Quiet {
+		fmt.Printf(format, a...)
+	}
 }

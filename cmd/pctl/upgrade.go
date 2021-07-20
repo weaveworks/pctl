@@ -1,0 +1,92 @@
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+
+	"github.com/urfave/cli/v2"
+	"github.com/weaveworks/pctl/pkg/catalog"
+	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/pctl/pkg/runner"
+	upgr "github.com/weaveworks/pctl/pkg/upgrade"
+	"github.com/weaveworks/pctl/pkg/upgrade/repo"
+)
+
+func upgradeCmd() *cli.Command {
+	return &cli.Command{
+		Name:      "upgrade",
+		Usage:     "upgrade profile installation",
+		UsageText: "To upgrade an installation: pctl upgrade pctl-profile-installation-path/ v0.1.1 ",
+		Flags: append(createPRFlags, &cli.StringFlag{
+			Name:  "git-repository",
+			Value: "",
+			Usage: "The namespace and name of the GitRepository object governing the flux repo.",
+		}),
+		Action: func(c *cli.Context) error {
+			if err := upgrade(c); err != nil {
+				return err
+			}
+			if c.Bool("create-pr") {
+				if err := createPullRequest(c); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	}
+}
+
+func upgrade(c *cli.Context) error {
+	if c.Args().Len() != 2 {
+		return fmt.Errorf("please provid the path to the profile and version to upgrade to, e.g. pctl upgrade my-profile/ v0.1.1")
+	}
+
+	profilePath := c.Args().Slice()[0]
+	profileVersion := c.Args().Slice()[1]
+	catalogClient, err := getCatalogClient(c)
+	if err != nil {
+		return fmt.Errorf("failed to create catalog client: %w", err)
+	}
+
+	tmpDir, err := ioutil.TempDir("", "profile-upgrade")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			fmt.Printf("warning: failed to cleanup temp directory %q: %v", tmpDir, err)
+		}
+	}()
+
+	var (
+		gitRepoNamespace string
+		gitRepoName      string
+	)
+
+	gitRepository := c.String("git-repository")
+	if gitRepository != "" {
+		split := strings.Split(gitRepository, "/")
+		if len(split) != 2 {
+			return fmt.Errorf("git-repository must in format <namespace>/<name>; was: %s", gitRepository)
+		}
+		gitRepoNamespace = split[0]
+		gitRepoName = split[1]
+	}
+
+	cfg := upgr.UpgradeConfig{
+		ProfileDir:     profilePath,
+		Version:        profileVersion,
+		CatalogClient:  catalogClient,
+		CatalogManager: &catalog.Manager{},
+		RepoManager: repo.NewManager(git.NewCLIGit(git.CLIGitConfig{
+			Directory: tmpDir,
+			Quiet:     true,
+		}, &runner.CLIRunner{})),
+		GitRepoName:      gitRepoName,
+		GitRepoNamespace: gitRepoNamespace,
+		WorkingDir:       tmpDir,
+	}
+	return upgr.Upgrade(cfg)
+}

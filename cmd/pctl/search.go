@@ -33,13 +33,18 @@ func searchCmd() *cli.Command {
 		},
 		Action: func(c *cli.Context) error {
 			var profiles []profilesv1.ProfileCatalogEntry
+			manager := &catalog.Manager{}
 			if c.Bool("all") {
+				if c.Args().Len() > 0 {
+					_ = cli.ShowCommandHelp(c, "search")
+					return fmt.Errorf("argument must not be provided")
+				}
 				catalogClient, err := getCatalogClient(c)
 				if err != nil {
 					_ = cli.ShowCommandHelp(c, "search")
 					return err
 				}
-				profiles, err = catalog.Search(catalogClient, "")
+				profiles, err = manager.Search(catalogClient, "")
 				if err != nil {
 					return err
 				}
@@ -49,7 +54,7 @@ func searchCmd() *cli.Command {
 					_ = cli.ShowCommandHelp(c, "search")
 					return err
 				}
-				profiles, err = catalog.Search(catalogClient, searchName)
+				profiles, err = manager.Search(catalogClient, searchName)
 				if err != nil {
 					return err
 				}

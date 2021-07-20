@@ -11,7 +11,7 @@ import (
 
 // Search queries the catalog at catalogURL for profiles matching the provided searchName.
 // If no searchName is provided it returns all profiles
-func Search(catalogClient CatalogClient, searchName string) ([]profilesv1.ProfileCatalogEntry, error) {
+func (m *Manager) Search(catalogClient CatalogClient, searchName string) ([]profilesv1.ProfileCatalogEntry, error) {
 	var data []byte
 	var statusCode int
 	var err error

@@ -15,6 +15,7 @@ import (
 var _ = Describe("GetAvailableUpdates", func() {
 	var (
 		fakeCatalogClient *fakes.FakeCatalogClient
+		manager           catalog.Manager
 	)
 
 	BeforeEach(func() {
@@ -67,7 +68,7 @@ var _ = Describe("GetAvailableUpdates", func() {
 	When("catalog client fails to make the request", func() {
 		It("returns an error", func() {
 			fakeCatalogClient.DoRequestReturns(nil, 502, fmt.Errorf("foo"))
-			_, err := catalog.Search(fakeCatalogClient, "dontexist")
+			_, err := manager.Search(fakeCatalogClient, "dontexist")
 			Expect(err).To(MatchError("failed to fetch catalog: foo"))
 		})
 	})
@@ -77,7 +78,7 @@ var _ = Describe("GetAvailableUpdates", func() {
 			httpBody := []byte(`[]`)
 			fakeCatalogClient.DoRequestReturns(httpBody, 500, nil)
 
-			_, err := catalog.Search(fakeCatalogClient, "dontexist")
+			_, err := manager.Search(fakeCatalogClient, "dontexist")
 			Expect(err).To(MatchError("failed to fetch profile from catalog, status code 500"))
 			path, query := fakeCatalogClient.DoRequestArgsForCall(0)
 			Expect(path).To(Equal("/profiles"))
@@ -92,7 +93,7 @@ var _ = Describe("GetAvailableUpdates", func() {
 			httpBody := []byte(`!20342 totally n:ot json "`)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
-			_, err := catalog.Search(fakeCatalogClient, "dontexist")
+			_, err := manager.Search(fakeCatalogClient, "dontexist")
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(ContainSubstring("failed to parse catalog")))
 		})

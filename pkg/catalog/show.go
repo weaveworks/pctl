@@ -12,7 +12,7 @@ import (
 )
 
 // Show queries the catalog at catalogURL for a profile matching the provided profileName
-func Show(catalogClient CatalogClient, catalogName, profileName, profileVersion string) (profilesv1.ProfileCatalogEntry, error) {
+func (m *Manager) Show(catalogClient CatalogClient, catalogName, profileName, profileVersion string) (profilesv1.ProfileCatalogEntry, error) {
 	u, err := url.Parse("/profiles")
 	if err != nil {
 		return profilesv1.ProfileCatalogEntry{}, err
