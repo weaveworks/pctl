@@ -15,13 +15,42 @@ import (
 	"github.com/weaveworks/pctl/pkg/runner"
 )
 
+var createPRFlags = []cli.Flag{
+	&cli.BoolFlag{
+		Name:  "create-pr",
+		Value: false,
+		Usage: "If given, upgrade will create a PR for the modifications it outputs.",
+	},
+	&cli.StringFlag{
+		Name:        "pr-remote",
+		Value:       "origin",
+		DefaultText: "origin",
+		Usage:       "The remote to push the branch to.",
+	},
+	&cli.StringFlag{
+		Name:        "pr-base",
+		Value:       "main",
+		DefaultText: "main",
+		Usage:       "The base branch to open a PR against.",
+	},
+	&cli.StringFlag{
+		Name:  "pr-branch",
+		Usage: "The branch to create the PR from. Generated if not set.",
+	},
+	&cli.StringFlag{
+		Name:  "pr-repo",
+		Value: "",
+		Usage: "The repository to open a pr against. Format is: org/repo-name.",
+	},
+}
+
 func installCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "install",
 		Usage: "generate a profile installation",
 		UsageText: "To install from a profile catalog entry: pctl --catalog-url <URL> install --name pctl-profile --namespace default --profile-branch main --config-map configmap-name <CATALOG>/<PROFILE>[/<VERSION>]\n   " +
 			"To install directly from a profile repository: pctl install --name pctl-profile --namespace default --profile-branch development --profile-url https://github.com/weaveworks/profiles-examples --profile-path bitnami-nginx",
-		Flags: []cli.Flag{
+		Flags: append(createPRFlags,
 			&cli.StringFlag{
 				Name:        "name",
 				DefaultText: "pctl-profile",
@@ -45,37 +74,11 @@ func installCmd() *cli.Command {
 				Value: "",
 				Usage: "The name of the ConfigMap which contains values for this profile.",
 			},
-			&cli.BoolFlag{
-				Name:  "create-pr",
-				Value: false,
-				Usage: "If given, install will create a PR for the modifications it outputs.",
-			},
-			&cli.StringFlag{
-				Name:        "pr-remote",
-				Value:       "origin",
-				DefaultText: "origin",
-				Usage:       "The remote to push the branch to.",
-			},
-			&cli.StringFlag{
-				Name:        "pr-base",
-				Value:       "main",
-				DefaultText: "main",
-				Usage:       "The base branch to open a PR against.",
-			},
-			&cli.StringFlag{
-				Name:  "pr-branch",
-				Usage: "The branch to create the PR from. Generated if not set.",
-			},
 			&cli.StringFlag{
 				Name:        "out",
 				DefaultText: "current",
 				Value:       ".",
 				Usage:       "Optional location to create the profile installation folder in. This should be relative to the current working directory.",
-			},
-			&cli.StringFlag{
-				Name:  "pr-repo",
-				Value: "",
-				Usage: "The repository to open a pr against. Format is: org/repo-name.",
 			},
 			&cli.StringFlag{
 				Name:  "profile-url",
@@ -92,8 +95,7 @@ func installCmd() *cli.Command {
 				Name:  "git-repository",
 				Value: "",
 				Usage: "The namespace and name of the GitRepository object governing the flux repo.",
-			},
-		},
+			}),
 		Action: func(c *cli.Context) error {
 			// Run installation main
 			if err := install(c); err != nil {
@@ -200,7 +202,8 @@ func install(c *cli.Context) error {
 			Version:       version,
 		},
 	}
-	err = catalog.Install(cfg)
+	manager := &catalog.Manager{}
+	err = manager.Install(cfg)
 	if err == nil {
 		fmt.Println("installation completed successfully")
 	}
@@ -236,5 +239,5 @@ func createPullRequest(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create scm client: %w", err)
 	}
-	return catalog.CreatePullRequest(scmClient, g)
+	return catalog.CreatePullRequest(scmClient, g, branch)
 }

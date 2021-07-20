@@ -29,6 +29,7 @@ require (
 	sigs.k8s.io/cli-utils v0.25.1-0.20210608181808-f3974341173a
 	sigs.k8s.io/controller-runtime v0.9.2
 	sigs.k8s.io/kustomize/api v0.8.11
+	sigs.k8s.io/yaml v1.2.0
 )
 
 // pin kustomize to v4.1.3

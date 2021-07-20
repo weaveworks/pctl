@@ -15,6 +15,7 @@ import (
 var _ = Describe("Show", func() {
 	var (
 		fakeCatalogClient *fakes.FakeCatalogClient
+		manager           catalog.Manager
 	)
 
 	BeforeEach(func() {
@@ -36,7 +37,7 @@ var _ = Describe("Show", func() {
 		  `)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
-			resp, err := catalog.Show(fakeCatalogClient, "foo", "weaveworks-nginx", "")
+			resp, err := manager.Show(fakeCatalogClient, "foo", "weaveworks-nginx", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeCatalogClient.DoRequestCallCount()).To(Equal(1))
 			path, query := fakeCatalogClient.DoRequestArgsForCall(0)
@@ -73,7 +74,7 @@ var _ = Describe("Show", func() {
 		  `)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
-			resp, err := catalog.Show(fakeCatalogClient, "foo", "weaveworks-nginx", "v0.1.0")
+			resp, err := manager.Show(fakeCatalogClient, "foo", "weaveworks-nginx", "v0.1.0")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeCatalogClient.DoRequestCallCount()).To(Equal(1))
 			path, query := fakeCatalogClient.DoRequestArgsForCall(0)
@@ -98,7 +99,7 @@ var _ = Describe("Show", func() {
 	When("http request fails", func() {
 		It("returns an error", func() {
 			fakeCatalogClient.DoRequestReturns(nil, 0, errors.New("epic fail"))
-			_, err := catalog.Show(fakeCatalogClient, "foo", "weaveworks-nginx", "")
+			_, err := manager.Show(fakeCatalogClient, "foo", "weaveworks-nginx", "")
 			Expect(err).To(MatchError(ContainSubstring("failed to do request: epic fail")))
 		})
 	})
@@ -107,7 +108,7 @@ var _ = Describe("Show", func() {
 		It("returns an error", func() {
 			fakeCatalogClient.DoRequestReturns(nil, 404, nil)
 
-			_, err := catalog.Show(fakeCatalogClient, "foo", "dontexist", "")
+			_, err := manager.Show(fakeCatalogClient, "foo", "dontexist", "")
 			Expect(err).To(MatchError("unable to find profile \"dontexist\" in catalog \"foo\" (with version if provided: )"))
 			path, query := fakeCatalogClient.DoRequestArgsForCall(0)
 			Expect(path).To(Equal("/profiles/foo/dontexist"))
@@ -119,7 +120,7 @@ var _ = Describe("Show", func() {
 		It("returns an error", func() {
 			fakeCatalogClient.DoRequestReturns(nil, 500, nil)
 
-			_, err := catalog.Show(fakeCatalogClient, "foo", "dontexist", "")
+			_, err := manager.Show(fakeCatalogClient, "foo", "dontexist", "")
 			Expect(err).To(MatchError("failed to fetch profile from catalog, status code 500"))
 			path, query := fakeCatalogClient.DoRequestArgsForCall(0)
 			Expect(path).To(Equal("/profiles/foo/dontexist"))
@@ -132,7 +133,7 @@ var _ = Describe("Show", func() {
 			httpBody := []byte(`!20342 totally n:ot json "`)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 
-			_, err := catalog.Show(fakeCatalogClient, "foo", "weaveworks-nginx", "")
+			_, err := manager.Show(fakeCatalogClient, "foo", "weaveworks-nginx", "")
 			Expect(err).To(MatchError(ContainSubstring("failed to parse profile")))
 		})
 	})

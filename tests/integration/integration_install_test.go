@@ -587,6 +587,9 @@ status: {}
 		})
 
 		It("generates valid artifacts to the local directory", func() {
+			if skipTestsThatRequireCredentials {
+				Skip("Skipping this tests as it requires credentials")
+			}
 			By("creating the flux repository")
 			gitRepoName := "pctl-repo"
 			branch := "flux_repo_test_" + uuid.NewString()[:6]
@@ -635,7 +638,7 @@ status: {}
 				"profile-installation.yaml",
 			))
 
-			filename := filepath.Join(temp, "nginx", "profile-installation.yaml")
+			filename := filepath.Join(temp, "profile-installation.yaml")
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
@@ -711,103 +714,6 @@ status: {}
 			}, 2*time.Minute, 5*time.Second).Should(Equal(v1.PodPhase("Running")))
 
 			Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("docker.io/bitnami/nginx:1.19.10-debian-10-r35"))
-		})
-		When("there is a depending chart", func() {
-			It("generates artifacts which contain a depends on flag", func() {
-				cmd := exec.Command(
-					binaryPath,
-					"install",
-					"--git-repository",
-					namespace+"/git-repo-name",
-					"--namespace",
-					namespace,
-					"--profile-url",
-					profileExamplesURL,
-					"--profile-path",
-					"dependson-nginx",
-				)
-				cmd.Dir = temp
-				output, err := cmd.CombinedOutput()
-				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
-				Expect(string(output)).To(ContainSubstring(fmt.Sprintf("generating profile installation from source: repository %s, path: dependson-nginx and branch main", profileExamplesURL)))
-
-				var files []string
-				profilesDir := filepath.Join(temp)
-				err = filepath.Walk(profilesDir, func(path string, info os.FileInfo, err error) error {
-					if !info.IsDir() {
-						files = append(files, strings.TrimPrefix(path, profilesDir+"/"))
-					}
-					return nil
-				})
-				Expect(err).NotTo(HaveOccurred())
-				By("creating the artifacts")
-				Expect(files).To(ContainElements(
-					"artifacts/dependon/nginx/deployment/deployment.yaml",
-					"artifacts/dependon/kustomization.yaml",
-					"artifacts/dependon/kustomize-flux.yaml",
-					"artifacts/dependon2/helm-chart/ConfigMap.yaml",
-					"artifacts/dependon2/helm-chart/HelmRelease.yaml",
-					"artifacts/dependon2/helm-chart/HelmRepository.yaml",
-					"artifacts/dependon2/kustomization.yaml",
-					"artifacts/dependon2/kustomize-flux.yaml",
-					"artifacts/nginx-chart/helm-chart/ConfigMap.yaml",
-					"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
-					"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
-					"artifacts/nginx-chart/kustomization.yaml",
-					"artifacts/nginx-chart/kustomize-flux.yaml",
-					"profile-installation.yaml",
-				))
-
-				filename := filepath.Join(temp, "profile-installation.yaml")
-				content, err := ioutil.ReadFile(filename)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
-kind: ProfileInstallation
-metadata:
-  creationTimestamp: null
-  name: pctl-profile
-  namespace: %s
-spec:
-  source:
-    branch: main
-    path: dependson-nginx
-    url: %s
-status: {}
-`, namespace, profileExamplesURL)))
-
-				By("verify that dependsOn has been added to the kustomize resource")
-				filename = filepath.Join(temp, "artifacts", "nginx-chart", "kustomize-flux.yaml")
-				content, err = ioutil.ReadFile(filename)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: kustomize.toolkit.fluxcd.io/v1beta1
-kind: Kustomization
-metadata:
-  creationTimestamp: null
-  name: pctl-profile-dependson-nginx-nginx-chart
-  namespace: %s
-spec:
-  dependsOn:
-  - name: pctl-profile-dependson-nginx-dependon
-    namespace: %s
-  - name: pctl-profile-dependson-nginx-dependon2
-    namespace: %s
-  healthChecks:
-  - apiVersion: helm.toolkit.fluxcd.io/v2beta1
-    kind: HelmRelease
-    name: pctl-profile-dependson-nginx-nginx-chart
-    namespace: %s
-  interval: 5m0s
-  path: artifacts/nginx-chart/helm-chart
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: git-repo-name
-    namespace: %s
-  targetNamespace: %s
-status: {}
-`, namespace, namespace, namespace, namespace, namespace, namespace)))
-				// This is a bit more involved since kubectl apply -r no longer works. Depends on only works with Flux.
-			})
 		})
 	})
 })

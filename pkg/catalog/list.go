@@ -16,7 +16,7 @@ type ProfileData struct {
 }
 
 // List will fetch all installed profiles on the cluster and check if there are updated versions available.
-func List(k8sClient runtimeclient.Client, catalogClient CatalogClient) ([]ProfileData, error) {
+func (m *Manager) List(k8sClient runtimeclient.Client, catalogClient CatalogClient) ([]ProfileData, error) {
 	profiles, err := installation.NewManager(k8sClient).List()
 	if err != nil {
 		return nil, err

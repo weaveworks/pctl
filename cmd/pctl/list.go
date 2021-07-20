@@ -32,7 +32,8 @@ func listCmd() *cli.Command {
 			if err != nil {
 				return err
 			}
-			data, err := catalog.List(cl, catalogClient)
+			manager := &catalog.Manager{}
+			data, err := manager.List(cl, catalogClient)
 			if err != nil {
 				return err
 			}

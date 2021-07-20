@@ -31,6 +31,7 @@ func main() {
 			listCmd(),
 			prepareCmd(),
 			docgenCmd(),
+			upgradeCmd(),
 		},
 	}
 
@@ -90,9 +91,6 @@ func parseArgs(c *cli.Context) (string, *client.Client, error) {
 }
 
 func getCatalogClient(c *cli.Context) (*client.Client, error) {
-	if c.Args().Len() > 0 {
-		return nil, fmt.Errorf("argument must not be provided")
-	}
 	return buildCatalogClient(c)
 }
 
