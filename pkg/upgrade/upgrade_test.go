@@ -151,7 +151,7 @@ var _ = Describe("Upgrade", func() {
 
 		It("returns a list of files that contain conflicts", func() {
 			err := upgrade.Upgrade(cfg)
-			expectedErrMsg := fmt.Sprintf("upgrade succeeded but merge conflict have occured, please resolve manually. Files containing conflicts:\n- %s", filepath.Join(profileDir, "foo/bar"))
+			expectedErrMsg := fmt.Sprintf("upgrade succeeded but merge conflicts have occurred, please resolve manually. Files containing conflicts:\n- %s", filepath.Join(profileDir, "foo/bar"))
 			Expect(err).To(MatchError(expectedErrMsg))
 		})
 	})
