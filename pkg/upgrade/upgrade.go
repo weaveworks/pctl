@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	copypkg "github.com/otiai10/copy"
 	"github.com/weaveworks/pctl/pkg/catalog"
@@ -126,14 +127,9 @@ func Upgrade(cfg UpgradeConfig) error {
 		return fmt.Errorf("failed to create branch with update changes: %w", err)
 	}
 
-	mergeConflict, err := cfg.RepoManager.MergeBranches("update-changes", "user-changes")
+	mergeConflictFiles, err := cfg.RepoManager.MergeBranches("update-changes", "user-changes")
 	if err != nil {
 		return fmt.Errorf("failed to merge updates with user changes: %w", err)
-	}
-	if mergeConflict {
-		fmt.Println("upgrade succeeded but merge conflict have occured, please resolve manually")
-	} else {
-		fmt.Println("upgrade completed successfully")
 	}
 
 	if err := os.RemoveAll(cfg.ProfileDir); err != nil {
@@ -148,5 +144,15 @@ func Upgrade(cfg UpgradeConfig) error {
 		return fmt.Errorf("failed to copy upgraded installation into installation directory: %w", err)
 	}
 
+	if len(mergeConflictFiles) > 0 {
+		msg := "upgrade succeeded but merge conflicts have occurred, please resolve manually. Files containing conflicts:\n"
+		for _, mergeConflictFile := range mergeConflictFiles {
+			msg = fmt.Sprintf("%s- %s\n", msg, filepath.Join(cfg.ProfileDir, mergeConflictFile))
+		}
+		msg = strings.TrimSuffix(msg, "\n")
+		return fmt.Errorf(msg)
+	}
+
+	fmt.Println("upgrade completed successfully")
 	return nil
 }

@@ -14,7 +14,7 @@ const main = "main"
 type RepoManager interface {
 	CreateRepoWithContent(contentWriter func() error) error
 	CreateBranchWithContentFromMain(branch string, contentWriter func() error) error
-	MergeBranches(branch1, branch2 string) (bool, error)
+	MergeBranches(branch1, branch2 string) ([]string, error)
 }
 
 // Manager for managing a git repository
@@ -82,14 +82,14 @@ func (m *Manager) CreateBranchWithContentFromMain(branch string, writeContent fu
 }
 
 // MergeBranches merges two branches
-func (m *Manager) MergeBranches(branch1, branch2 string) (bool, error) {
+func (m *Manager) MergeBranches(branch1, branch2 string) ([]string, error) {
 	if err := m.gitClient.Checkout(branch1); err != nil {
-		return false, fmt.Errorf("failed to checkout main: %w", err)
+		return nil, fmt.Errorf("failed to checkout main: %w", err)
 	}
 
 	mergeConflict, err := m.gitClient.Merge(branch2)
 	if err != nil {
-		return false, fmt.Errorf("failed to merge branch %s into branch %s: %w", branch1, branch2, err)
+		return nil, fmt.Errorf("failed to merge branch %s into branch %s: %w", branch1, branch2, err)
 	}
 
 	return mergeConflict, nil

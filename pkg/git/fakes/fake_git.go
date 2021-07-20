@@ -105,17 +105,17 @@ type FakeGit struct {
 	isRepositoryReturnsOnCall map[int]struct {
 		result1 error
 	}
-	MergeStub        func(string) (bool, error)
+	MergeStub        func(string) ([]string, error)
 	mergeMutex       sync.RWMutex
 	mergeArgsForCall []struct {
 		arg1 string
 	}
 	mergeReturns struct {
-		result1 bool
+		result1 []string
 		result2 error
 	}
 	mergeReturnsOnCall map[int]struct {
-		result1 bool
+		result1 []string
 		result2 error
 	}
 	PushStub        func() error
@@ -648,7 +648,7 @@ func (fake *FakeGit) IsRepositoryReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeGit) Merge(arg1 string) (bool, error) {
+func (fake *FakeGit) Merge(arg1 string) ([]string, error) {
 	fake.mergeMutex.Lock()
 	ret, specificReturn := fake.mergeReturnsOnCall[len(fake.mergeArgsForCall)]
 	fake.mergeArgsForCall = append(fake.mergeArgsForCall, struct {
@@ -673,7 +673,7 @@ func (fake *FakeGit) MergeCallCount() int {
 	return len(fake.mergeArgsForCall)
 }
 
-func (fake *FakeGit) MergeCalls(stub func(string) (bool, error)) {
+func (fake *FakeGit) MergeCalls(stub func(string) ([]string, error)) {
 	fake.mergeMutex.Lock()
 	defer fake.mergeMutex.Unlock()
 	fake.MergeStub = stub
@@ -686,28 +686,28 @@ func (fake *FakeGit) MergeArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FakeGit) MergeReturns(result1 bool, result2 error) {
+func (fake *FakeGit) MergeReturns(result1 []string, result2 error) {
 	fake.mergeMutex.Lock()
 	defer fake.mergeMutex.Unlock()
 	fake.MergeStub = nil
 	fake.mergeReturns = struct {
-		result1 bool
+		result1 []string
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeGit) MergeReturnsOnCall(i int, result1 bool, result2 error) {
+func (fake *FakeGit) MergeReturnsOnCall(i int, result1 []string, result2 error) {
 	fake.mergeMutex.Lock()
 	defer fake.mergeMutex.Unlock()
 	fake.MergeStub = nil
 	if fake.mergeReturnsOnCall == nil {
 		fake.mergeReturnsOnCall = make(map[int]struct {
-			result1 bool
+			result1 []string
 			result2 error
 		})
 	}
 	fake.mergeReturnsOnCall[i] = struct {
-		result1 bool
+		result1 []string
 		result2 error
 	}{result1, result2}
 }

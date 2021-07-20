@@ -33,8 +33,8 @@ type Git interface {
 	// Init will create a git repository
 	Init() error
 	// Merge will merge the branch into the currently checked out branch
-	// return true when merge succeeds but conflicts occur
-	Merge(branch string) (bool, error)
+	// return a list of files when a conflict occurs
+	Merge(branch string) ([]string, error)
 	// Checkout the target branch
 	Checkout(branch string) error
 	// GetDirectory returns the git directory
@@ -231,7 +231,7 @@ func (g *CLIGit) Init() error {
 
 // Merge will merge the branch into the currently checked out branch.
 // returns (true, nil) when merge conflict occurs.
-func (g *CLIGit) Merge(branch string) (bool, error) {
+func (g *CLIGit) Merge(branch string) ([]string, error) {
 	args := []string{
 		"--git-dir", filepath.Join(g.Directory, ".git"),
 		"--work-tree", g.Directory,
@@ -242,11 +242,24 @@ func (g *CLIGit) Merge(branch string) (bool, error) {
 	out, err := g.Runner.Run("git", args...)
 	if err != nil {
 		if strings.Contains(string(out), "Merge conflict") {
-			return true, nil
+			args := []string{
+				"--git-dir", filepath.Join(g.Directory, ".git"),
+				"--work-tree", g.Directory,
+				"diff",
+				"--name-only",
+				"--diff-filter=U",
+			}
+
+			outBytes, err := g.Runner.Run("git", args...)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list files with merge conflicts: %w", err)
+			}
+			out := strings.TrimSuffix(string(outBytes), "\n")
+			return strings.Split(string(out), "\n"), nil
 		}
-		return false, fmt.Errorf("failed to run merge: %w", err)
+		return nil, fmt.Errorf("failed to run merge: %w", err)
 	}
-	return false, nil
+	return nil, nil
 }
 
 // Checkout the target branch

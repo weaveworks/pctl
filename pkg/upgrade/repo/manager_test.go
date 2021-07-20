@@ -165,11 +165,14 @@ var _ = Describe("Manager", func() {
 		})
 	})
 
-	Describe("CreateRepoWithContents", func() {
-		It("creates a repository with the contents", func() {
+	Describe("MergeBranch", func() {
+		BeforeEach(func() {
+			fakeGitClient.MergeReturns([]string{"foo/bar"}, nil)
+		})
+		It("merges the branch and returns any conflicts", func() {
 			mergeConflict, err := manager.MergeBranches("foo", "bar")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(mergeConflict).To(BeFalse())
+			Expect(mergeConflict).To(ConsistOf("foo/bar"))
 			Expect(fakeGitClient.CheckoutCallCount()).To(Equal(1))
 			Expect(fakeGitClient.CheckoutArgsForCall(0)).To(Equal("foo"))
 			Expect(fakeGitClient.MergeCallCount()).To(Equal(1))
@@ -189,7 +192,7 @@ var _ = Describe("Manager", func() {
 
 		When("Merge fails", func() {
 			BeforeEach(func() {
-				fakeGitClient.MergeReturns(false, fmt.Errorf("failed"))
+				fakeGitClient.MergeReturns(nil, fmt.Errorf("failed"))
 			})
 
 			It("returns an error", func() {
