@@ -17,25 +17,34 @@ type Clients struct {
 	ArtifactsMaker profile.ArtifactsMaker
 }
 
-// ProfileConfig contains configuration for profiles ie. catalogName, profilesName, etc.
+// Profile contains configuration for profiles ie. catalogName, profilesName, etc.
+type Profile struct {
+	GitRepoConfig
+	ProfileConfig
+}
+
 type ProfileConfig struct {
-	GitRepoName      string
-	GitRepoNamespace string
-	CatalogName      string
-	ConfigMap        string
-	Namespace        string
-	ProfileName      string
-	SubName          string
-	Version          string
-	ProfileBranch    string
-	URL              string
-	Path             string
+	ProfileName   string
+	CatalogName   string
+	ConfigMap     string
+	Namespace     string
+	SubName       string
+	Version       string
+	ProfileBranch string
+	URL           string
+	Path          string
+}
+
+// GitConfig contains the configuration of the git repository used to deploy the profile
+type GitRepoConfig struct {
+	Name      string
+	Namespace string
 }
 
 // InstallConfig defines parameters for the installation call.
 type InstallConfig struct {
 	Clients
-	ProfileConfig
+	Profile
 }
 
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile installation
@@ -52,7 +61,7 @@ func (m *Manager) Install(cfg InstallConfig) error {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cfg.SubName,
-			Namespace: cfg.Namespace,
+			Namespace: cfg.ProfileConfig.Namespace,
 		},
 		Spec: pSpec,
 	}
@@ -65,10 +74,10 @@ func (m *Manager) Install(cfg InstallConfig) error {
 // createInstallationSpec creates a spec based on configured properties.
 func (m *Manager) createInstallationSpec(cfg InstallConfig) (profilesv1.ProfileInstallationSpec, error) {
 	var gitRepo *profilesv1.GitRepository
-	if cfg.GitRepoName != "" {
+	if cfg.GitRepoConfig.Name != "" {
 		gitRepo = &profilesv1.GitRepository{
-			Name:      cfg.GitRepoName,
-			Namespace: cfg.GitRepoNamespace,
+			Name:      cfg.GitRepoConfig.Name,
+			Namespace: cfg.GitRepoConfig.Namespace,
 		}
 	}
 	if cfg.URL != "" {

@@ -110,13 +110,17 @@ var _ = Describe("Upgrade", func() {
 		createRepoWriteContentsFunc := fakeRepoManager.CreateRepoWithContentArgsForCall(0)
 		Expect(createRepoWriteContentsFunc()).To(Succeed())
 		Expect(fakeCatalogManager.InstallCallCount()).To(Equal(1))
-		Expect(fakeCatalogManager.InstallArgsForCall(0).ProfileConfig).To(Equal(catalog.ProfileConfig{
-			CatalogName:      "my-catalog",
-			ProfileName:      "my-profile",
-			Version:          "v0.1.0",
-			ConfigMap:        "my-config-map",
-			GitRepoName:      "foo",
-			GitRepoNamespace: "bar",
+		Expect(fakeCatalogManager.InstallArgsForCall(0).Profile).To(Equal(catalog.Profile{
+			ProfileConfig: catalog.ProfileConfig{
+				CatalogName: "my-catalog",
+				ProfileName: "my-profile",
+				Version:     "v0.1.0",
+				ConfigMap:   "my-config-map",
+			},
+			GitRepoConfig: catalog.GitRepoConfig{
+				Name:      "foo",
+				Namespace: "bar",
+			},
 		}))
 
 		By("copying the user changes into the user-changes branch")
@@ -133,13 +137,17 @@ var _ = Describe("Upgrade", func() {
 		Expect(branch).To(Equal("update-changes"))
 		Expect(writeContentFunc()).To(Succeed())
 		Expect(fakeCatalogManager.InstallCallCount()).To(Equal(2))
-		Expect(fakeCatalogManager.InstallArgsForCall(1).ProfileConfig).To(Equal(catalog.ProfileConfig{
-			CatalogName:      "my-catalog",
-			ProfileName:      "my-profile",
-			Version:          "v0.1.1",
-			ConfigMap:        "my-config-map",
-			GitRepoName:      "foo",
-			GitRepoNamespace: "bar",
+		Expect(fakeCatalogManager.InstallArgsForCall(1).Profile).To(Equal(catalog.Profile{
+			ProfileConfig: catalog.ProfileConfig{
+				CatalogName: "my-catalog",
+				ProfileName: "my-profile",
+				Version:     "v0.1.1",
+				ConfigMap:   "my-config-map",
+			},
+			GitRepoConfig: catalog.GitRepoConfig{
+				Name:      "foo",
+				Namespace: "bar",
+			},
 		}))
 
 		By("merging the two and copying the outcome into the profile installation")

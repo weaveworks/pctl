@@ -73,13 +73,17 @@ func Upgrade(cfg UpgradeConfig) error {
 					GitRepoName:      gitRepoName,
 				}),
 			},
-			ProfileConfig: catalog.ProfileConfig{
-				ProfileName:      profileName,
-				CatalogName:      catalogName,
-				Version:          currentVersion,
-				ConfigMap:        profileInstallation.Spec.ConfigMap,
-				GitRepoNamespace: gitRepoNamespace,
-				GitRepoName:      gitRepoName,
+			Profile: catalog.Profile{
+				ProfileConfig: catalog.ProfileConfig{
+					ProfileName: profileName,
+					CatalogName: catalogName,
+					Version:     currentVersion,
+					ConfigMap:   profileInstallation.Spec.ConfigMap,
+				},
+				GitRepoConfig: catalog.GitRepoConfig{
+					Namespace: gitRepoNamespace,
+					Name:      gitRepoName,
+				},
 			},
 		}
 		if err := cfg.CatalogManager.Install(installConfig); err != nil {
@@ -114,13 +118,17 @@ func Upgrade(cfg UpgradeConfig) error {
 					GitRepoName:      gitRepoName,
 				}),
 			},
-			ProfileConfig: catalog.ProfileConfig{
-				ProfileName:      profileName,
-				CatalogName:      catalogName,
-				Version:          cfg.Version,
-				ConfigMap:        profileInstallation.Spec.ConfigMap,
-				GitRepoNamespace: gitRepoNamespace,
-				GitRepoName:      gitRepoName,
+			Profile: catalog.Profile{
+				ProfileConfig: catalog.ProfileConfig{
+					ProfileName: profileName,
+					CatalogName: catalogName,
+					Version:     cfg.Version,
+					ConfigMap:   profileInstallation.Spec.ConfigMap,
+				},
+				GitRepoConfig: catalog.GitRepoConfig{
+					Namespace: gitRepoNamespace,
+					Name:      gitRepoName,
+				},
 			},
 		}
 

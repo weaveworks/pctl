@@ -51,16 +51,20 @@ var _ = Describe("Install", func() {
 `)
 		fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 		cfg = catalog.InstallConfig{
-			ProfileConfig: catalog.ProfileConfig{
-				CatalogName:      "nginx",
-				Namespace:        "default",
-				ProfileBranch:    "main",
-				ProfileName:      "nginx-1",
-				SubName:          "mysub",
-				Version:          "v0.0.1",
-				ConfigMap:        "config-map",
-				GitRepoName:      "git-name",
-				GitRepoNamespace: "git-namespace",
+			Profile: catalog.Profile{
+				ProfileConfig: catalog.ProfileConfig{
+					CatalogName:   "nginx",
+					Namespace:     "default",
+					ProfileBranch: "main",
+					ProfileName:   "nginx-1",
+					SubName:       "mysub",
+					Version:       "v0.0.1",
+					ConfigMap:     "config-map",
+				},
+				GitRepoConfig: catalog.GitRepoConfig{
+					Name:      "git-name",
+					Namespace: "git-namespace",
+				},
 			},
 			Clients: catalog.Clients{
 				CatalogClient:  fakeCatalogClient,
@@ -114,16 +118,20 @@ var _ = Describe("Install", func() {
 		When("installing from a url", func() {
 			BeforeEach(func() {
 				cfg = catalog.InstallConfig{
-					ProfileConfig: catalog.ProfileConfig{
-						Namespace:        "default",
-						ProfileBranch:    "main",
-						Path:             "nginx-1",
-						URL:              "https://github.com/weaveworks/nginx-profile",
-						SubName:          "mysub",
-						Version:          "v0.0.1",
-						ConfigMap:        "config-map",
-						GitRepoName:      "git-name",
-						GitRepoNamespace: "git-namespace",
+					Profile: catalog.Profile{
+						ProfileConfig: catalog.ProfileConfig{
+							Namespace:     "default",
+							ProfileBranch: "main",
+							Path:          "nginx-1",
+							URL:           "https://github.com/weaveworks/nginx-profile",
+							SubName:       "mysub",
+							Version:       "v0.0.1",
+							ConfigMap:     "config-map",
+						},
+						GitRepoConfig: catalog.GitRepoConfig{
+							Name:      "git-name",
+							Namespace: "git-namespace",
+						},
 					},
 					Clients: catalog.Clients{
 						CatalogClient:  fakeCatalogClient,
@@ -177,14 +185,16 @@ var _ = Describe("Install", func() {
 						CatalogClient:  fakeCatalogClient,
 						ArtifactsMaker: fakeMakeArtifacts,
 					},
-					ProfileConfig: catalog.ProfileConfig{
-						CatalogName:   "nginx",
-						Namespace:     "default",
-						Path:          "path",
-						ProfileBranch: "not_domain_compatible",
-						ProfileName:   "nginx-1",
-						SubName:       "mysub",
-						URL:           "https://github.com/weaveworks/profiles-examples",
+					Profile: catalog.Profile{
+						ProfileConfig: catalog.ProfileConfig{
+							CatalogName:   "nginx",
+							Namespace:     "default",
+							Path:          "path",
+							ProfileBranch: "not_domain_compatible",
+							ProfileName:   "nginx-1",
+							SubName:       "mysub",
+							URL:           "https://github.com/weaveworks/profiles-examples",
+						},
 					},
 				}
 				err := manager.Install(cfg)
