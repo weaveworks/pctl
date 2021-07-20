@@ -329,9 +329,9 @@ var _ = Describe("git", func() {
 				Branch:    "main",
 				Remote:    "origin",
 			}, runner)
-			mergeConflict, err := g.Merge("user-changes")
+			mergeConflictFiles, err := g.Merge("user-changes")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(mergeConflict).To(BeFalse())
+			Expect(mergeConflictFiles).To(BeEmpty())
 			Expect(runner.RunCallCount()).To(Equal(1))
 			arg, args := runner.RunArgsForCall(0)
 			Expect(arg).To(Equal("git"))
@@ -347,9 +347,9 @@ var _ = Describe("git", func() {
 						Branch:    "main",
 						Remote:    "origin",
 					}, runner)
-					mergeConflict, err := g.Merge("user-changes")
+					mergeConflictFiles, err := g.Merge("user-changes")
 					Expect(err).To(MatchError("failed to run merge: merge failed"))
-					Expect(mergeConflict).To(BeFalse())
+					Expect(mergeConflictFiles).To(BeEmpty())
 					Expect(runner.RunCallCount()).To(Equal(1))
 					arg, args := runner.RunArgsForCall(0)
 					Expect(arg).To(Equal("git"))
@@ -358,20 +358,50 @@ var _ = Describe("git", func() {
 			})
 
 			When("its due to a conflict", func() {
-				It("returns conflict true and no error", func() {
-					runner.RunReturns([]byte("some text followed by: Merge conflict"), fmt.Errorf("merge failed"))
+				It("returns a list of files with conflicts and no error", func() {
+					runner.RunReturnsOnCall(0, []byte("some text followed by: Merge conflict"), fmt.Errorf("merge failed"))
+					runner.RunReturnsOnCall(1, []byte("foo/bar\nbar/baz\n"), nil)
 					g := git.NewCLIGit(git.CLIGitConfig{
 						Directory: "location",
 						Branch:    "main",
 						Remote:    "origin",
 					}, runner)
-					mergeConflict, err := g.Merge("user-changes")
+					mergeConflictFiles, err := g.Merge("user-changes")
 					Expect(err).NotTo(HaveOccurred())
-					Expect(mergeConflict).To(BeTrue())
-					Expect(runner.RunCallCount()).To(Equal(1))
+					Expect(mergeConflictFiles).To(ConsistOf(
+						"foo/bar",
+						"bar/baz",
+					))
+					Expect(runner.RunCallCount()).To(Equal(2))
 					arg, args := runner.RunArgsForCall(0)
 					Expect(arg).To(Equal("git"))
 					Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "merge", "user-changes"}))
+
+					arg, args = runner.RunArgsForCall(1)
+					Expect(arg).To(Equal("git"))
+					Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "diff", "--name-only", "--diff-filter=U"}))
+				})
+
+				When("listing the files with merge conflicts fails", func() {
+					It("returns an error", func() {
+						runner.RunReturnsOnCall(0, []byte("some text followed by: Merge conflict"), fmt.Errorf("merge failed"))
+						runner.RunReturnsOnCall(1, nil, fmt.Errorf("foo"))
+						g := git.NewCLIGit(git.CLIGitConfig{
+							Directory: "location",
+							Branch:    "main",
+							Remote:    "origin",
+						}, runner)
+						_, err := g.Merge("user-changes")
+						Expect(err).To(MatchError("failed to list files with merge conflicts: foo"))
+						Expect(runner.RunCallCount()).To(Equal(2))
+						arg, args := runner.RunArgsForCall(0)
+						Expect(arg).To(Equal("git"))
+						Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "merge", "user-changes"}))
+
+						arg, args = runner.RunArgsForCall(1)
+						Expect(arg).To(Equal("git"))
+						Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "diff", "--name-only", "--diff-filter=U"}))
+					})
 				})
 			})
 		})

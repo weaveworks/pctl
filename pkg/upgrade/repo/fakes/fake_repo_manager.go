@@ -31,18 +31,18 @@ type FakeRepoManager struct {
 	createRepoWithContentReturnsOnCall map[int]struct {
 		result1 error
 	}
-	MergeBranchesStub        func(string, string) (bool, error)
+	MergeBranchesStub        func(string, string) ([]string, error)
 	mergeBranchesMutex       sync.RWMutex
 	mergeBranchesArgsForCall []struct {
 		arg1 string
 		arg2 string
 	}
 	mergeBranchesReturns struct {
-		result1 bool
+		result1 []string
 		result2 error
 	}
 	mergeBranchesReturnsOnCall map[int]struct {
-		result1 bool
+		result1 []string
 		result2 error
 	}
 	invocations      map[string][][]interface{}
@@ -172,7 +172,7 @@ func (fake *FakeRepoManager) CreateRepoWithContentReturnsOnCall(i int, result1 e
 	}{result1}
 }
 
-func (fake *FakeRepoManager) MergeBranches(arg1 string, arg2 string) (bool, error) {
+func (fake *FakeRepoManager) MergeBranches(arg1 string, arg2 string) ([]string, error) {
 	fake.mergeBranchesMutex.Lock()
 	ret, specificReturn := fake.mergeBranchesReturnsOnCall[len(fake.mergeBranchesArgsForCall)]
 	fake.mergeBranchesArgsForCall = append(fake.mergeBranchesArgsForCall, struct {
@@ -198,7 +198,7 @@ func (fake *FakeRepoManager) MergeBranchesCallCount() int {
 	return len(fake.mergeBranchesArgsForCall)
 }
 
-func (fake *FakeRepoManager) MergeBranchesCalls(stub func(string, string) (bool, error)) {
+func (fake *FakeRepoManager) MergeBranchesCalls(stub func(string, string) ([]string, error)) {
 	fake.mergeBranchesMutex.Lock()
 	defer fake.mergeBranchesMutex.Unlock()
 	fake.MergeBranchesStub = stub
@@ -211,28 +211,28 @@ func (fake *FakeRepoManager) MergeBranchesArgsForCall(i int) (string, string) {
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeRepoManager) MergeBranchesReturns(result1 bool, result2 error) {
+func (fake *FakeRepoManager) MergeBranchesReturns(result1 []string, result2 error) {
 	fake.mergeBranchesMutex.Lock()
 	defer fake.mergeBranchesMutex.Unlock()
 	fake.MergeBranchesStub = nil
 	fake.mergeBranchesReturns = struct {
-		result1 bool
+		result1 []string
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeRepoManager) MergeBranchesReturnsOnCall(i int, result1 bool, result2 error) {
+func (fake *FakeRepoManager) MergeBranchesReturnsOnCall(i int, result1 []string, result2 error) {
 	fake.mergeBranchesMutex.Lock()
 	defer fake.mergeBranchesMutex.Unlock()
 	fake.MergeBranchesStub = nil
 	if fake.mergeBranchesReturnsOnCall == nil {
 		fake.mergeBranchesReturnsOnCall = make(map[int]struct {
-			result1 bool
+			result1 []string
 			result2 error
 		})
 	}
 	fake.mergeBranchesReturnsOnCall[i] = struct {
-		result1 bool
+		result1 []string
 		result2 error
 	}{result1, result2}
 }

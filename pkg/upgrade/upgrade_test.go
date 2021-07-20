@@ -144,6 +144,18 @@ var _ = Describe("Upgrade", func() {
 		Expect(copierArgs[0]).To(ConsistOf(workingDir, profileDir))
 	})
 
+	When("merge conflicts occur", func() {
+		BeforeEach(func() {
+			fakeRepoManager.MergeBranchesReturns([]string{"foo/bar"}, nil)
+		})
+
+		It("returns a list of files that contain conflicts", func() {
+			err := upgrade.Upgrade(cfg)
+			expectedErrMsg := fmt.Sprintf("upgrade succeeded but merge conflict have occured, please resolve manually. Files containing conflicts:\n- %s", filepath.Join(profileDir, "foo/bar"))
+			Expect(err).To(MatchError(expectedErrMsg))
+		})
+	})
+
 	When("the profile installation doesn't exist", func() {
 		BeforeEach(func() {
 			cfg.ProfileDir = "/tmp/totally/dont/exist"
@@ -221,7 +233,7 @@ var _ = Describe("Upgrade", func() {
 
 	When("merging branches fails", func() {
 		BeforeEach(func() {
-			fakeRepoManager.MergeBranchesReturns(false, fmt.Errorf("bab"))
+			fakeRepoManager.MergeBranchesReturns(nil, fmt.Errorf("bab"))
 		})
 
 		It("returns an error", func() {
