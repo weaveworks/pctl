@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -181,7 +182,7 @@ func install(c *cli.Context) error {
 	artifactsMaker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
 		ProfileName:      profileName,
 		GitClient:        g,
-		RootDir:          dir,
+		RootDir:          filepath.Join(dir, profileName),
 		GitRepoNamespace: gitRepoNamespace,
 		GitRepoName:      gitRepoName,
 	})

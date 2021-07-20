@@ -66,8 +66,7 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 	if err != nil {
 		return fmt.Errorf("failed to build artifact: %w", err)
 	}
-	profileRootdir := filepath.Join(pa.RootDir, pa.ProfileName)
-	artifactsRootDir := filepath.Join(profileRootdir, "artifacts")
+	artifactsRootDir := filepath.Join(pa.RootDir, "artifacts")
 	defer pa.cleanCloneCache()
 	for _, artifact := range artifacts {
 		artifactDir := filepath.Join(artifactsRootDir, artifact.Name)
@@ -109,7 +108,7 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 			return err
 		}
 	}
-	return pa.generateOutput(filepath.Join(profileRootdir, "profile-installation.yaml"), &installation)
+	return pa.generateOutput(filepath.Join(pa.RootDir, "profile-installation.yaml"), &installation)
 }
 
 // writeOutKustomizeResource writes out kustomization resource data if set to a specific file.

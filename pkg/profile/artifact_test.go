@@ -379,7 +379,7 @@ status: {}
 				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
 					ProfileName:      "generate-test",
 					GitClient:        fakeGitClient,
-					RootDir:          tempDir,
+					RootDir:          filepath.Join(tempDir, "generate-test"),
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
 				})

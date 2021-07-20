@@ -638,7 +638,7 @@ status: {}
 				"profile-installation.yaml",
 			))
 
-			filename := filepath.Join(temp, "profile-installation.yaml")
+			filename := filepath.Join(profilesDir, "profile-installation.yaml")
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
@@ -711,7 +711,7 @@ status: {}
 					return v1.PodPhase("no pods found")
 				}
 				return podList.Items[0].Status.Phase
-			}, 2*time.Minute, 5*time.Second).Should(Equal(v1.PodPhase("Running")))
+			}, 10*time.Minute, 5*time.Second).Should(Equal(v1.PodPhase("Running")))
 
 			Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("docker.io/bitnami/nginx:1.19.10-debian-10-r35"))
 		})
