@@ -100,7 +100,7 @@ func addCmd() *cli.Command {
 			}),
 		Action: func(c *cli.Context) error {
 			// Run installation main
-			if err := installProfile(c); err != nil {
+			if err := addProfile(c); err != nil {
 				return err
 			}
 			// Create a pull request if desired
@@ -114,8 +114,8 @@ func addCmd() *cli.Command {
 	}
 }
 
-// install runs the install part of the `install` command.
-func installProfile(c *cli.Context) error {
+// add runs the add part of the `add` command.
+func addProfile(c *cli.Context) error {
 	var (
 		err           error
 		catalogClient *client.Client
