@@ -444,7 +444,7 @@ status: {}
 				path := "branch-nginx"
 				cmd := exec.Command(
 					binaryPath,
-					"install",
+					"add",
 					"--git-repository",
 					namespace+"/git-repo-name",
 					"--namespace",
@@ -491,7 +491,7 @@ status: {}
 				Expect(err).NotTo(HaveOccurred())
 				branch := "prtest_" + suffix
 				cmd = exec.Command(binaryPath,
-					"install",
+					"add",
 					"--git-repository", namespace+"/git-repo-name",
 					"--create-pr",
 					"--pr-branch",
@@ -510,7 +510,8 @@ status: {}
 				suffix, err := randString(3)
 				Expect(err).NotTo(HaveOccurred())
 				branch := "prtest_" + suffix
-				cmd := exec.Command(binaryPath,
+				cmd := exec.Command(
+					binaryPath,
 					"add",
 					"--git-repository", namespace+"/git-repo-name",
 					"--create-pr",
@@ -535,7 +536,8 @@ status: {}
 				suffix, err := randString(3)
 				Expect(err).NotTo(HaveOccurred())
 				branch := "prtest_" + suffix
-				cmd := exec.Command(binaryPath,
+				cmd := exec.Command(
+					binaryPath,
 					"add",
 					"--git-repository", namespace+"/git-repo-name",
 					"--create-pr",
