@@ -10,9 +10,9 @@ and run: mdtoc -inplace README.md
 - [Usage](#usage)
   - [Search](#search)
   - [Show](#show)
-  - [Install](#install)
-    - [Install via Catalog](#install-via-catalog)
-    - [Install via URL](#install-via-url)
+  - [Add](#add)
+    - [Add via Catalog](#add-via-catalog)
+    - [Add via URL](#add-via-url)
     - [Configuring a profile](#configuring-a-profile)
     - [Cloning repository resources](#cloning-repository-resources)
     - [Architecture](#architecture)
@@ -68,26 +68,26 @@ Maintainer      weaveworks (https://github.com/weaveworks/profiles)
 Prerequisites   Kubernetes 1.18+
 ```
 
-### Install
+### Add
 
-#### Install via Catalog
+#### Add via Catalog
 
 pctl can be used to install a profile, example:
 
 ```
-pctl install nginx-catalog/weaveworks-nginx/v0.1.0
+pctl add nginx-catalog/weaveworks-nginx/v0.1.0
 ```
 
-you can omit the version and pctl will install the latest by default, example:
+you can omit the version and pctl will add the latest by default, example:
 ```
-pctl install nginx-catalog/weaveworks-nginx
+pctl add nginx-catalog/weaveworks-nginx
 ```
 
 
 This results in a profile installation folder being created (defaults to the name of the profile). Example:
 
 ```
-$ pctl install --git-repository flux-system/flux-system nginx-catalog/weaveworks-nginx/v0.1.0
+$ pctl add --git-repository flux-system/flux-system nginx-catalog/weaveworks-nginx/v0.1.0
 generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0
 installation completed successfully
 
@@ -132,9 +132,9 @@ This can be applied to the cluster by committing it to your flux repository. Sin
 applying it by hand isn't supported at the moment. If you are using a flux repository, the `--create-pr` flags provides
 an automated way for creating a PR against it. See `pctl install --help` for more details.
 
-#### Install via URL
+#### Add via URL
 
-It's also possible to install from a specific location given a URL, branch and a path. For example, consider the following
+It's also possible to add from a specific location given a URL, branch and a path. For example, consider the following
 `profiles` folder structure:
 
 ```
@@ -157,11 +157,11 @@ tree
     └── profile.yaml
 ```
 
-Given a development branch called `devel` to install the `bitnami-nginx` profile from this repository, call `install`
+Given a development branch called `devel` to add the `bitnami-nginx` profile from this repository, call `add`
 with the following parameters:
 
 ```
-pctl install --name pctl-profile \
+pctl add --name pctl-profile \
              --namespace default \
              --profile-branch devel \
              --profile-url https://github.com/<usr>/<repo> \
@@ -174,7 +174,7 @@ It can be any form of url as long as `git clone` understands it.
 
 
 #### Configuring a profile
-You can configure a set of helm values for the charts inside your profile. For example if you install the `weaveworks-nginx` profile
+You can configure a set of helm values for the charts inside your profile. For example if you add the `weaveworks-nginx` profile
 that contains two artifacts that are charts, `nginx-chart` and `nginx-server` you would configure them by creating a config map as
 follows:
 
@@ -193,7 +193,7 @@ data:
 ```
 
 The key in the `data` is the name of the chart artifact, and the value is the values.yaml file you want to have provided. You can
-pass this config map into pctl install by providing the `--config-map my-profile-values` in during `pctl install`
+pass this config map into pctl add by providing the `--config-map my-profile-values` in during `pctl add`
 
 #### Cloning repository resources
 
@@ -203,12 +203,12 @@ resources to work, the user has to provide the location of the GitRepository obj
 creating a flux repository. This resource is usually under the namespace `flux-system` named `flux-system` and of type
 GitRepository.
 
-Provide the following information when running install: `--git-repository <namespace>/<name>`.
+Provide the following information when running add: `--git-repository <namespace>/<name>`.
 
 This looks as follows if installing via a URL:
 
 ```
-pctl install --name pctl-profile \
+pctl add --name pctl-profile \
              --namespace [default] \
              --profile-branch [main] \
              --profile-url git@github.com:org/private-profile-repo \
@@ -221,7 +221,7 @@ This will result in all the private resources which aren't available from the ou
 into the flux repository.
 
 #### Architecture
-The below diagram illustrates how pctl install works:
+The below diagram illustrates how pctl add works:
 
 <!--
 To update this diagram go to https://miro.com/app/board/o9J_lI2seIg=/
