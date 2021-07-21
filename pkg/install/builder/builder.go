@@ -19,7 +19,7 @@ import (
 	"knative.dev/pkg/apis"
 	"sigs.k8s.io/kustomize/api/types"
 
-	"github.com/weaveworks/pctl/pkg/profile/artifact"
+	"github.com/weaveworks/pctl/pkg/install/artifact"
 )
 
 const (

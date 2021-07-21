@@ -11,7 +11,7 @@ import (
 	copypkg "github.com/otiai10/copy"
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/profile"
+	"github.com/weaveworks/pctl/pkg/install"
 	"github.com/weaveworks/pctl/pkg/runner"
 	"github.com/weaveworks/pctl/pkg/upgrade/repo"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
@@ -65,7 +65,7 @@ func Upgrade(cfg UpgradeConfig) error {
 		installConfig := catalog.InstallConfig{
 			Clients: catalog.Clients{
 				CatalogClient: cfg.CatalogClient,
-				ArtifactsMaker: profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				Installer: install.NewInstaller(install.Config{
 					ProfileName:      profileName,
 					GitClient:        git.NewCLIGit(git.CLIGitConfig{}, &runner.CLIRunner{}),
 					RootDir:          cfg.WorkingDir,
@@ -110,7 +110,7 @@ func Upgrade(cfg UpgradeConfig) error {
 		installConfig := catalog.InstallConfig{
 			Clients: catalog.Clients{
 				CatalogClient: cfg.CatalogClient,
-				ArtifactsMaker: profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				Installer: install.NewInstaller(install.Config{
 					ProfileName:      profileName,
 					GitClient:        git.NewCLIGit(git.CLIGitConfig{}, &runner.CLIRunner{}),
 					RootDir:          cfg.WorkingDir,

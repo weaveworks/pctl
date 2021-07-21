@@ -1,4 +1,4 @@
-package profile_test
+package install_test
 
 import (
 	"errors"
@@ -13,7 +13,7 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
 	fakegit "github.com/weaveworks/pctl/pkg/git/fakes"
-	"github.com/weaveworks/pctl/pkg/profile"
+	"github.com/weaveworks/pctl/pkg/install"
 )
 
 var _ = Describe("Repo", func() {
@@ -47,13 +47,13 @@ spec:
 			Expect(err).NotTo(HaveOccurred())
 			return ioutil.WriteFile(filepath.Join(dir, path, "profile.yaml"), profileYaml, 0755)
 		}
-		maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+		installer := install.NewInstaller(install.Config{
 			GitClient:        fakeGitClient,
 			RootDir:          "root-dir",
 			GitRepoNamespace: "git-repo-namespace",
 			GitRepoName:      "git-repo-name",
 		})
-		definition, err := maker.GetProfileDefinition(repoURL, branch, path)
+		definition, err := installer.GetProfileDefinition(repoURL, branch, path)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(fakeGitClient.CloneCallCount()).To(Equal(1))
 		// dir is semi random
@@ -88,13 +88,13 @@ spec:
 	When("the clone request fails", func() {
 		It("returns an error", func() {
 			fakeGitClient.CloneReturns(errors.New("errored"))
-			maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+			installer := install.NewInstaller(install.Config{
 				GitClient:        fakeGitClient,
 				RootDir:          "root-dir",
 				GitRepoNamespace: "git-repo-namespace",
 				GitRepoName:      "git-repo-name",
 			})
-			_, err := maker.GetProfileDefinition(repoURL, branch, "path")
+			_, err := installer.GetProfileDefinition(repoURL, branch, "path")
 			Expect(err).To(MatchError("failed to clone the repo: errored"))
 			Expect(fakeGitClient.CloneCallCount()).To(Equal(1))
 			// dir is semi random
@@ -112,13 +112,13 @@ spec:
 				Expect(err).NotTo(HaveOccurred())
 				return ioutil.WriteFile(filepath.Join(dir, path, "profile.yaml"), profileYaml, 0755)
 			}
-			maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+			installer := install.NewInstaller(install.Config{
 				GitClient:        fakeGitClient,
 				RootDir:          "root-dir",
 				GitRepoNamespace: "git-repo-namespace",
 				GitRepoName:      "git-repo-name",
 			})
-			_, err := maker.GetProfileDefinition(repoURL, branch, "my-profile")
+			_, err := installer.GetProfileDefinition(repoURL, branch, "my-profile")
 			Expect(err).To(MatchError(ContainSubstring("failed to parse profile")))
 			url, cloneBranch, _ := fakeGitClient.CloneArgsForCall(0)
 			Expect(url).To(Equal(repoURL))
@@ -134,13 +134,13 @@ spec:
 				Expect(err).NotTo(HaveOccurred())
 				return ioutil.WriteFile(filepath.Join(dir, path, "profile.yaml"), profileYaml, 0755)
 			}
-			maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+			installer := install.NewInstaller(install.Config{
 				GitClient:        fakeGitClient,
 				RootDir:          "root-dir",
 				GitRepoNamespace: "git-repo-namespace",
 				GitRepoName:      "git-repo-name",
 			})
-			_, err := maker.GetProfileDefinition(repoURL, branch, "my-profile")
+			_, err := installer.GetProfileDefinition(repoURL, branch, "my-profile")
 			Expect(err).To(MatchError(ContainSubstring("failed to parse profile")))
 			url, cloneBranch, _ := fakeGitClient.CloneArgsForCall(0)
 			Expect(url).To(Equal(repoURL))
@@ -151,7 +151,7 @@ spec:
 		var (
 			profileYaml []byte
 			path        string
-			maker       *profile.ProfilesArtifactsMaker
+			installer   *install.Installer
 		)
 		BeforeEach(func() {
 			profileYaml = []byte(`
@@ -171,7 +171,7 @@ spec:
 				Expect(err).NotTo(HaveOccurred())
 				return ioutil.WriteFile(filepath.Join(dir, path, "profile.yaml"), profileYaml, 0755)
 			}
-			maker = profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+			installer = install.NewInstaller(install.Config{
 				GitClient:        fakeGitClient,
 				RootDir:          "root-dir",
 				GitRepoNamespace: "git-repo-namespace",
@@ -180,27 +180,27 @@ spec:
 		})
 		When("called multiple times with the same repo", func() {
 			It("it only clones it once", func() {
-				_, err := maker.GetProfileDefinition(repoURL, branch, "my-profile")
+				_, err := installer.GetProfileDefinition(repoURL, branch, "my-profile")
 				Expect(err).NotTo(HaveOccurred())
-				_, err = maker.GetProfileDefinition(repoURL, branch, "my-profile")
+				_, err = installer.GetProfileDefinition(repoURL, branch, "my-profile")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeGitClient.CloneCallCount()).To(Equal(1))
 			})
 		})
 		When("called multiple times with different url", func() {
 			It("it clones all", func() {
-				_, err := maker.GetProfileDefinition(repoURL, branch, "my-profile")
+				_, err := installer.GetProfileDefinition(repoURL, branch, "my-profile")
 				Expect(err).NotTo(HaveOccurred())
-				_, err = maker.GetProfileDefinition("https://github.com/different", branch, "my-profile")
+				_, err = installer.GetProfileDefinition("https://github.com/different", branch, "my-profile")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeGitClient.CloneCallCount()).To(Equal(2))
 			})
 		})
 		When("called multiple times with the same url but different branch", func() {
 			It("it clones all", func() {
-				_, err := maker.GetProfileDefinition(repoURL, branch, "my-profile")
+				_, err := installer.GetProfileDefinition(repoURL, branch, "my-profile")
 				Expect(err).NotTo(HaveOccurred())
-				_, err = maker.GetProfileDefinition(repoURL, "different", "my-profile")
+				_, err = installer.GetProfileDefinition(repoURL, "different", "my-profile")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeGitClient.CloneCallCount()).To(Equal(2))
 			})

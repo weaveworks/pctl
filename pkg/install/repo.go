@@ -1,4 +1,4 @@
-package profile
+package install
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 )
 
 // GetProfileDefinition returns a definition based on a url and a branch.
-func (pa *ProfilesArtifactsMaker) GetProfileDefinition(repoURL, branch, path string) (profilesv1.ProfileDefinition, error) {
+func (i *Installer) GetProfileDefinition(repoURL, branch, path string) (profilesv1.ProfileDefinition, error) {
 	// Add postfix so potential nested profiles don't clone into the same folder.
 	u, err := uuid.NewRandom()
 	if err != nil {
@@ -28,7 +28,7 @@ func (pa *ProfilesArtifactsMaker) GetProfileDefinition(repoURL, branch, path str
 	var (
 		tmp string
 	)
-	if v, ok := pa.cloneCache[cloneCacheKey(repoURL, branch)]; ok {
+	if v, ok := i.cloneCache[cloneCacheKey(repoURL, branch)]; ok {
 		tmp = v
 	} else {
 		px := u.String()[:6]
@@ -36,10 +36,10 @@ func (pa *ProfilesArtifactsMaker) GetProfileDefinition(repoURL, branch, path str
 		if err != nil {
 			return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to create temp folder for cloning repository: %w", err)
 		}
-		if err := pa.GitClient.Clone(repoURL, branch, tmp); err != nil {
+		if err := i.GitClient.Clone(repoURL, branch, tmp); err != nil {
 			return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to clone the repo: %w", err)
 		}
-		pa.cloneCache[cloneCacheKey(repoURL, branch)] = tmp
+		i.cloneCache[cloneCacheKey(repoURL, branch)] = tmp
 	}
 
 	content, err := ioutil.ReadFile(filepath.Join(tmp, path, "profile.yaml"))

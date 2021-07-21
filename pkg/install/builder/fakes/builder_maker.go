@@ -4,8 +4,8 @@ package fakes
 import (
 	"sync"
 
-	"github.com/weaveworks/pctl/pkg/profile/artifact"
-	"github.com/weaveworks/pctl/pkg/profile/builder"
+	"github.com/weaveworks/pctl/pkg/install/artifact"
+	"github.com/weaveworks/pctl/pkg/install/builder"
 	"github.com/weaveworks/profiles/api/v1alpha1"
 )
 

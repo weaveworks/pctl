@@ -12,7 +12,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
 	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/profile"
+	"github.com/weaveworks/pctl/pkg/install"
 	"github.com/weaveworks/pctl/pkg/runner"
 )
 
@@ -99,7 +99,7 @@ func installCmd() *cli.Command {
 			}),
 		Action: func(c *cli.Context) error {
 			// Run installation main
-			if err := install(c); err != nil {
+			if err := installProfile(c); err != nil {
 				return err
 			}
 			// Create a pull request if desired
@@ -114,7 +114,7 @@ func installCmd() *cli.Command {
 }
 
 // install runs the install part of the `install` command.
-func install(c *cli.Context) error {
+func installProfile(c *cli.Context) error {
 	var (
 		err           error
 		catalogClient *client.Client
@@ -179,7 +179,7 @@ func install(c *cli.Context) error {
 		gitRepoNamespace = split[0]
 		gitRepoName = split[1]
 	}
-	artifactsMaker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+	installer := install.NewInstaller(install.Config{
 		ProfileName:      profileName,
 		GitClient:        g,
 		RootDir:          filepath.Join(dir, profileName),
@@ -188,8 +188,8 @@ func install(c *cli.Context) error {
 	})
 	cfg := catalog.InstallConfig{
 		Clients: catalog.Clients{
-			CatalogClient:  catalogClient,
-			ArtifactsMaker: artifactsMaker,
+			CatalogClient: catalogClient,
+			Installer:     installer,
 		},
 		Profile: catalog.Profile{
 			ProfileConfig: catalog.ProfileConfig{
