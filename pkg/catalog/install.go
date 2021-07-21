@@ -17,12 +17,17 @@ type Clients struct {
 	ArtifactsMaker profile.ArtifactsMaker
 }
 
-// ProfileConfig contains configuration for profiles ie. catalogName, profilesName, etc.
+// Profile contains configuration for profiles ie. catalogName, profilesName, etc.
+type Profile struct {
+	GitRepoConfig
+	ProfileConfig
+}
+
 type ProfileConfig struct {
+	ProfileName   string
 	CatalogName   string
 	ConfigMap     string
 	Namespace     string
-	ProfileName   string
 	SubName       string
 	Version       string
 	ProfileBranch string
@@ -30,16 +35,22 @@ type ProfileConfig struct {
 	Path          string
 }
 
+// GitConfig contains the configuration of the git repository used to deploy the profile
+type GitRepoConfig struct {
+	Name      string
+	Namespace string
+}
+
 // InstallConfig defines parameters for the installation call.
 type InstallConfig struct {
 	Clients
-	ProfileConfig
+	Profile
 }
 
 // Install using the catalog at catalogURL and a profile matching the provided profileName generates a profile installation
 // and its artifacts
 func (m *Manager) Install(cfg InstallConfig) error {
-	pSpec, err := m.getProfileSpec(cfg)
+	pSpec, err := m.createInstallationSpec(cfg)
 	if err != nil {
 		return err
 	}
@@ -50,7 +61,7 @@ func (m *Manager) Install(cfg InstallConfig) error {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cfg.SubName,
-			Namespace: cfg.Namespace,
+			Namespace: cfg.ProfileConfig.Namespace,
 		},
 		Spec: pSpec,
 	}
@@ -60,8 +71,15 @@ func (m *Manager) Install(cfg InstallConfig) error {
 	return nil
 }
 
-// getProfileSpec generates a spec based on configured properties.
-func (m *Manager) getProfileSpec(cfg InstallConfig) (profilesv1.ProfileInstallationSpec, error) {
+// createInstallationSpec creates a spec based on configured properties.
+func (m *Manager) createInstallationSpec(cfg InstallConfig) (profilesv1.ProfileInstallationSpec, error) {
+	var gitRepo *profilesv1.GitRepository
+	if cfg.GitRepoConfig.Name != "" {
+		gitRepo = &profilesv1.GitRepository{
+			Name:      cfg.GitRepoConfig.Name,
+			Namespace: cfg.GitRepoConfig.Namespace,
+		}
+	}
 	if cfg.URL != "" {
 		return profilesv1.ProfileInstallationSpec{
 			Source: &profilesv1.Source{
@@ -69,7 +87,8 @@ func (m *Manager) getProfileSpec(cfg InstallConfig) (profilesv1.ProfileInstallat
 				Branch: cfg.ProfileBranch,
 				Path:   cfg.Path,
 			},
-			ConfigMap: cfg.ConfigMap,
+			ConfigMap:     cfg.ConfigMap,
+			GitRepository: gitRepo,
 		}, nil
 	}
 	p, err := m.Show(cfg.CatalogClient, cfg.CatalogName, cfg.ProfileName, cfg.Version)
@@ -95,7 +114,8 @@ func (m *Manager) getProfileSpec(cfg InstallConfig) (profilesv1.ProfileInstallat
 			Version: profilesv1.GetVersionFromTag(p.Tag),
 			Profile: p.Name,
 		},
-		ConfigMap: cfg.ConfigMap,
+		ConfigMap:     cfg.ConfigMap,
+		GitRepository: gitRepo,
 	}, nil
 }
 

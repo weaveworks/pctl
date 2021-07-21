@@ -191,16 +191,22 @@ func install(c *cli.Context) error {
 			CatalogClient:  catalogClient,
 			ArtifactsMaker: artifactsMaker,
 		},
-		ProfileConfig: catalog.ProfileConfig{
-			CatalogName:   catalogName,
-			ConfigMap:     configMap,
-			Namespace:     namespace,
-			Path:          path,
-			ProfileBranch: branch,
-			ProfileName:   profileName,
-			SubName:       subName,
-			URL:           url,
-			Version:       version,
+		Profile: catalog.Profile{
+			ProfileConfig: catalog.ProfileConfig{
+				CatalogName:   catalogName,
+				ConfigMap:     configMap,
+				Namespace:     namespace,
+				Path:          path,
+				ProfileBranch: branch,
+				ProfileName:   profileName,
+				SubName:       subName,
+				URL:           url,
+				Version:       version,
+			},
+			GitRepoConfig: catalog.GitRepoConfig{
+				Namespace: gitRepoNamespace,
+				Name:      gitRepoName,
+			},
 		},
 	}
 	manager := &catalog.Manager{}

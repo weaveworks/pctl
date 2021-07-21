@@ -119,12 +119,15 @@ spec:
     profile: weaveworks-nginx
     version: v0.1.0
   configMap: %s
+  gitRepository:
+    name: %s
+    namespace: %s
   source:
     path: weaveworks-nginx
     tag: weaveworks-nginx/v0.1.0
     url: https://github.com/weaveworks/profiles-examples
 status: {}
-`, namespace, configMapName)))
+`, namespace, configMapName, gitRepoName, namespace)))
 
 		By("manual editing the profile")
 		deploymentFile := filepath.Join(profileDir, "artifacts/nginx-deployment/nginx/deployment/deployment.yaml")
@@ -145,8 +148,6 @@ status: {}
 		cmd = exec.Command(
 			binaryPath,
 			"upgrade",
-			"--git-repository",
-			fmt.Sprintf("%s/%s", namespace, gitRepoName),
 			profileDir,
 			"v0.1.1")
 		cmd.Dir = temp
@@ -184,12 +185,15 @@ spec:
     profile: weaveworks-nginx
     version: v0.1.1
   configMap: %s
+  gitRepository:
+    name: %s
+    namespace: %s
   source:
     path: weaveworks-nginx
     tag: weaveworks-nginx/v0.1.1
     url: https://github.com/weaveworks/profiles-examples
 status: {}
-`, namespace, configMapName)))
+`, namespace, configMapName, gitRepoName, namespace)))
 
 		By("user changes and upstream changes being applied")
 		input, err = ioutil.ReadFile(deploymentFile)
@@ -260,12 +264,15 @@ spec:
     profile: weaveworks-nginx
     version: v0.1.0
   configMap: %s
+  gitRepository:
+    name: my-git-repo
+    namespace: %s
   source:
     path: weaveworks-nginx
     tag: weaveworks-nginx/v0.1.0
     url: https://github.com/weaveworks/profiles-examples
 status: {}
-`, namespace, configMapName)))
+`, namespace, configMapName, namespace)))
 
 			By("manual editing the profile")
 			deploymentFile := filepath.Join(profileDir, "artifacts/nginx-deployment/nginx/deployment/deployment.yaml")
@@ -284,8 +291,6 @@ status: {}
 			cmd = exec.Command(
 				binaryPath,
 				"upgrade",
-				"--git-repository",
-				fmt.Sprintf("%s/%s", namespace, gitRepoName),
 				profileDir,
 				"v0.1.1")
 			cmd.Dir = temp
@@ -329,12 +334,15 @@ spec:
     profile: weaveworks-nginx
     version: v0.1.1
   configMap: %s
+  gitRepository:
+    name: my-git-repo
+    namespace: %s
   source:
     path: weaveworks-nginx
     tag: weaveworks-nginx/v0.1.1
     url: https://github.com/weaveworks/profiles-examples
 status: {}
-`, namespace, configMapName)))
+`, namespace, configMapName, namespace)))
 		})
 	})
 })

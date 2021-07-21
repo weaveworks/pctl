@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	"github.com/urfave/cli/v2"
 	"github.com/weaveworks/pctl/pkg/catalog"
@@ -19,11 +18,7 @@ func upgradeCmd() *cli.Command {
 		Name:      "upgrade",
 		Usage:     "upgrade profile installation",
 		UsageText: "To upgrade an installation: pctl upgrade pctl-profile-installation-path/ v0.1.1 ",
-		Flags: append(createPRFlags, &cli.StringFlag{
-			Name:  "git-repository",
-			Value: "",
-			Usage: "The namespace and name of the GitRepository object governing the flux repo.",
-		}),
+		Flags:     createPRFlags,
 		Action: func(c *cli.Context) error {
 			if err := upgrade(c); err != nil {
 				return err
@@ -60,21 +55,6 @@ func upgrade(c *cli.Context) error {
 		}
 	}()
 
-	var (
-		gitRepoNamespace string
-		gitRepoName      string
-	)
-
-	gitRepository := c.String("git-repository")
-	if gitRepository != "" {
-		split := strings.Split(gitRepository, "/")
-		if len(split) != 2 {
-			return fmt.Errorf("git-repository must in format <namespace>/<name>; was: %s", gitRepository)
-		}
-		gitRepoNamespace = split[0]
-		gitRepoName = split[1]
-	}
-
 	cfg := upgr.UpgradeConfig{
 		ProfileDir:     profilePath,
 		Version:        profileVersion,
@@ -84,9 +64,7 @@ func upgrade(c *cli.Context) error {
 			Directory: tmpDir,
 			Quiet:     true,
 		}, &runner.CLIRunner{})),
-		GitRepoName:      gitRepoName,
-		GitRepoNamespace: gitRepoNamespace,
-		WorkingDir:       tmpDir,
+		WorkingDir: tmpDir,
 	}
 	return upgr.Upgrade(cfg)
 }

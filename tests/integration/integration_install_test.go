@@ -171,12 +171,15 @@ metadata:
   namespace: %s
 spec:
   configMap: %s
+  gitRepository:
+    name: %s
+    namespace: %s
   source:
     branch: main
     path: weaveworks-nginx
     url: %s
 status: {}
-`, namespace, configMapName, profileExamplesURL)))
+`, namespace, configMapName, gitRepoName, namespace, profileExamplesURL)))
 
 			By("the artifacts being deployable")
 			// Generate the resources into the flux repo, and push them up the repo?
@@ -368,12 +371,15 @@ metadata:
   name: pctl-profile
   namespace: %s
 spec:
+  gitRepository:
+    name: git-repo-name
+    namespace: %s
   source:
     branch: main
     path: bitnami-nginx
     url: %s
 status: {}
-`, namespace, profileExamplesURL)))
+`, namespace, namespace, profileExamplesURL)))
 			})
 		})
 
@@ -418,12 +424,15 @@ metadata:
   name: pctl-profile
   namespace: %s
 spec:
+  gitRepository:
+    name: git-repo-name
+    namespace: %s
   source:
     branch: main
     path: bitnami-nginx
     url: git@github.com:weaveworks/profiles-examples-private.git
 status: {}
-`, namespace)))
+`, namespace, namespace)))
 			})
 		})
 
@@ -652,12 +661,15 @@ spec:
     catalog: nginx-catalog
     profile: nginx
     version: v2.0.1
+  gitRepository:
+    name: %s
+    namespace: %s
   source:
     path: .
     tag: v2.0.1
     url: https://github.com/weaveworks/nginx-profile
 status: {}
-`, namespace)))
+`, namespace, gitRepoName, namespace)))
 
 			By("the artifacts being deployable")
 			// Generate the resources into the flux repo, and push them up the repo?
