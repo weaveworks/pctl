@@ -16,8 +16,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/kustomize/api/types"
 
-	"github.com/weaveworks/pctl/pkg/profile/artifact"
-	"github.com/weaveworks/pctl/pkg/profile/builder"
+	"github.com/weaveworks/pctl/pkg/install/artifact"
+	"github.com/weaveworks/pctl/pkg/install/builder"
 )
 
 var _ = Describe("ArtifactBuilder", func() {

@@ -1,4 +1,4 @@
-package profile_test
+package install_test
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/kustomize/api/types"
 
 	fakegit "github.com/weaveworks/pctl/pkg/git/fakes"
-	"github.com/weaveworks/pctl/pkg/profile"
+	"github.com/weaveworks/pctl/pkg/install"
 )
 
 const (
@@ -68,13 +68,13 @@ var _ = Describe("MakeArtifactsFunc", func() {
 
 	Context("makeArtifact", func() {
 		It("generates the artifacts", func() {
-			maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+			installer := install.NewInstaller(install.Config{
 				GitClient:        fakeGit,
 				RootDir:          rootDir,
 				GitRepoNamespace: gitRepoNamespace,
 				GitRepoName:      gitRepoName,
 			})
-			artifacts, err := profile.MakeArtifacts(maker, pSub)
+			artifacts, err := install.MakeArtifacts(installer, pSub)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(artifacts).To(HaveLen(3))
 
@@ -103,14 +103,14 @@ var _ = Describe("MakeArtifactsFunc", func() {
 		})
 		When("fetching the nested profile definition fails", func() {
 			It("returns an error", func() {
-				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				installer := install.NewInstaller(install.Config{
 					GitClient:        fakeGit,
 					RootDir:          rootDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
 				})
 				fakeGit.CloneReturns(errors.New("nope"))
-				_, err := profile.MakeArtifacts(maker, pSub)
+				_, err := install.MakeArtifacts(installer, pSub)
 				Expect(err).To(MatchError(ContainSubstring("failed to get profile definition: failed to clone the repo: nope")))
 			})
 		})
@@ -118,13 +118,13 @@ var _ = Describe("MakeArtifactsFunc", func() {
 			It("returns an error", func() {
 				fakeGit := &fakegit.FakeGit{}
 				fakeGit.CloneReturns(errors.New("nope"))
-				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				installer := install.NewInstaller(install.Config{
 					GitClient:        fakeGit,
 					RootDir:          rootDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
 				})
-				_, err := profile.MakeArtifacts(maker, pSub)
+				_, err := install.MakeArtifacts(installer, pSub)
 				Expect(err).To(MatchError(ContainSubstring("failed to get profile definition: failed to clone the repo: nope")))
 			})
 		})
@@ -136,13 +136,13 @@ var _ = Describe("MakeArtifactsFunc", func() {
 					Expect(err).NotTo(HaveOccurred())
 					return nil
 				}
-				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				installer := install.NewInstaller(install.Config{
 					GitClient:        fakeGit,
 					RootDir:          rootDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
 				})
-				_, err := profile.MakeArtifacts(maker, pSub)
+				_, err := install.MakeArtifacts(installer, pSub)
 				Expect(err).To(MatchError(ContainSubstring("recursive artifact detected: profile https://github.com/weaveworks/profiles-examples on branch  contains an artifact that points recursively back at itself")))
 			})
 		})
@@ -154,13 +154,13 @@ var _ = Describe("MakeArtifactsFunc", func() {
 					Expect(err).NotTo(HaveOccurred())
 					return nil
 				}
-				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				installer := install.NewInstaller(install.Config{
 					GitClient:        fakeGit,
 					RootDir:          rootDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
 				})
-				_, err := profile.MakeArtifacts(maker, pSub)
+				_, err := install.MakeArtifacts(installer, pSub)
 				Expect(err).To(MatchError(ContainSubstring("failed to build artifact: no artifact set")))
 			})
 		})

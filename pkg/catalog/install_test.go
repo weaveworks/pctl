@@ -14,7 +14,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
 	gitfakes "github.com/weaveworks/pctl/pkg/git/fakes"
-	artifactFakes "github.com/weaveworks/pctl/pkg/profile/fakes"
+	installerfake "github.com/weaveworks/pctl/pkg/install/fakes"
 )
 
 var _ = Describe("Install", func() {
@@ -25,7 +25,7 @@ var _ = Describe("Install", func() {
 		tempDir           string
 		httpBody          []byte
 		cfg               catalog.InstallConfig
-		fakeMakeArtifacts *artifactFakes.FakeArtifactsMaker
+		fakeInstaller     *installerfake.FakeProfileInstaller
 		manager           catalog.Manager
 	)
 
@@ -33,7 +33,7 @@ var _ = Describe("Install", func() {
 		fakeCatalogClient = new(fakes.FakeCatalogClient)
 		fakeGit = new(gitfakes.FakeGit)
 		fakeScm = new(gitfakes.FakeSCMClient)
-		fakeMakeArtifacts = new(artifactFakes.FakeArtifactsMaker)
+		fakeInstaller = new(installerfake.FakeProfileInstaller)
 		var err error
 		tempDir, err = ioutil.TempDir("", "catalog-install")
 		Expect(err).NotTo(HaveOccurred())
@@ -67,8 +67,8 @@ var _ = Describe("Install", func() {
 				},
 			},
 			Clients: catalog.Clients{
-				CatalogClient:  fakeCatalogClient,
-				ArtifactsMaker: fakeMakeArtifacts,
+				CatalogClient: fakeCatalogClient,
+				Installer:     fakeInstaller,
 			},
 		}
 	})
@@ -82,8 +82,8 @@ var _ = Describe("Install", func() {
 			It("generates the artifacts", func() {
 				err := manager.Install(cfg)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(fakeMakeArtifacts.MakeCallCount()).To(Equal(1))
-				arg := fakeMakeArtifacts.MakeArgsForCall(0)
+				Expect(fakeInstaller.InstallCallCount()).To(Equal(1))
+				arg := fakeInstaller.InstallArgsForCall(0)
 				Expect(arg).To(Equal(profilesv1.ProfileInstallation{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "ProfileInstallation",
@@ -134,16 +134,16 @@ var _ = Describe("Install", func() {
 						},
 					},
 					Clients: catalog.Clients{
-						CatalogClient:  fakeCatalogClient,
-						ArtifactsMaker: fakeMakeArtifacts,
+						CatalogClient: fakeCatalogClient,
+						Installer:     fakeInstaller,
 					},
 				}
 			})
 			It("generates the artifacts", func() {
 				err := manager.Install(cfg)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(fakeMakeArtifacts.MakeCallCount()).To(Equal(1))
-				arg := fakeMakeArtifacts.MakeArgsForCall(0)
+				Expect(fakeInstaller.InstallCallCount()).To(Equal(1))
+				arg := fakeInstaller.InstallArgsForCall(0)
 				Expect(arg).To(Equal(profilesv1.ProfileInstallation{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "ProfileInstallation",
@@ -171,7 +171,7 @@ var _ = Describe("Install", func() {
 
 		When("getting the artifacts fails", func() {
 			It("errors", func() {
-				fakeMakeArtifacts.MakeReturns(fmt.Errorf("foo"))
+				fakeInstaller.InstallReturns(fmt.Errorf("foo"))
 				err := manager.Install(cfg)
 				Expect(err).To(MatchError("failed to make artifacts: foo"))
 			})
@@ -179,11 +179,11 @@ var _ = Describe("Install", func() {
 
 		When("a branch is provided which isn't domain compatible", func() {
 			It("will not care because the name is sanitised", func() {
-				fakeMakeArtifacts.MakeReturns(nil)
+				fakeInstaller.InstallReturns(nil)
 				cfg = catalog.InstallConfig{
 					Clients: catalog.Clients{
-						CatalogClient:  fakeCatalogClient,
-						ArtifactsMaker: fakeMakeArtifacts,
+						CatalogClient: fakeCatalogClient,
+						Installer:     fakeInstaller,
 					},
 					Profile: catalog.Profile{
 						ProfileConfig: catalog.ProfileConfig{

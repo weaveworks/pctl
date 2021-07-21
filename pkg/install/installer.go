@@ -1,4 +1,4 @@
-package profile
+package install
 
 import (
 	"fmt"
@@ -16,18 +16,21 @@ import (
 	"sigs.k8s.io/kustomize/api/types"
 
 	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/profile/artifact"
-	"github.com/weaveworks/pctl/pkg/profile/builder"
+	"github.com/weaveworks/pctl/pkg/install/artifact"
+	"github.com/weaveworks/pctl/pkg/install/builder"
 )
 
-// ArtifactsMaker can create a list of artifacts.
-//go:generate counterfeiter -o fakes/artifacts_maker.go . ArtifactsMaker
-type ArtifactsMaker interface {
-	Make(installation profilesv1.ProfileInstallation) error
+// ProfileInstaller installs the profile
+//go:generate counterfeiter -o fakes/fake_profile_installer.go . ProfileInstaller
+type ProfileInstaller interface {
+	Install(installation profilesv1.ProfileInstallation) error
 }
 
-// MakerConfig contains all configuration properties for the Artifacts Maker.
-type MakerConfig struct {
+//Ensure Installer implements ProfileInstaller interface
+var _ ProfileInstaller = &Installer{}
+
+// Config defines configurable options for the installer
+type Config struct {
 	GitClient        git.Git
 	RootDir          string
 	GitRepoNamespace string
@@ -35,20 +38,19 @@ type MakerConfig struct {
 	ProfileName      string
 }
 
-// ProfilesArtifactsMaker creates a list of artifacts from profiles data.
-type ProfilesArtifactsMaker struct {
-	MakerConfig
-
+// Installer is a profile specific installer
+type Installer struct {
+	Config
 	Builder      builder.Builder
 	nestedName   string
 	profileRepos []string
 	cloneCache   map[string]string
 }
 
-// NewProfilesArtifactsMaker creates a new profiles artifacts maker.
-func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
-	return &ProfilesArtifactsMaker{
-		MakerConfig: cfg,
+// NewInstaller creates a new profiles installer
+func NewInstaller(cfg Config) *Installer {
+	return &Installer{
+		Config: cfg,
 		Builder: &builder.ArtifactBuilder{
 			Config: builder.Config{
 				GitRepositoryName:      cfg.GitRepoName,
@@ -60,21 +62,22 @@ func NewProfilesArtifactsMaker(cfg MakerConfig) *ProfilesArtifactsMaker {
 	}
 }
 
-// Make generates artifacts without owners for manual applying to a personal cluster.
-func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallation) error {
-	artifacts, err := profilesArtifactsMaker(pa, installation)
+// Install installs the artifacts into the configured directory
+func (i *Installer) Install(installation profilesv1.ProfileInstallation) error {
+	artifacts, err := profilesArtifactsMaker(i, installation)
 	if err != nil {
 		return fmt.Errorf("failed to build artifact: %w", err)
 	}
-	artifactsRootDir := filepath.Join(pa.RootDir, "artifacts")
-	defer pa.cleanCloneCache()
+
+	artifactsRootDir := filepath.Join(i.RootDir, "artifacts")
+	defer i.cleanCloneCache()
 	for _, artifact := range artifacts {
 		artifactDir := filepath.Join(artifactsRootDir, artifact.Name)
 		if err := os.MkdirAll(artifactDir, 0755); err != nil && !os.IsExist(err) {
 			return fmt.Errorf("failed to create directory")
 		}
 		if artifact.RepoURL != "" {
-			if err := pa.getRepositoryLocalArtifacts(artifact, artifactDir); err != nil {
+			if err := i.getRepositoryLocalArtifacts(artifact, artifactDir); err != nil {
 				return fmt.Errorf("failed to get package local artifacts: %w", err)
 			}
 		}
@@ -91,7 +94,7 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 				}
 				filename = filepath.Join(subFolder, fmt.Sprintf("%s.%s", name, "yaml"))
 			}
-			if err := pa.generateOutput(filename, obj.Object); err != nil {
+			if err := i.generateOutput(filename, obj.Object); err != nil {
 				return err
 			}
 		}
@@ -108,7 +111,7 @@ func (pa *ProfilesArtifactsMaker) Make(installation profilesv1.ProfileInstallati
 			return err
 		}
 	}
-	return pa.generateOutput(filepath.Join(pa.RootDir, "profile-installation.yaml"), &installation)
+	return i.generateOutput(filepath.Join(i.RootDir, "profile-installation.yaml"), &installation)
 }
 
 // writeOutKustomizeResource writes out kustomization resource data if set to a specific file.
@@ -124,12 +127,12 @@ func writeOutKustomizeResource(kustomize *types.Kustomization, filename string) 
 }
 
 // getRepositoryLocalArtifacts clones all repository local artifacts so they can be copied over to the flux repository.
-func (pa *ProfilesArtifactsMaker) getRepositoryLocalArtifacts(a artifact.Artifact, artifactDir string) error {
+func (i *Installer) getRepositoryLocalArtifacts(a artifact.Artifact, artifactDir string) error {
 	var (
 		tmp string
 		err error
 	)
-	if v, ok := pa.cloneCache[cloneCacheKey(a.RepoURL, a.Branch)]; ok {
+	if v, ok := i.cloneCache[cloneCacheKey(a.RepoURL, a.Branch)]; ok {
 		tmp = v
 	} else {
 		u := uuid.NewString()[:6]
@@ -137,13 +140,13 @@ func (pa *ProfilesArtifactsMaker) getRepositoryLocalArtifacts(a artifact.Artifac
 		if err != nil {
 			return fmt.Errorf("failed to create temp folder: %w", err)
 		}
-		if err := pa.GitClient.Clone(a.RepoURL, a.Branch, tmp); err != nil {
+		if err := i.GitClient.Clone(a.RepoURL, a.Branch, tmp); err != nil {
 			return fmt.Errorf("failed to sparse clone folder with url: %s; branch: %s; with error: %w",
 				a.RepoURL,
 				a.Branch,
 				err)
 		}
-		pa.cloneCache[cloneCacheKey(a.RepoURL, a.Branch)] = tmp
+		i.cloneCache[cloneCacheKey(a.RepoURL, a.Branch)] = tmp
 	}
 
 	for _, path := range a.PathsToCopy {
@@ -164,15 +167,15 @@ func (pa *ProfilesArtifactsMaker) getRepositoryLocalArtifacts(a artifact.Artifac
 }
 
 // cleanCloneCache clears all cached cloned folders if there are any.
-func (pa *ProfilesArtifactsMaker) cleanCloneCache() {
-	for _, c := range pa.cloneCache {
+func (i *Installer) cleanCloneCache() {
+	for _, c := range i.cloneCache {
 		if err := os.RemoveAll(c); err != nil {
 			fmt.Printf("failed to remove %s cache, please clean by hand", c)
 		}
 	}
 }
 
-func (pa *ProfilesArtifactsMaker) generateOutput(filename string, o runtime.Object) error {
+func (i *Installer) generateOutput(filename string, o runtime.Object) error {
 	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {

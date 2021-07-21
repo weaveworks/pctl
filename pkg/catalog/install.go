@@ -8,13 +8,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/profile"
+	"github.com/weaveworks/pctl/pkg/install"
 )
 
 // Clients contains a set of clients which are used by install.
 type Clients struct {
-	CatalogClient  CatalogClient
-	ArtifactsMaker profile.ArtifactsMaker
+	CatalogClient CatalogClient
+	Installer     install.ProfileInstaller
 }
 
 // Profile contains configuration for profiles ie. catalogName, profilesName, etc.
@@ -65,7 +65,7 @@ func (m *Manager) Install(cfg InstallConfig) error {
 		},
 		Spec: pSpec,
 	}
-	if err := cfg.ArtifactsMaker.Make(installation); err != nil {
+	if err := cfg.Installer.Install(installation); err != nil {
 		return fmt.Errorf("failed to make artifacts: %w", err)
 	}
 	return nil

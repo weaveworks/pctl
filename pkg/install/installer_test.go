@@ -1,4 +1,4 @@
-package profile_test
+package install_test
 
 import (
 	"errors"
@@ -22,11 +22,11 @@ import (
 	"sigs.k8s.io/kustomize/api/types"
 
 	fakegit "github.com/weaveworks/pctl/pkg/git/fakes"
-	"github.com/weaveworks/pctl/pkg/profile"
-	"github.com/weaveworks/pctl/pkg/profile/artifact"
+	"github.com/weaveworks/pctl/pkg/install"
+	"github.com/weaveworks/pctl/pkg/install/artifact"
 )
 
-var _ = Describe("Profile", func() {
+var _ = Describe("Installer", func() {
 	var (
 		pSub                   profilesv1.ProfileInstallation
 		fakeGitClient          *fakegit.FakeGit
@@ -173,7 +173,7 @@ var _ = Describe("Profile", func() {
 				},
 			},
 		}
-		profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
+		install.SetProfileMakeArtifacts(func(i *install.Installer, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
 			return artifacts, nil
 		})
 	})
@@ -182,15 +182,15 @@ var _ = Describe("Profile", func() {
 		Expect(os.RemoveAll(rootDir)).To(Succeed())
 	})
 
-	Context("Make", func() {
+	Context("Install", func() {
 		It("generates the artifacts", func() {
-			maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+			installer := install.NewInstaller(install.Config{
 				GitClient:        fakeGitClient,
 				RootDir:          rootDir,
 				GitRepoNamespace: gitRepoNamespace,
 				GitRepoName:      gitRepoName,
 			})
-			err := maker.Make(pSub)
+			err := installer.Install(pSub)
 			Expect(err).NotTo(HaveOccurred())
 			files := make(map[string]string)
 			err = filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
@@ -288,29 +288,29 @@ status: {}
 		})
 		When("the profiles maker fails", func() {
 			It("returns an error", func() {
-				profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
+				install.SetProfileMakeArtifacts(func(i *install.Installer, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
 					return nil, errors.New("nope")
 				})
-				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				installer := install.NewInstaller(install.Config{
 					GitClient:        fakeGitClient,
 					RootDir:          rootDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
 				})
-				err := maker.Make(pSub)
+				err := installer.Install(pSub)
 				Expect(err).To(MatchError("failed to build artifact: nope"))
 			})
 		})
 		When("fetching the local repository objects fails", func() {
 			It("returns an error", func() {
 				fakeGitClient.CloneReturns(errors.New("nope"))
-				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				installer := install.NewInstaller(install.Config{
 					GitClient:        fakeGitClient,
 					RootDir:          rootDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
 				})
-				err := maker.Make(pSub)
+				err := installer.Install(pSub)
 				Expect(err).To(MatchError("failed to get package local artifacts: failed to sparse clone folder with url: https://repo-url.com; branch: ; with error: nope"))
 			})
 		})
@@ -358,7 +358,7 @@ status: {}
 						Branch:       "",
 					},
 				}
-				profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
+				install.SetProfileMakeArtifacts(func(i *install.Installer, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
 					return artifacts, nil
 				})
 				pSub := profilesv1.ProfileInstallation{
@@ -376,14 +376,14 @@ status: {}
 				}
 				tempDir, err := ioutil.TempDir("", "catalog-install")
 				Expect(err).NotTo(HaveOccurred())
-				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				installer := install.NewInstaller(install.Config{
 					ProfileName:      "generate-test",
 					GitClient:        fakeGitClient,
 					RootDir:          filepath.Join(tempDir, "generate-test"),
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
 				})
-				err = maker.Make(pSub)
+				err = installer.Install(pSub)
 				Expect(err).NotTo(HaveOccurred())
 
 				var files []string
@@ -540,19 +540,20 @@ status: {}
 					Expect(err).NotTo(HaveOccurred())
 					return nil
 				}
-				profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
+				install.SetProfileMakeArtifacts(func(i *install.Installer, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
 					return artifacts, nil
 				})
-				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				installer := install.NewInstaller(install.Config{
 					GitClient:        fakeGitClient,
 					RootDir:          rootDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
 				})
-				err := maker.Make(pSub)
+				err := installer.Install(pSub)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeGitClient.CloneCallCount()).To(Equal(1), "cache did not work, clone has been called more than once.")
 			})
+
 			It("should still clone different urls", func() {
 				fakeGitClient.CloneStub = func(url string, branch string, dir string) error {
 					from := filepath.Join("testdata", "clone_cache")
@@ -561,19 +562,20 @@ status: {}
 					return nil
 				}
 				artifacts[0].RepoURL = "https://github.com/weaveworks/profiles-examples"
-				profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
+				install.SetProfileMakeArtifacts(func(i *install.Installer, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
 					return artifacts, nil
 				})
-				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				installer := install.NewInstaller(install.Config{
 					GitClient:        fakeGitClient,
 					RootDir:          rootDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
 				})
-				err := maker.Make(pSub)
+				err := installer.Install(pSub)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeGitClient.CloneCallCount()).To(Equal(2))
 			})
+
 			It("should still clone same urls but with different branch", func() {
 				fakeGitClient.CloneStub = func(url string, branch string, dir string) error {
 					from := filepath.Join("testdata", "clone_cache")
@@ -582,16 +584,16 @@ status: {}
 					return nil
 				}
 				artifacts[0].Branch = "different"
-				profile.SetProfileMakeArtifacts(func(pam *profile.ProfilesArtifactsMaker, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
+				install.SetProfileMakeArtifacts(func(i *install.Installer, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
 					return artifacts, nil
 				})
-				maker := profile.NewProfilesArtifactsMaker(profile.MakerConfig{
+				installer := install.NewInstaller(install.Config{
 					GitClient:        fakeGitClient,
 					RootDir:          rootDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
 				})
-				err := maker.Make(pSub)
+				err := installer.Install(pSub)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeGitClient.CloneCallCount()).To(Equal(2))
 			})
