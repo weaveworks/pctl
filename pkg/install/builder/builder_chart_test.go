@@ -45,9 +45,9 @@ var _ = Describe("Helm", func() {
 						DefaultValues: "values",
 					},
 				},
-				ProfileRepoKey: repoKey,
-				ProfilePath:    profilePath,
-				ParentProfileArtifactName:  "",
+				ProfileRepoKey:            repoKey,
+				ProfilePath:               profilePath,
+				ParentProfileArtifactName: "",
 			},
 		}
 	})
@@ -187,9 +187,9 @@ var _ = Describe("Helm", func() {
 							Name:    chartName,
 						},
 					},
-					ProfileRepoKey: repoKey,
-					ProfilePath:    profilePath,
-					ParentProfileArtifactName:  "",
+					ProfileRepoKey:            repoKey,
+					ProfilePath:               profilePath,
+					ParentProfileArtifactName: "",
 				},
 			}
 		})

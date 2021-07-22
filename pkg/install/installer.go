@@ -98,10 +98,10 @@ func (i *Installer) composeArtifacts(installation profilesv1.ProfileInstallation
 		} else {
 			if nested {
 				artifacts = append(artifacts, artifact.Artifact{
-					Artifact:       a,
-					ProfileRepoKey: profileRepoKey,
-					ParentProfileArtifactName:  installation.Name,
-					ProfilePath:    installation.Spec.Source.Path,
+					Artifact:                  a,
+					ProfileRepoKey:            profileRepoKey,
+					ParentProfileArtifactName: installation.Name,
+					ProfilePath:               installation.Spec.Source.Path,
 				})
 			} else {
 				artifacts = append(artifacts, artifact.Artifact{

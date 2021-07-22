@@ -28,7 +28,7 @@ import (
 const (
 	defaultValuesKey           = "default-values.yaml"
 	helmChartLocation          = "helm-chart"
-	kustomizeWrapperObjectName = "kustomize-flux"
+	kustomizeWrapperObjectName = "kustomize-flux.yaml"
 )
 
 // Builder can build an artifacts from an installation and a profile artifact.
@@ -94,10 +94,6 @@ func validateArtifact(a profilesv1.Artifact) error {
 	return nil
 }
 
-func validateChartArtifact(in profilesv1.Artifact) error {
-	return nil
-}
-
 func (c *ArtifactBuilder2) writeKustomizeArtifact(installation profilesv1.ProfileInstallation, a artifact.Artifact, deps []artifact.Artifact, repoLocations map[string]string) error {
 	//TODO validate kustomize
 	if c.GitRepositoryNamespace == "" || c.GitRepositoryName == "" {
@@ -108,12 +104,12 @@ func (c *ArtifactBuilder2) writeKustomizeArtifact(installation profilesv1.Profil
 	if err := c.copyArtifacts(a, a.Kustomize.Path, filepath.Join(artifactDir, a.Kustomize.Path), repoLocations); err != nil {
 		return err
 	}
-	if err := c.writeOutKustomizeResource([]string{"kustomize-flux.yaml"}, artifactDir); err != nil {
+	if err := c.writeOutKustomizeResource([]string{kustomizeWrapperObjectName}, artifactDir); err != nil {
 		return err
 	}
 
 	// wrapper := c.makeKustomization(artifact, path, installation, definitionName, dependencies)
-	return c.writeResourceWithName(c.makeKustomization(a, filepath.Join(artifactDir, a.Kustomize.Path), installation, a.ProfilePath, deps), filepath.Join(artifactDir, "kustomize-flux.yaml"))
+	return c.writeResourceWithName(c.makeKustomization(a, filepath.Join(artifactDir, a.Kustomize.Path), installation, a.ProfilePath, deps), filepath.Join(artifactDir, kustomizeWrapperObjectName))
 }
 
 func (c *ArtifactBuilder2) writeChartArtifact(installation profilesv1.ProfileInstallation, a artifact.Artifact, deps []artifact.Artifact, repoLocations map[string]string) error {
@@ -152,11 +148,11 @@ func (c *ArtifactBuilder2) writeChartArtifact(installation profilesv1.ProfileIns
 		}
 	}
 
-	if err := c.writeOutKustomizeResource([]string{"kustomize-flux.yaml"}, artifactDir); err != nil {
+	if err := c.writeOutKustomizeResource([]string{kustomizeWrapperObjectName}, artifactDir); err != nil {
 		return err
 	}
 
-	return c.writeResourceWithName(c.makeKustomizeHelmReleaseWrapper(a, installation, a.ProfilePath, helmChartDir, deps), filepath.Join(artifactDir, "kustomize-flux.yaml"))
+	return c.writeResourceWithName(c.makeKustomizeHelmReleaseWrapper(a, installation, a.ProfilePath, helmChartDir, deps), filepath.Join(artifactDir, kustomizeWrapperObjectName))
 }
 
 func (c *ArtifactBuilder2) writeOutKustomizeResource(resources []string, dir string) error {

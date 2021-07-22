@@ -71,8 +71,8 @@ var _ = BeforeEach(func() {
 })
 
 var _ = AfterEach(func() {
-	os.RemoveAll(rootDir)
-	os.RemoveAll(gitDir)
+	_ = os.RemoveAll(rootDir)
+	_ = os.RemoveAll(gitDir)
 })
 
 func decodeFile(filepath string, obj interface{}) {

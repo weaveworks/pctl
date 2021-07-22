@@ -35,9 +35,9 @@ var _ = Describe("Kustomize", func() {
 						Path: "files/",
 					},
 				},
-				ProfileRepoKey: repoKey,
-				ProfilePath:    profilePath,
-				ParentProfileArtifactName:  "",
+				ProfileRepoKey:            repoKey,
+				ProfilePath:               profilePath,
+				ParentProfileArtifactName: "",
 			},
 		}
 	})
