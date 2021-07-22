@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"knative.dev/pkg/apis"
 	"sigs.k8s.io/kustomize/api/types"
 )
 
@@ -56,6 +57,9 @@ func (c *ArtifactBuilder2) Write(installation profilesv1.ProfileInstallation, ar
 			}
 			deps = append(deps, d)
 		}
+		if err := validateArtifact(a.Artifact); err != nil {
+			return fmt.Errorf("invalid artifact: %w", err)
+		}
 
 		if a.Chart != nil {
 			if err := c.writeChartArtifact(installation, a, deps, repoLocation); err != nil {
@@ -66,19 +70,41 @@ func (c *ArtifactBuilder2) Write(installation profilesv1.ProfileInstallation, ar
 				return err
 			}
 		} else {
-			return fmt.Errorf("no artifact set")
+			return fmt.Errorf("no artifact type set")
 		}
 	}
 	return c.writeResourceWithName(&installation, filepath.Join(c.RootDir, "profile-installation.yaml"))
 }
 
+func validateArtifact(a profilesv1.Artifact) error {
+	if a.Chart != nil {
+		if a.Profile != nil {
+			return apis.ErrMultipleOneOf("chart", "profile")
+		}
+		if a.Kustomize != nil {
+			return apis.ErrMultipleOneOf("chart", "kustomize")
+		}
+		if a.Chart.Path != "" && a.Chart.URL != "" {
+			return apis.ErrMultipleOneOf("chart.path", "chart.url")
+		}
+	}
+	if a.Kustomize != nil && a.Profile != nil {
+		return apis.ErrMultipleOneOf("kustomize", "profile")
+	}
+	return nil
+}
+
+func validateChartArtifact(in profilesv1.Artifact) error {
+	return nil
+}
+
 func (c *ArtifactBuilder2) writeKustomizeArtifact(installation profilesv1.ProfileInstallation, a artifact.Artifact, deps []artifact.Artifact, repoLocations map[string]string) error {
 	//TODO validate kustomize
-	if c.GitRepositoryNamespace == "" && c.GitRepositoryName == "" {
+	if c.GitRepositoryNamespace == "" || c.GitRepositoryName == "" {
 		return fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 	}
 
-	artifactDir := filepath.Join(c.RootDir, "artifacts", a.NestedDirName, a.Name)
+	artifactDir := filepath.Join(c.RootDir, "artifacts", a.ParentProfileArtifactName, a.Name)
 	if err := c.copyArtifacts(a, a.Kustomize.Path, filepath.Join(artifactDir, a.Kustomize.Path), repoLocations); err != nil {
 		return err
 	}
@@ -92,7 +118,7 @@ func (c *ArtifactBuilder2) writeKustomizeArtifact(installation profilesv1.Profil
 
 func (c *ArtifactBuilder2) writeChartArtifact(installation profilesv1.ProfileInstallation, a artifact.Artifact, deps []artifact.Artifact, repoLocations map[string]string) error {
 	//TODO validate chart
-	artifactDir := filepath.Join(c.RootDir, "artifacts", a.NestedDirName, a.Name)
+	artifactDir := filepath.Join(c.RootDir, "artifacts", a.ParentProfileArtifactName, a.Name)
 	helmChartDir := filepath.Join(artifactDir, helmChartLocation)
 	if err := os.MkdirAll(helmChartDir, 0755); err != nil && !os.IsExist(err) {
 		return fmt.Errorf("failed to create directory %w", err)
@@ -104,7 +130,7 @@ func (c *ArtifactBuilder2) writeChartArtifact(installation profilesv1.ProfileIns
 	}
 	objs = append(objs, helmRelease)
 	if a.Chart.Path != "" {
-		if c.GitRepositoryNamespace == "" && c.GitRepositoryName == "" {
+		if c.GitRepositoryNamespace == "" || c.GitRepositoryName == "" {
 			return fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 		}
 		helmRelease.Spec.Chart.Spec.Chart = filepath.Join(helmChartDir, a.Chart.Path)
@@ -188,12 +214,12 @@ func (c *ArtifactBuilder2) writeResource(obj runtime.Object, dir string) error {
 func (c *ArtifactBuilder2) copyArtifacts(a artifact.Artifact, subDir, destDir string, repoLocations map[string]string) error {
 	tmp, ok := repoLocations[a.ProfileRepoKey]
 	if !ok {
-		return fmt.Errorf("tried to copy artifacts for %q, but repo is not in map %v", a.Name, repoLocations)
+		return fmt.Errorf("could not find repo clone for %q", a.ProfileRepoKey)
 	}
 
 	srcDir := filepath.Join(tmp, a.ProfilePath, subDir)
 	if err := copy.Copy(srcDir, destDir); err != nil {
-		return fmt.Errorf("failed to move folder: %w", err)
+		return fmt.Errorf("failed to copy files: %w", err)
 	}
 	return nil
 }
@@ -379,7 +405,7 @@ func (c *ArtifactBuilder2) makeArtifactName(name string, installationName, defin
 }
 func containsArtifact(list []artifact.Artifact, name string) (artifact.Artifact, bool) {
 	for _, a := range list {
-		if a.Name == name {
+		if a.Name == name || a.ParentProfileArtifactName == name {
 			return a, true
 		}
 	}

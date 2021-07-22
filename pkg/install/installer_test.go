@@ -174,7 +174,7 @@ var _ = Describe("Installer", func() {
 				Artifact: profilesv1.Artifact{
 					Name: "artifact-2",
 				},
-				NestedDirName: "nested-artifact-1",
+				ParentProfileArtifactName: "nested-artifact-1",
 				ProfilePath:      profilePath2,
 				ProfileRepoKey:          profile2RepoKey,
 			},
@@ -182,7 +182,7 @@ var _ = Describe("Installer", func() {
 				Artifact: profilesv1.Artifact{
 					Name: "artifact-3",
 				},
-				NestedDirName: "nested-artifact-2",
+				ParentProfileArtifactName: "nested-artifact-2",
 				ProfilePath:      profilePath3,
 				ProfileRepoKey:          profile1RepoKey,
 			},

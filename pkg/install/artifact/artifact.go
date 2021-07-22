@@ -6,7 +6,7 @@ import (
 
 type Artifact struct {
 	profilesv1.Artifact
-	NestedDirName  string
-	ProfilePath    string
-	ProfileRepoKey string
+	ParentProfileArtifactName string
+	ProfilePath               string
+	ProfileRepoKey            string
 }

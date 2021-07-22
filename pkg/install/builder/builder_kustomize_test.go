@@ -37,7 +37,7 @@ var _ = Describe("Kustomize", func() {
 				},
 				ProfileRepoKey: repoKey,
 				ProfilePath:    profilePath,
-				NestedDirName:  "",
+				ParentProfileArtifactName:  "",
 			},
 		}
 	})
@@ -90,5 +90,29 @@ var _ = Describe("Kustomize", func() {
 		i := profilesv1.ProfileInstallation{}
 		decodeFile(filepath.Join(rootDir, "profile-installation.yaml"), &i)
 		Expect(i).To(Equal(installation))
+	})
+
+	When("the gitrepository isn't set", func() {
+		It("returns an error", func() {
+			artifactBuilder.GitRepositoryName = ""
+			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+			Expect(err).To(MatchError("in case of local resources, the flux gitrepository object's details must be provided"))
+		})
+	})
+
+	When("the repo hasn't been cloned", func() {
+		It("returns an error", func() {
+			artifacts[0].ProfileRepoKey = "dontexistlol"
+			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+			Expect(err).To(MatchError(ContainSubstring("could not find repo clone for \"dontexistlol\"")))
+		})
+	})
+
+	When("copying the artifact fails", func() {
+		It("returns an error", func() {
+			artifacts[0].ProfilePath = "/tmp/i/dont/exist"
+			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+			Expect(err).To(MatchError(ContainSubstring("failed to copy files:")))
+		})
 	})
 })

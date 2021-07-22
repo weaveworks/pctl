@@ -100,7 +100,7 @@ func (i *Installer) composeArtifacts(installation profilesv1.ProfileInstallation
 				artifacts = append(artifacts, artifact.Artifact{
 					Artifact:       a,
 					ProfileRepoKey: profileRepoKey,
-					NestedDirName:  installation.Name,
+					ParentProfileArtifactName:  installation.Name,
 					ProfilePath:    installation.Spec.Source.Path,
 				})
 			} else {
