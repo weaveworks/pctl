@@ -64,11 +64,15 @@ func NewInstaller(cfg Config) *Installer {
 
 // Install installs the artifacts into the configured directory
 func (i *Installer) Install(installation profilesv1.ProfileInstallation) error {
-	artifacts, err := profilesArtifactsMaker(i, installation)
+	artifacts, err := generateArtifacts(i, installation)
 	if err != nil {
 		return fmt.Errorf("failed to build artifact: %w", err)
 	}
 
+	return i.writeArtifactsToInstallationDir(artifacts, installation)
+}
+
+func (i *Installer) writeArtifactsToInstallationDir(artifacts []artifact.Artifact, installation profilesv1.ProfileInstallation) error {
 	artifactsRootDir := filepath.Join(i.RootDir, "artifacts")
 	defer i.cleanCloneCache()
 	for _, artifact := range artifacts {

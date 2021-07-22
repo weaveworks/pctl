@@ -1,6 +1,7 @@
 package artifact
 
 import (
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/kustomize/api/types"
 )
@@ -34,4 +35,11 @@ type Artifact struct {
 	SparseFolder string
 	Branch       string
 	SubFolder    string
+}
+
+type Artifact2 struct {
+	profilesv1.Artifact
+	NestedProfileDir string
+	ProfileName      string
+	RepoKey          string
 }

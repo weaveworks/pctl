@@ -66,7 +66,7 @@ var _ = Describe("pctl install", func() {
 
 		})
 
-		It("generates valid artifacts to the local directory", func() {
+		FIt("generates valid artifacts to the local directory", func() {
 			if skipTestsThatRequireCredentials {
 				Skip("Skipping this tests as it requires credentials")
 			}

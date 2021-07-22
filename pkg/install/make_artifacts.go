@@ -13,7 +13,7 @@ import (
 // MakeArtifactsFunc defines a method to create artifacts from an installation using a maker.
 type MakeArtifactsFunc func(i *Installer, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error)
 
-var profilesArtifactsMaker = MakeArtifacts
+var generateArtifacts = MakeArtifacts
 
 // MakeArtifacts makes profile artifacts.
 func MakeArtifacts(installer *Installer, installation profilesv1.ProfileInstallation) ([]artifact.Artifact, error) {
