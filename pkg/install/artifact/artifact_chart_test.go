@@ -1,4 +1,4 @@
-package builder_test
+package artifact_test
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/install/builder"
+	"github.com/weaveworks/pctl/pkg/install/artifact"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +36,7 @@ var _ = Describe("Helm", func() {
 		Expect(os.MkdirAll(chartDir, 0755)).To(Succeed())
 		Expect(ioutil.WriteFile(filepath.Join(chartDir, "file1"), []byte("foo"), 0755)).To(Succeed())
 
-		artifacts = []builder.ArtifactWrapper{
+		artifacts = []artifact.ArtifactWrapper{
 			{
 				Artifact: profilesv1.Artifact{
 					Name: artifactName,
@@ -53,7 +53,7 @@ var _ = Describe("Helm", func() {
 
 	It("generates the helm resources and copies the chart into the directory", func() {
 		installation.Spec.ConfigMap = configMapName
-		err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+		err := artifactWriter.Write(installation, artifacts)
 		Expect(err).NotTo(HaveOccurred())
 
 		var files []string
@@ -176,7 +176,7 @@ var _ = Describe("Helm", func() {
 			chartVersion = "v1.0.0"
 		)
 		BeforeEach(func() {
-			artifacts = []builder.ArtifactWrapper{
+			artifacts = []artifact.ArtifactWrapper{
 				{
 					Artifact: profilesv1.Artifact{
 						Name: artifactName,
@@ -193,7 +193,7 @@ var _ = Describe("Helm", func() {
 		})
 
 		It("generates the helm resources and copies the chart into the directory", func() {
-			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+			err := artifactWriter.Write(installation, artifacts)
 			Expect(err).NotTo(HaveOccurred())
 
 			var files []string
@@ -289,8 +289,8 @@ var _ = Describe("Helm", func() {
 
 	When("the gitrepository isn't set", func() {
 		It("returns an error", func() {
-			artifactBuilder.GitRepositoryName = ""
-			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+			artifactWriter.GitRepositoryName = ""
+			err := artifactWriter.Write(installation, artifacts)
 			Expect(err).To(MatchError("in case of local resources, the flux gitrepository object's details must be provided"))
 		})
 	})
@@ -298,7 +298,7 @@ var _ = Describe("Helm", func() {
 	When("copying the artifact fails", func() {
 		It("returns an error", func() {
 			artifacts[0].PathToProfileClone = "/tmp/i/dont/exist"
-			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+			err := artifactWriter.Write(installation, artifacts)
 			Expect(err).To(MatchError(ContainSubstring("failed to copy files:")))
 		})
 	})

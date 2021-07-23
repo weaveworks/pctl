@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/gomega"
 	fakegit "github.com/weaveworks/pctl/pkg/git/fakes"
 	"github.com/weaveworks/pctl/pkg/install"
-	"github.com/weaveworks/pctl/pkg/install/builder"
-	"github.com/weaveworks/pctl/pkg/install/builder/fakes"
+	"github.com/weaveworks/pctl/pkg/install/artifact"
+	"github.com/weaveworks/pctl/pkg/install/artifact/fakes"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -21,7 +21,7 @@ import (
 var _ = Describe("Installer", func() {
 	var (
 		fakeGitClient    *fakegit.FakeGit
-		fakeBuilder      *fakes.FakeBuilder
+		fakeWriter       *fakes.FakeArtifactWriter
 		installer        *install.Installer
 		installation     profilesv1.ProfileInstallation
 		gitRepoName      = "git-repo-name"
@@ -101,14 +101,14 @@ var _ = Describe("Installer", func() {
 
 	BeforeEach(func() {
 		fakeGitClient = &fakegit.FakeGit{}
-		fakeBuilder = &fakes.FakeBuilder{}
+		fakeWriter = &fakes.FakeArtifactWriter{}
 		installer = install.NewInstaller(install.Config{
 			GitClient:        fakeGitClient,
 			RootDir:          rootDir,
 			GitRepoNamespace: gitRepoNamespace,
 			GitRepoName:      gitRepoName,
 		})
-		installer.SetBuilder(fakeBuilder)
+		installer.SetWriter(fakeWriter)
 
 		installation = profilesv1.ProfileInstallation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -151,26 +151,20 @@ var _ = Describe("Installer", func() {
 		Expect(url).To(Equal(profileURL2))
 		Expect(branch).To(Equal(profileBranch2))
 
-		Expect(fakeBuilder.WriteCallCount()).To(Equal(1))
-		inst, artifacts, repoClones := fakeBuilder.WriteArgsForCall(0)
+		Expect(fakeWriter.WriteCallCount()).To(Equal(1))
+		inst, artifacts := fakeWriter.WriteArgsForCall(0)
 		Expect(inst).To(Equal(installation))
 
-		profile1RepoKey := fmt.Sprintf("%s:%s", profileURL1, profileBranch1)
-		profile2RepoKey := fmt.Sprintf("%s:%s", profileURL2, profileBranch2)
 		By("creating the artifacts")
-		Expect(repoClones).To(Equal(map[string]string{
-			profile1RepoKey: profile1CloneDir,
-			profile2RepoKey: profile2CloneDir,
-		}))
 		Expect(artifacts).To(ConsistOf(
-			builder.ArtifactWrapper{
+			artifact.ArtifactWrapper{
 				Artifact: profilesv1.Artifact{
 					Name: "artifact-1",
 				},
 				PathToProfileClone: filepath.Join(profile1CloneDir, profilePath1),
 				ProfileName:        profileDefinition1.Name,
 			},
-			builder.ArtifactWrapper{
+			artifact.ArtifactWrapper{
 				Artifact: profilesv1.Artifact{
 					Name: "artifact-2",
 				},
@@ -178,7 +172,7 @@ var _ = Describe("Installer", func() {
 				PathToProfileClone:        filepath.Join(profile2CloneDir, profilePath2),
 				ProfileName:               profileDefinition2.Name,
 			},
-			builder.ArtifactWrapper{
+			artifact.ArtifactWrapper{
 				Artifact: profilesv1.Artifact{
 					Name: "artifact-3",
 				},

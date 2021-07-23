@@ -1,7 +1,7 @@
 package install
 
-import "github.com/weaveworks/pctl/pkg/install/builder"
+import "github.com/weaveworks/pctl/pkg/install/artifact"
 
-func (i *Installer) SetBuilder(b builder.Builder) {
-	i.Builder = b
+func (i *Installer) SetWriter(b artifact.ArtifactWriter) {
+	i.Writer = b
 }

@@ -1,4 +1,4 @@
-package builder_test
+package artifact_test
 
 import (
 	"bytes"
@@ -8,22 +8,21 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/install/builder"
+	"github.com/weaveworks/pctl/pkg/install/artifact"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
-func TestBuilder(t *testing.T) {
+func TestArtifact(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Builder Suite")
+	RunSpecs(t, "Artiact Suite")
 }
 
 var (
 	rootDir          string
 	gitDir           string
-	artifactBuilder  *builder.ArtifactBuilder
-	repoKey          = "repoKey"
+	artifactWriter   *artifact.Writer
 	gitRepoName      = "my-git-repo"
 	gitRepoNamespace = "my-git-repo-namespace"
 	profileURL       = "github.com/weaveworks/profiles-examples"
@@ -33,9 +32,8 @@ var (
 	installation     profilesv1.ProfileInstallation
 	installationName = "install-name"
 	namespace        = "my-namespace"
-	artifacts        []builder.ArtifactWrapper
+	artifacts        []artifact.ArtifactWrapper
 	artifactName     = "1"
-	repoLocationMap  map[string]string
 )
 
 var _ = BeforeEach(func() {
@@ -59,15 +57,12 @@ var _ = BeforeEach(func() {
 		},
 	}
 
-	artifactBuilder = &builder.ArtifactBuilder{
+	artifactWriter = &artifact.Writer{
 		GitRepositoryName:      gitRepoName,
 		GitRepositoryNamespace: gitRepoNamespace,
 		RootDir:                rootDir,
 	}
 
-	repoLocationMap = map[string]string{
-		repoKey: gitDir,
-	}
 })
 
 var _ = AfterEach(func() {

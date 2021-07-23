@@ -4,17 +4,16 @@ package fakes
 import (
 	"sync"
 
-	"github.com/weaveworks/pctl/pkg/install/builder"
+	"github.com/weaveworks/pctl/pkg/install/artifact"
 	"github.com/weaveworks/profiles/api/v1alpha1"
 )
 
-type FakeBuilder struct {
-	WriteStub        func(v1alpha1.ProfileInstallation, []builder.ArtifactWrapper, map[string]string) error
+type FakeArtifactWriter struct {
+	WriteStub        func(v1alpha1.ProfileInstallation, []artifact.ArtifactWrapper) error
 	writeMutex       sync.RWMutex
 	writeArgsForCall []struct {
 		arg1 v1alpha1.ProfileInstallation
-		arg2 []builder.ArtifactWrapper
-		arg3 map[string]string
+		arg2 []artifact.ArtifactWrapper
 	}
 	writeReturns struct {
 		result1 error
@@ -26,25 +25,24 @@ type FakeBuilder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBuilder) Write(arg1 v1alpha1.ProfileInstallation, arg2 []builder.ArtifactWrapper, arg3 map[string]string) error {
-	var arg2Copy []builder.ArtifactWrapper
+func (fake *FakeArtifactWriter) Write(arg1 v1alpha1.ProfileInstallation, arg2 []artifact.ArtifactWrapper) error {
+	var arg2Copy []artifact.ArtifactWrapper
 	if arg2 != nil {
-		arg2Copy = make([]builder.ArtifactWrapper, len(arg2))
+		arg2Copy = make([]artifact.ArtifactWrapper, len(arg2))
 		copy(arg2Copy, arg2)
 	}
 	fake.writeMutex.Lock()
 	ret, specificReturn := fake.writeReturnsOnCall[len(fake.writeArgsForCall)]
 	fake.writeArgsForCall = append(fake.writeArgsForCall, struct {
 		arg1 v1alpha1.ProfileInstallation
-		arg2 []builder.ArtifactWrapper
-		arg3 map[string]string
-	}{arg1, arg2Copy, arg3})
+		arg2 []artifact.ArtifactWrapper
+	}{arg1, arg2Copy})
 	stub := fake.WriteStub
 	fakeReturns := fake.writeReturns
-	fake.recordInvocation("Write", []interface{}{arg1, arg2Copy, arg3})
+	fake.recordInvocation("Write", []interface{}{arg1, arg2Copy})
 	fake.writeMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
@@ -52,26 +50,26 @@ func (fake *FakeBuilder) Write(arg1 v1alpha1.ProfileInstallation, arg2 []builder
 	return fakeReturns.result1
 }
 
-func (fake *FakeBuilder) WriteCallCount() int {
+func (fake *FakeArtifactWriter) WriteCallCount() int {
 	fake.writeMutex.RLock()
 	defer fake.writeMutex.RUnlock()
 	return len(fake.writeArgsForCall)
 }
 
-func (fake *FakeBuilder) WriteCalls(stub func(v1alpha1.ProfileInstallation, []builder.ArtifactWrapper, map[string]string) error) {
+func (fake *FakeArtifactWriter) WriteCalls(stub func(v1alpha1.ProfileInstallation, []artifact.ArtifactWrapper) error) {
 	fake.writeMutex.Lock()
 	defer fake.writeMutex.Unlock()
 	fake.WriteStub = stub
 }
 
-func (fake *FakeBuilder) WriteArgsForCall(i int) (v1alpha1.ProfileInstallation, []builder.ArtifactWrapper, map[string]string) {
+func (fake *FakeArtifactWriter) WriteArgsForCall(i int) (v1alpha1.ProfileInstallation, []artifact.ArtifactWrapper) {
 	fake.writeMutex.RLock()
 	defer fake.writeMutex.RUnlock()
 	argsForCall := fake.writeArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeBuilder) WriteReturns(result1 error) {
+func (fake *FakeArtifactWriter) WriteReturns(result1 error) {
 	fake.writeMutex.Lock()
 	defer fake.writeMutex.Unlock()
 	fake.WriteStub = nil
@@ -80,7 +78,7 @@ func (fake *FakeBuilder) WriteReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeBuilder) WriteReturnsOnCall(i int, result1 error) {
+func (fake *FakeArtifactWriter) WriteReturnsOnCall(i int, result1 error) {
 	fake.writeMutex.Lock()
 	defer fake.writeMutex.Unlock()
 	fake.WriteStub = nil
@@ -94,7 +92,7 @@ func (fake *FakeBuilder) WriteReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeBuilder) Invocations() map[string][][]interface{} {
+func (fake *FakeArtifactWriter) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.writeMutex.RLock()
@@ -106,7 +104,7 @@ func (fake *FakeBuilder) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *FakeBuilder) recordInvocation(key string, args []interface{}) {
+func (fake *FakeArtifactWriter) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -118,4 +116,4 @@ func (fake *FakeBuilder) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ builder.Builder = new(FakeBuilder)
+var _ artifact.ArtifactWriter = new(FakeArtifactWriter)

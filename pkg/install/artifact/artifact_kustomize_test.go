@@ -1,4 +1,4 @@
-package builder_test
+package artifact_test
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/install/builder"
+	"github.com/weaveworks/pctl/pkg/install/artifact"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/kustomize/api/types"
@@ -27,7 +27,7 @@ var _ = Describe("Kustomize", func() {
 		Expect(os.MkdirAll(kustomizeFilesDir, 0755)).To(Succeed())
 		Expect(ioutil.WriteFile(filepath.Join(kustomizeFilesDir, "file1"), []byte("foo"), 0755)).To(Succeed())
 
-		artifacts = []builder.ArtifactWrapper{
+		artifacts = []artifact.ArtifactWrapper{
 			{
 				Artifact: profilesv1.Artifact{
 					Name: artifactName,
@@ -42,7 +42,7 @@ var _ = Describe("Kustomize", func() {
 	})
 
 	It("generates the Kustomization and copies the raw artifacts into the directory", func() {
-		err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+		err := artifactWriter.Write(installation, artifacts)
 		Expect(err).NotTo(HaveOccurred())
 
 		var files []string
@@ -93,8 +93,8 @@ var _ = Describe("Kustomize", func() {
 
 	When("the gitrepository isn't set", func() {
 		It("returns an error", func() {
-			artifactBuilder.GitRepositoryName = ""
-			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+			artifactWriter.GitRepositoryName = ""
+			err := artifactWriter.Write(installation, artifacts)
 			Expect(err).To(MatchError("in case of local resources, the flux gitrepository object's details must be provided"))
 		})
 	})
@@ -102,7 +102,7 @@ var _ = Describe("Kustomize", func() {
 	When("copying the artifact fails", func() {
 		It("returns an error", func() {
 			artifacts[0].PathToProfileClone = "/tmp/i/dont/exist"
-			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+			err := artifactWriter.Write(installation, artifacts)
 			Expect(err).To(MatchError(ContainSubstring("failed to copy files:")))
 		})
 	})

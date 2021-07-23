@@ -1,4 +1,4 @@
-package builder_test
+package artifact_test
 
 import (
 	"fmt"
@@ -11,18 +11,18 @@ import (
 	"github.com/fluxcd/pkg/runtime/dependency"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/install/builder"
+	"github.com/weaveworks/pctl/pkg/install/artifact"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Builder", func() {
+var _ = Describe("NestedArtifact", func() {
 	Context("when the artifact is a nested artifact", func() {
 		BeforeEach(func() {
 			kustomizeFilesDir := filepath.Join(gitDir, profilePath, "files")
 			Expect(os.MkdirAll(kustomizeFilesDir, 0755)).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(kustomizeFilesDir, "file1"), []byte("foo"), 0755)).To(Succeed())
-			artifacts = []builder.ArtifactWrapper{
+			artifacts = []artifact.ArtifactWrapper{
 				{
 					Artifact: profilesv1.Artifact{
 						Name: artifactName,
@@ -38,7 +38,7 @@ var _ = Describe("Builder", func() {
 		})
 
 		It("places the artifactr in a subdirectory", func() {
-			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+			err := artifactWriter.Write(installation, artifacts)
 			Expect(err).NotTo(HaveOccurred())
 
 			var files []string
@@ -68,7 +68,7 @@ var _ = Describe("Builder", func() {
 			kustomizeFilesDir := filepath.Join(gitDir, profilePath, "files")
 			Expect(os.MkdirAll(kustomizeFilesDir, 0755)).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(kustomizeFilesDir, "file1"), []byte("foo"), 0755)).To(Succeed())
-			artifacts = []builder.ArtifactWrapper{
+			artifacts = []artifact.ArtifactWrapper{
 				{
 					Artifact: profilesv1.Artifact{
 						Name: artifactName,
@@ -112,7 +112,7 @@ var _ = Describe("Builder", func() {
 		})
 
 		It("sets the depends on field in the kustomization", func() {
-			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+			err := artifactWriter.Write(installation, artifacts)
 			Expect(err).NotTo(HaveOccurred())
 
 			var files []string
@@ -173,7 +173,7 @@ var _ = Describe("Builder", func() {
 		When("no type is set", func() {
 			It("returns an error", func() {
 				artifacts[0].Artifact = profilesv1.Artifact{}
-				err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+				err := artifactWriter.Write(installation, artifacts)
 				Expect(err).To(MatchError(ContainSubstring("no artifact type set")))
 			})
 		})
@@ -186,7 +186,7 @@ var _ = Describe("Builder", func() {
 						URL:  "bar",
 					},
 				}
-				err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+				err := artifactWriter.Write(installation, artifacts)
 				Expect(err).To(MatchError(ContainSubstring("expected exactly one, got both: chart.path, chart.url")))
 			})
 		})
@@ -201,7 +201,7 @@ var _ = Describe("Builder", func() {
 						Path: "bar",
 					},
 				}
-				err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+				err := artifactWriter.Write(installation, artifacts)
 				Expect(err).To(MatchError(ContainSubstring("expected exactly one, got both: chart, kustomize")))
 			})
 		})
@@ -214,7 +214,7 @@ var _ = Describe("Builder", func() {
 						Path: "foo",
 					},
 				}
-				err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+				err := artifactWriter.Write(installation, artifacts)
 				Expect(err).To(MatchError(ContainSubstring("expected exactly one, got both: chart, profile")))
 			})
 		})
@@ -227,7 +227,7 @@ var _ = Describe("Builder", func() {
 						Path: "foo",
 					},
 				}
-				err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
+				err := artifactWriter.Write(installation, artifacts)
 				Expect(err).To(MatchError(ContainSubstring("expected exactly one, got both: kustomize, profile")))
 			})
 		})
