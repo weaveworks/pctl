@@ -40,9 +40,9 @@ var _ ArtifactWriter = &Writer{}
 
 type ArtifactWrapper struct {
 	profilesv1.Artifact
-	NestedProfileArtifactName string
-	PathToProfileClone        string
-	ProfileName               string
+	NestedProfileSubDirectoryName string
+	PathToProfileClone            string
+	ProfileName                   string
 }
 
 // Writer will build helm chart resources.
@@ -105,7 +105,7 @@ func (c *Writer) writeKustomizeArtifact(installation profilesv1.ProfileInstallat
 		return fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 	}
 
-	artifactDir := filepath.Join(c.RootDir, "artifacts", a.NestedProfileArtifactName, a.Name)
+	artifactDir := filepath.Join(c.RootDir, "artifacts", a.NestedProfileSubDirectoryName, a.Name)
 	if err := c.copyArtifacts(a, a.Kustomize.Path, filepath.Join(artifactDir, a.Kustomize.Path)); err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (c *Writer) writeKustomizeArtifact(installation profilesv1.ProfileInstallat
 }
 
 func (c *Writer) writeChartArtifact(installation profilesv1.ProfileInstallation, a ArtifactWrapper, deps []ArtifactWrapper) error {
-	artifactDir := filepath.Join(c.RootDir, "artifacts", a.NestedProfileArtifactName, a.Name)
+	artifactDir := filepath.Join(c.RootDir, "artifacts", a.NestedProfileSubDirectoryName, a.Name)
 	helmChartDir := filepath.Join(artifactDir, helmChartLocation)
 	if err := os.MkdirAll(helmChartDir, 0755); err != nil && !os.IsExist(err) {
 		return fmt.Errorf("failed to create directory %w", err)
@@ -400,7 +400,7 @@ func (c *Writer) makeArtifactName(installationName, definitionName, artifactName
 }
 func containsArtifact(list []ArtifactWrapper, name string) (ArtifactWrapper, bool) {
 	for _, a := range list {
-		if a.Name == name || a.NestedProfileArtifactName == name {
+		if a.Name == name || a.NestedProfileSubDirectoryName == name {
 			return a, true
 		}
 	}

@@ -34,8 +34,8 @@ type Config struct {
 
 type Installer struct {
 	Config
-	clonedRepos map[string]string
-	Writer      artifact.ArtifactWriter
+	clonedRepos    map[string]string
+	artifactWriter artifact.ArtifactWriter
 }
 
 // NewInstaller creates a new profiles installer
@@ -43,7 +43,7 @@ func NewInstaller(cfg Config) *Installer {
 	return &Installer{
 		clonedRepos: make(map[string]string),
 		Config:      cfg,
-		Writer: &artifact.Writer{
+		artifactWriter: &artifact.Writer{
 			GitRepositoryName:      cfg.GitRepoName,
 			GitRepositoryNamespace: cfg.GitRepoNamespace,
 			RootDir:                cfg.RootDir,
@@ -52,20 +52,21 @@ func NewInstaller(cfg Config) *Installer {
 }
 
 func (i *Installer) Install(installation profilesv1.ProfileInstallation) error {
-	artifacts, err := i.composeArtifacts(installation, false)
+	artifacts, err := i.collectArtifacts(installation, false)
 	if err != nil {
 		return err
 	}
-	return i.Writer.Write(installation, artifacts)
+	return i.artifactWriter.Write(installation, artifacts)
 }
 
-func (i *Installer) composeArtifacts(installation profilesv1.ProfileInstallation, nested bool) ([]artifact.ArtifactWrapper, error) {
+//collectArtifacts goes through the profile definition and any nested profiles to collect all artifacts
+func (i *Installer) collectArtifacts(installation profilesv1.ProfileInstallation, isNestedArtifact bool) ([]artifact.ArtifactWrapper, error) {
 	path := installation.Spec.Source.Path
 	branchOrTag := installation.Spec.Source.Tag
 	if installation.Spec.Source.Tag == "" {
 		branchOrTag = installation.Spec.Source.Branch
 	}
-	profileDef, err := i.GetProfileDefinition(installation.Spec.Source.URL, branchOrTag, path)
+	profileDef, err := i.cloneRepoAndGetProfileDefinition(installation.Spec.Source.URL, branchOrTag, path)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +74,7 @@ func (i *Installer) composeArtifacts(installation profilesv1.ProfileInstallation
 
 	var artifacts []artifact.ArtifactWrapper
 	for _, a := range profileDef.Spec.Artifacts {
+		//If its a nested profile lets make a recursive call to scans its artifacts
 		if a.Profile != nil {
 			nestedInstallation := installation.DeepCopyObject().(*profilesv1.ProfileInstallation)
 			nestedInstallation.Spec.Source.URL = a.Profile.Source.URL
@@ -88,32 +90,28 @@ func (i *Installer) composeArtifacts(installation profilesv1.ProfileInstallation
 				nestedInstallation.Spec.Source.Path = path
 			}
 			nestedInstallation.Name = a.Name
-			nestedArtifacts, err := i.composeArtifacts(*nestedInstallation, true)
+			nestedArtifacts, err := i.collectArtifacts(*nestedInstallation, true)
 			if err != nil {
 				return nil, err
 			}
 			artifacts = append(artifacts, nestedArtifacts...)
 		} else {
-			if nested {
-				artifacts = append(artifacts, artifact.ArtifactWrapper{
-					Artifact:                  a,
-					NestedProfileArtifactName: installation.Name,
-					PathToProfileClone:        filepath.Join(i.clonedRepos[profileRepoKey], installation.Spec.Source.Path),
-					ProfileName:               profileDef.Name,
-				})
-			} else {
-				artifacts = append(artifacts, artifact.ArtifactWrapper{
-					Artifact:           a,
-					PathToProfileClone: filepath.Join(i.clonedRepos[profileRepoKey], installation.Spec.Source.Path),
-					ProfileName:        profileDef.Name,
-				})
+			newArtifact := artifact.ArtifactWrapper{
+				Artifact:           a,
+				PathToProfileClone: filepath.Join(i.clonedRepos[profileRepoKey], installation.Spec.Source.Path),
+				ProfileName:        profileDef.Name,
 			}
+			//if its a nested artifact we want to wrap the artifact in a sub-directory
+			if isNestedArtifact {
+				newArtifact.NestedProfileSubDirectoryName = installation.Name
+			}
+			artifacts = append(artifacts, newArtifact)
 		}
 	}
 	return artifacts, nil
 }
 
-func (i *Installer) GetProfileDefinition(repoURL, branch, path string) (profilesv1.ProfileDefinition, error) {
+func (i *Installer) cloneRepoAndGetProfileDefinition(repoURL, branch, path string) (profilesv1.ProfileDefinition, error) {
 	// Add postfix so potential nested profiles don't clone into the same folder.
 	u, err := uuid.NewRandom()
 	if err != nil {

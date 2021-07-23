@@ -30,9 +30,9 @@ var _ = Describe("NestedArtifact", func() {
 							Path: "files/",
 						},
 					},
-					PathToProfileClone:        filepath.Join(gitDir, profilePath),
-					ProfileName:               profileName,
-					NestedProfileArtifactName: "nested-profile",
+					PathToProfileClone:            filepath.Join(gitDir, profilePath),
+					ProfileName:                   profileName,
+					NestedProfileSubDirectoryName: "nested-profile",
 				},
 			}
 		})
@@ -105,9 +105,9 @@ var _ = Describe("NestedArtifact", func() {
 							Path: "files/",
 						},
 					},
-					NestedProfileArtifactName: nestedProfileName,
-					PathToProfileClone:        filepath.Join(gitDir, profilePath),
-					ProfileName:               profileName2,
+					NestedProfileSubDirectoryName: nestedProfileName,
+					PathToProfileClone:            filepath.Join(gitDir, profilePath),
+					ProfileName:                   profileName2,
 				},
 			}
 		})
