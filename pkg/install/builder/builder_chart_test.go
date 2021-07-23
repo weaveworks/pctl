@@ -13,7 +13,7 @@ import (
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/install/artifact"
+	"github.com/weaveworks/pctl/pkg/install/builder"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,11 +32,11 @@ var helmRepoTypeMeta = metav1.TypeMeta{
 var _ = Describe("Helm", func() {
 	var configMapName = "my-configmap"
 	BeforeEach(func() {
-		chartDir := filepath.Join(gitDir, "weaveworks-nginx", "files")
+		chartDir := filepath.Join(gitDir, profilePath, "files")
 		Expect(os.MkdirAll(chartDir, 0755)).To(Succeed())
 		Expect(ioutil.WriteFile(filepath.Join(chartDir, "file1"), []byte("foo"), 0755)).To(Succeed())
 
-		artifacts = []artifact.Artifact{
+		artifacts = []builder.ArtifactWrapper{
 			{
 				Artifact: profilesv1.Artifact{
 					Name: artifactName,
@@ -45,9 +45,8 @@ var _ = Describe("Helm", func() {
 						DefaultValues: "values",
 					},
 				},
-				ProfileRepoKey:            repoKey,
-				ProfilePath:               profilePath,
-				ParentProfileArtifactName: "",
+				PathToProfileClone: filepath.Join(gitDir, profilePath),
+				ProfileName:        profileName,
 			},
 		}
 	})
@@ -87,7 +86,7 @@ var _ = Describe("Helm", func() {
 		Expect(kustomize).To(Equal(kustomizev1.Kustomization{
 			TypeMeta: kustomizeTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s-%s", installationName, profilePath, artifactName),
+				Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
 				Namespace: namespace,
 			},
 			Spec: kustomizev1.KustomizationSpec{
@@ -101,7 +100,7 @@ var _ = Describe("Helm", func() {
 					{
 						APIVersion: helmv2.GroupVersion.String(),
 						Kind:       helmv2.HelmReleaseKind,
-						Name:       fmt.Sprintf("%s-%s-%s", installationName, profilePath, artifactName),
+						Name:       fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
 						Namespace:  namespace,
 					},
 				},
@@ -140,7 +139,7 @@ var _ = Describe("Helm", func() {
 		Expect(helmRes).To(Equal(helmv2.HelmRelease{
 			TypeMeta: helmReleaseTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s-%s", installationName, profilePath, artifactName),
+				Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
 				Namespace: namespace,
 			},
 			Spec: helmv2.HelmReleaseSpec{
@@ -177,7 +176,7 @@ var _ = Describe("Helm", func() {
 			chartVersion = "v1.0.0"
 		)
 		BeforeEach(func() {
-			artifacts = []artifact.Artifact{
+			artifacts = []builder.ArtifactWrapper{
 				{
 					Artifact: profilesv1.Artifact{
 						Name: artifactName,
@@ -187,9 +186,8 @@ var _ = Describe("Helm", func() {
 							Name:    chartName,
 						},
 					},
-					ProfileRepoKey:            repoKey,
-					ProfilePath:               profilePath,
-					ParentProfileArtifactName: "",
+					PathToProfileClone: filepath.Join(gitDir, profilePath),
+					ProfileName:        profileName,
 				},
 			}
 		})
@@ -226,7 +224,7 @@ var _ = Describe("Helm", func() {
 			Expect(kustomize).To(Equal(kustomizev1.Kustomization{
 				TypeMeta: kustomizeTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-%s-%s", installationName, profilePath, artifactName),
+					Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
 					Namespace: namespace,
 				},
 				Spec: kustomizev1.KustomizationSpec{
@@ -240,7 +238,7 @@ var _ = Describe("Helm", func() {
 						{
 							APIVersion: helmv2.GroupVersion.String(),
 							Kind:       helmv2.HelmReleaseKind,
-							Name:       fmt.Sprintf("%s-%s-%s", installationName, profilePath, artifactName),
+							Name:       fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
 							Namespace:  namespace,
 						},
 					},
@@ -256,7 +254,7 @@ var _ = Describe("Helm", func() {
 			Expect(helmRes).To(Equal(helmv2.HelmRelease{
 				TypeMeta: helmReleaseTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-%s-%s", installationName, profilePath, artifactName),
+					Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
 					Namespace: namespace,
 				},
 				Spec: helmv2.HelmReleaseSpec{
@@ -297,17 +295,9 @@ var _ = Describe("Helm", func() {
 		})
 	})
 
-	When("the repo hasn't been cloned", func() {
-		It("returns an error", func() {
-			artifacts[0].ProfileRepoKey = "dontexistlol"
-			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
-			Expect(err).To(MatchError(ContainSubstring("could not find repo clone for \"dontexistlol\"")))
-		})
-	})
-
 	When("copying the artifact fails", func() {
 		It("returns an error", func() {
-			artifacts[0].ProfilePath = "/tmp/i/dont/exist"
+			artifacts[0].PathToProfileClone = "/tmp/i/dont/exist"
 			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
 			Expect(err).To(MatchError(ContainSubstring("failed to copy files:")))
 		})

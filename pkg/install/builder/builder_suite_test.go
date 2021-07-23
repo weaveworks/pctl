@@ -8,7 +8,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/install/artifact"
 	"github.com/weaveworks/pctl/pkg/install/builder"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,17 +22,18 @@ func TestBuilder(t *testing.T) {
 var (
 	rootDir          string
 	gitDir           string
-	artifactBuilder  *builder.ArtifactBuilder2
+	artifactBuilder  *builder.ArtifactBuilder
 	repoKey          = "repoKey"
 	gitRepoName      = "my-git-repo"
 	gitRepoNamespace = "my-git-repo-namespace"
 	profileURL       = "github.com/weaveworks/profiles-examples"
 	profileBranch    = "main"
-	profilePath      = "weaveworks-nginx"
+	profilePath      = "path/to/profile"
+	profileName      = "weaveworks-nginx"
 	installation     profilesv1.ProfileInstallation
 	installationName = "install-name"
 	namespace        = "my-namespace"
-	artifacts        []artifact.Artifact
+	artifacts        []builder.ArtifactWrapper
 	artifactName     = "1"
 	repoLocationMap  map[string]string
 )
@@ -59,7 +59,7 @@ var _ = BeforeEach(func() {
 		},
 	}
 
-	artifactBuilder = &builder.ArtifactBuilder2{
+	artifactBuilder = &builder.ArtifactBuilder{
 		GitRepositoryName:      gitRepoName,
 		GitRepositoryNamespace: gitRepoNamespace,
 		RootDir:                rootDir,

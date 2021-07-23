@@ -10,7 +10,7 @@ import (
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/install/artifact"
+	"github.com/weaveworks/pctl/pkg/install/builder"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/kustomize/api/types"
@@ -23,11 +23,11 @@ var kustomizeTypeMeta = metav1.TypeMeta{
 
 var _ = Describe("Kustomize", func() {
 	BeforeEach(func() {
-		kustomizeFilesDir := filepath.Join(gitDir, "weaveworks-nginx", "files")
+		kustomizeFilesDir := filepath.Join(gitDir, profilePath, "files")
 		Expect(os.MkdirAll(kustomizeFilesDir, 0755)).To(Succeed())
 		Expect(ioutil.WriteFile(filepath.Join(kustomizeFilesDir, "file1"), []byte("foo"), 0755)).To(Succeed())
 
-		artifacts = []artifact.Artifact{
+		artifacts = []builder.ArtifactWrapper{
 			{
 				Artifact: profilesv1.Artifact{
 					Name: artifactName,
@@ -35,9 +35,8 @@ var _ = Describe("Kustomize", func() {
 						Path: "files/",
 					},
 				},
-				ProfileRepoKey:            repoKey,
-				ProfilePath:               profilePath,
-				ParentProfileArtifactName: "",
+				PathToProfileClone: filepath.Join(gitDir, profilePath),
+				ProfileName:        profileName,
 			},
 		}
 	})
@@ -71,7 +70,7 @@ var _ = Describe("Kustomize", func() {
 		Expect(kustomize).To(Equal(kustomizev1.Kustomization{
 			TypeMeta: kustomizeTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s-%s", installationName, profilePath, artifactName),
+				Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
 				Namespace: namespace,
 			},
 			Spec: kustomizev1.KustomizationSpec{
@@ -100,17 +99,9 @@ var _ = Describe("Kustomize", func() {
 		})
 	})
 
-	When("the repo hasn't been cloned", func() {
-		It("returns an error", func() {
-			artifacts[0].ProfileRepoKey = "dontexistlol"
-			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
-			Expect(err).To(MatchError(ContainSubstring("could not find repo clone for \"dontexistlol\"")))
-		})
-	})
-
 	When("copying the artifact fails", func() {
 		It("returns an error", func() {
-			artifacts[0].ProfilePath = "/tmp/i/dont/exist"
+			artifacts[0].PathToProfileClone = "/tmp/i/dont/exist"
 			err := artifactBuilder.Write(installation, artifacts, repoLocationMap)
 			Expect(err).To(MatchError(ContainSubstring("failed to copy files:")))
 		})

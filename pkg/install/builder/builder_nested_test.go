@@ -11,7 +11,7 @@ import (
 	"github.com/fluxcd/pkg/runtime/dependency"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/install/artifact"
+	"github.com/weaveworks/pctl/pkg/install/builder"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -19,10 +19,10 @@ import (
 var _ = Describe("Builder", func() {
 	Context("when the artifact is a nested artifact", func() {
 		BeforeEach(func() {
-			kustomizeFilesDir := filepath.Join(gitDir, "weaveworks-nginx", "files")
+			kustomizeFilesDir := filepath.Join(gitDir, profilePath, "files")
 			Expect(os.MkdirAll(kustomizeFilesDir, 0755)).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(kustomizeFilesDir, "file1"), []byte("foo"), 0755)).To(Succeed())
-			artifacts = []artifact.Artifact{
+			artifacts = []builder.ArtifactWrapper{
 				{
 					Artifact: profilesv1.Artifact{
 						Name: artifactName,
@@ -30,9 +30,9 @@ var _ = Describe("Builder", func() {
 							Path: "files/",
 						},
 					},
-					ProfileRepoKey:            repoKey,
-					ProfilePath:               profilePath,
-					ParentProfileArtifactName: "nested-profile",
+					PathToProfileClone:        filepath.Join(gitDir, profilePath),
+					ProfileName:               profileName,
+					NestedProfileArtifactName: "nested-profile",
 				},
 			}
 		})
@@ -65,10 +65,10 @@ var _ = Describe("Builder", func() {
 			nestedProfileName = "nested-profile"
 		)
 		BeforeEach(func() {
-			kustomizeFilesDir := filepath.Join(gitDir, "weaveworks-nginx", "files")
+			kustomizeFilesDir := filepath.Join(gitDir, profilePath, "files")
 			Expect(os.MkdirAll(kustomizeFilesDir, 0755)).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(kustomizeFilesDir, "file1"), []byte("foo"), 0755)).To(Succeed())
-			artifacts = []artifact.Artifact{
+			artifacts = []builder.ArtifactWrapper{
 				{
 					Artifact: profilesv1.Artifact{
 						Name: artifactName,
@@ -84,8 +84,8 @@ var _ = Describe("Builder", func() {
 							},
 						},
 					},
-					ProfileRepoKey: repoKey,
-					ProfilePath:    profilePath,
+					PathToProfileClone: filepath.Join(gitDir, profilePath),
+					ProfileName:        profileName,
 				},
 				{
 					Artifact: profilesv1.Artifact{
@@ -94,8 +94,8 @@ var _ = Describe("Builder", func() {
 							Path: "files/",
 						},
 					},
-					ProfileRepoKey: repoKey,
-					ProfilePath:    profilePath,
+					PathToProfileClone: filepath.Join(gitDir, profilePath),
+					ProfileName:        profileName,
 				},
 				{
 					Artifact: profilesv1.Artifact{
@@ -104,9 +104,9 @@ var _ = Describe("Builder", func() {
 							Path: "files/",
 						},
 					},
-					ProfileRepoKey:            repoKey,
-					ProfilePath:               profilePath,
-					ParentProfileArtifactName: nestedProfileName,
+					NestedProfileArtifactName: nestedProfileName,
+					PathToProfileClone:        filepath.Join(gitDir, profilePath),
+					ProfileName:               profileName,
 				},
 			}
 		})
@@ -141,7 +141,7 @@ var _ = Describe("Builder", func() {
 			Expect(kustomize).To(Equal(kustomizev1.Kustomization{
 				TypeMeta: kustomizeTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-%s-%s", installationName, profilePath, artifactName),
+					Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
 					Namespace: namespace,
 				},
 				Spec: kustomizev1.KustomizationSpec{
@@ -156,11 +156,11 @@ var _ = Describe("Builder", func() {
 					TargetNamespace: namespace,
 					DependsOn: []dependency.CrossNamespaceDependencyReference{
 						{
-							Name:      fmt.Sprintf("%s-%s-%s", installationName, profilePath, artifactName2),
+							Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName2),
 							Namespace: namespace,
 						},
 						{
-							Name:      fmt.Sprintf("%s-%s-%s", installationName, profilePath, artifactName3),
+							Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName3),
 							Namespace: namespace,
 						},
 					},

@@ -14,7 +14,6 @@ import (
 	"github.com/fluxcd/pkg/runtime/dependency"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	"github.com/otiai10/copy"
-	"github.com/weaveworks/pctl/pkg/install/artifact"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
@@ -34,22 +33,29 @@ const (
 // Builder can build an artifacts from an installation and a profile artifact.
 //go:generate counterfeiter -o fakes/fake_builder.go . Builder
 type Builder interface {
-	Write(installation profilesv1.ProfileInstallation, artifacts []artifact.Artifact, repoLocation map[string]string) error
+	Write(installation profilesv1.ProfileInstallation, artifacts []ArtifactWrapper, repoLocation map[string]string) error
 }
 
-var _ Builder = &ArtifactBuilder2{}
+var _ Builder = &ArtifactBuilder{}
+
+type ArtifactWrapper struct {
+	profilesv1.Artifact
+	NestedProfileArtifactName string
+	PathToProfileClone        string
+	ProfileName               string
+}
 
 // ArtifactBuilder will build helm chart resources.
-type ArtifactBuilder2 struct {
+type ArtifactBuilder struct {
 	GitRepositoryName      string
 	GitRepositoryNamespace string
 	RootDir                string
 }
 
 // Build a single artifact from a profile artifact and installation.
-func (c *ArtifactBuilder2) Write(installation profilesv1.ProfileInstallation, artifacts []artifact.Artifact, repoLocation map[string]string) error {
+func (c *ArtifactBuilder) Write(installation profilesv1.ProfileInstallation, artifacts []ArtifactWrapper, repoLocation map[string]string) error {
 	for _, a := range artifacts {
-		var deps []artifact.Artifact
+		var deps []ArtifactWrapper
 		for _, dep := range a.DependsOn {
 			d, ok := containsArtifact(artifacts, dep.Name)
 			if !ok {
@@ -94,13 +100,13 @@ func validateArtifact(a profilesv1.Artifact) error {
 	return nil
 }
 
-func (c *ArtifactBuilder2) writeKustomizeArtifact(installation profilesv1.ProfileInstallation, a artifact.Artifact, deps []artifact.Artifact, repoLocations map[string]string) error {
+func (c *ArtifactBuilder) writeKustomizeArtifact(installation profilesv1.ProfileInstallation, a ArtifactWrapper, deps []ArtifactWrapper, repoLocations map[string]string) error {
 	//TODO validate kustomize
 	if c.GitRepositoryNamespace == "" || c.GitRepositoryName == "" {
 		return fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
 	}
 
-	artifactDir := filepath.Join(c.RootDir, "artifacts", a.ParentProfileArtifactName, a.Name)
+	artifactDir := filepath.Join(c.RootDir, "artifacts", a.NestedProfileArtifactName, a.Name)
 	if err := c.copyArtifacts(a, a.Kustomize.Path, filepath.Join(artifactDir, a.Kustomize.Path), repoLocations); err != nil {
 		return err
 	}
@@ -109,18 +115,18 @@ func (c *ArtifactBuilder2) writeKustomizeArtifact(installation profilesv1.Profil
 	}
 
 	// wrapper := c.makeKustomization(artifact, path, installation, definitionName, dependencies)
-	return c.writeResourceWithName(c.makeKustomization(a, filepath.Join(artifactDir, a.Kustomize.Path), installation, a.ProfilePath, deps), filepath.Join(artifactDir, kustomizeWrapperObjectName))
+	return c.writeResourceWithName(c.makeKustomization(a, filepath.Join(artifactDir, a.Kustomize.Path), installation, a.ProfileName, deps), filepath.Join(artifactDir, kustomizeWrapperObjectName))
 }
 
-func (c *ArtifactBuilder2) writeChartArtifact(installation profilesv1.ProfileInstallation, a artifact.Artifact, deps []artifact.Artifact, repoLocations map[string]string) error {
+func (c *ArtifactBuilder) writeChartArtifact(installation profilesv1.ProfileInstallation, a ArtifactWrapper, deps []ArtifactWrapper, repoLocations map[string]string) error {
 	//TODO validate chart
-	artifactDir := filepath.Join(c.RootDir, "artifacts", a.ParentProfileArtifactName, a.Name)
+	artifactDir := filepath.Join(c.RootDir, "artifacts", a.NestedProfileArtifactName, a.Name)
 	helmChartDir := filepath.Join(artifactDir, helmChartLocation)
 	if err := os.MkdirAll(helmChartDir, 0755); err != nil && !os.IsExist(err) {
 		return fmt.Errorf("failed to create directory %w", err)
 	}
 	var objs []runtime.Object
-	helmRelease, cfgMap := c.makeHelmReleaseObjects(a.Artifact, installation, a.ProfilePath)
+	helmRelease, cfgMap := c.makeHelmReleaseObjects(a.Artifact, installation, a.ProfileName)
 	if cfgMap != nil {
 		objs = append(objs, cfgMap)
 	}
@@ -152,10 +158,10 @@ func (c *ArtifactBuilder2) writeChartArtifact(installation profilesv1.ProfileIns
 		return err
 	}
 
-	return c.writeResourceWithName(c.makeKustomizeHelmReleaseWrapper(a, installation, a.ProfilePath, helmChartDir, deps), filepath.Join(artifactDir, kustomizeWrapperObjectName))
+	return c.writeResourceWithName(c.makeKustomizeHelmReleaseWrapper(a, installation, a.ProfileName, helmChartDir, deps), filepath.Join(artifactDir, kustomizeWrapperObjectName))
 }
 
-func (c *ArtifactBuilder2) writeOutKustomizeResource(resources []string, dir string) error {
+func (c *ArtifactBuilder) writeOutKustomizeResource(resources []string, dir string) error {
 	kustomize := &types.Kustomization{
 		Resources: resources,
 	}
@@ -171,7 +177,7 @@ func (c *ArtifactBuilder2) writeOutKustomizeResource(resources []string, dir str
 	return nil
 }
 
-func (c *ArtifactBuilder2) writeResourceWithName(obj runtime.Object, filename string) error {
+func (c *ArtifactBuilder) writeResourceWithName(obj runtime.Object, filename string) error {
 	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
@@ -188,7 +194,7 @@ func (c *ArtifactBuilder2) writeResourceWithName(obj runtime.Object, filename st
 	return nil
 }
 
-func (c *ArtifactBuilder2) writeResource(obj runtime.Object, dir string) error {
+func (c *ArtifactBuilder) writeResource(obj runtime.Object, dir string) error {
 	name := obj.GetObjectKind().GroupVersionKind().Kind
 	filename := filepath.Join(dir, fmt.Sprintf("%s.%s", name, "yaml"))
 	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
@@ -207,20 +213,15 @@ func (c *ArtifactBuilder2) writeResource(obj runtime.Object, dir string) error {
 	return nil
 }
 
-func (c *ArtifactBuilder2) copyArtifacts(a artifact.Artifact, subDir, destDir string, repoLocations map[string]string) error {
-	tmp, ok := repoLocations[a.ProfileRepoKey]
-	if !ok {
-		return fmt.Errorf("could not find repo clone for %q", a.ProfileRepoKey)
-	}
-
-	srcDir := filepath.Join(tmp, a.ProfilePath, subDir)
+func (c *ArtifactBuilder) copyArtifacts(a ArtifactWrapper, subDir, destDir string, repoLocations map[string]string) error {
+	srcDir := filepath.Join(a.PathToProfileClone, subDir)
 	if err := copy.Copy(srcDir, destDir); err != nil {
 		return fmt.Errorf("failed to copy files: %w", err)
 	}
 	return nil
 }
 
-func (c *ArtifactBuilder2) makeHelmReleaseObjects(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string) (*helmv2.HelmRelease, *corev1.ConfigMap) {
+func (c *ArtifactBuilder) makeHelmReleaseObjects(artifact profilesv1.Artifact, installation profilesv1.ProfileInstallation, definitionName string) (*helmv2.HelmRelease, *corev1.ConfigMap) {
 	var helmChartSpec helmv2.HelmChartTemplateSpec
 	if artifact.Chart.Path != "" {
 		helmChartSpec = c.makeGitChartSpec(path.Join(installation.Spec.Source.Path, artifact.Chart.Path))
@@ -250,7 +251,7 @@ func (c *ArtifactBuilder2) makeHelmReleaseObjects(artifact profilesv1.Artifact, 
 	}
 	helmRelease := &helmv2.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      c.makeArtifactName(artifact.Name, installation.Name, definitionName),
+			Name:      c.makeArtifactName(installation.Name, definitionName, artifact.Name),
 			Namespace: installation.ObjectMeta.Namespace,
 		},
 		TypeMeta: metav1.TypeMeta{
@@ -267,7 +268,7 @@ func (c *ArtifactBuilder2) makeHelmReleaseObjects(artifact profilesv1.Artifact, 
 	return helmRelease, cfgMap
 }
 
-func (c *ArtifactBuilder2) makeHelmRepository(url string, name string, installation profilesv1.ProfileInstallation) *sourcev1.HelmRepository {
+func (c *ArtifactBuilder) makeHelmRepository(url string, name string, installation profilesv1.ProfileInstallation) *sourcev1.HelmRepository {
 	return &sourcev1.HelmRepository{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      c.makeHelmRepoName(name, installation),
@@ -283,13 +284,13 @@ func (c *ArtifactBuilder2) makeHelmRepository(url string, name string, installat
 	}
 }
 
-func (c *ArtifactBuilder2) makeHelmRepoName(name string, installation profilesv1.ProfileInstallation) string {
+func (c *ArtifactBuilder) makeHelmRepoName(name string, installation profilesv1.ProfileInstallation) string {
 	repoParts := strings.Split(installation.Spec.Source.URL, "/")
 	repoName := repoParts[len(repoParts)-1]
 	return c.join(installation.Name, repoName, name)
 }
 
-func (c *ArtifactBuilder2) makeGitChartSpec(path string) helmv2.HelmChartTemplateSpec {
+func (c *ArtifactBuilder) makeGitChartSpec(path string) helmv2.HelmChartTemplateSpec {
 	return helmv2.HelmChartTemplateSpec{
 		Chart: path,
 		SourceRef: helmv2.CrossNamespaceObjectReference{
@@ -300,7 +301,7 @@ func (c *ArtifactBuilder2) makeGitChartSpec(path string) helmv2.HelmChartTemplat
 	}
 }
 
-func (c *ArtifactBuilder2) makeHelmChartSpec(chart string, version string, installation profilesv1.ProfileInstallation) helmv2.HelmChartTemplateSpec {
+func (c *ArtifactBuilder) makeHelmChartSpec(chart string, version string, installation profilesv1.ProfileInstallation) helmv2.HelmChartTemplateSpec {
 	return helmv2.HelmChartTemplateSpec{
 		Chart: chart,
 		SourceRef: helmv2.CrossNamespaceObjectReference{
@@ -312,7 +313,7 @@ func (c *ArtifactBuilder2) makeHelmChartSpec(chart string, version string, insta
 	}
 }
 
-func (c *ArtifactBuilder2) makeDefaultValuesCfgMap(name, data string, installation profilesv1.ProfileInstallation) *corev1.ConfigMap {
+func (c *ArtifactBuilder) makeDefaultValuesCfgMap(name, data string, installation profilesv1.ProfileInstallation) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
@@ -328,13 +329,13 @@ func (c *ArtifactBuilder2) makeDefaultValuesCfgMap(name, data string, installati
 	}
 }
 
-func (c *ArtifactBuilder2) makeKustomizeHelmReleaseWrapper(artifact artifact.Artifact, installation profilesv1.ProfileInstallation, definitionName, path string, dependencies []artifact.Artifact) *kustomizev1.Kustomization {
+func (c *ArtifactBuilder) makeKustomizeHelmReleaseWrapper(artifact ArtifactWrapper, installation profilesv1.ProfileInstallation, definitionName, path string, dependencies []ArtifactWrapper) *kustomizev1.Kustomization {
 	wrapper := c.makeKustomization(artifact, path, installation, definitionName, dependencies)
 	wrapper.Spec.HealthChecks = []meta.NamespacedObjectKindReference{
 		{
 			APIVersion: helmv2.GroupVersion.String(),
 			Kind:       helmv2.HelmReleaseKind,
-			Name:       c.makeArtifactName(artifact.Name, installation.Name, definitionName),
+			Name:       c.makeArtifactName(installation.Name, definitionName, artifact.Name),
 			Namespace:  installation.ObjectMeta.Namespace,
 		},
 	}
@@ -342,22 +343,22 @@ func (c *ArtifactBuilder2) makeKustomizeHelmReleaseWrapper(artifact artifact.Art
 }
 
 // makeKustomization creates a Kustomize object.
-func (c *ArtifactBuilder2) makeKustomization(
-	artifact artifact.Artifact,
+func (c *ArtifactBuilder) makeKustomization(
+	artifact ArtifactWrapper,
 	repoPath string,
 	installation profilesv1.ProfileInstallation,
 	definitionName string,
-	dependencies []artifact.Artifact) *kustomizev1.Kustomization {
+	dependencies []ArtifactWrapper) *kustomizev1.Kustomization {
 	var dependsOn []dependency.CrossNamespaceDependencyReference
 	for _, dep := range dependencies {
 		dependsOn = append(dependsOn, dependency.CrossNamespaceDependencyReference{
-			Name:      c.makeArtifactName(dep.Name, installation.Name, definitionName),
+			Name:      c.makeArtifactName(installation.Name, definitionName, dep.Name),
 			Namespace: installation.Namespace,
 		})
 	}
 	return &kustomizev1.Kustomization{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      c.makeArtifactName(artifact.Name, installation.Name, definitionName),
+			Name:      c.makeArtifactName(installation.Name, definitionName, artifact.Name),
 			Namespace: installation.ObjectMeta.Namespace,
 		},
 		TypeMeta: metav1.TypeMeta{
@@ -379,7 +380,7 @@ func (c *ArtifactBuilder2) makeKustomization(
 	}
 }
 
-func (c *ArtifactBuilder2) makeCfgMapName(name string, installation profilesv1.ProfileInstallation) string {
+func (c *ArtifactBuilder) makeCfgMapName(name string, installation profilesv1.ProfileInstallation) string {
 	if strings.Contains(name, "/") {
 		name = filepath.Base(name)
 	}
@@ -387,23 +388,23 @@ func (c *ArtifactBuilder2) makeCfgMapName(name string, installation profilesv1.P
 }
 
 // join creates a joined string of name using - as a join character.
-func (c *ArtifactBuilder2) join(s ...string) string {
+func (c *ArtifactBuilder) join(s ...string) string {
 	return strings.Join(s, "-")
 }
 
 // makeArtifactName creates a name for an artifact.
-func (c *ArtifactBuilder2) makeArtifactName(name string, installationName, definitionName string) string {
+func (c *ArtifactBuilder) makeArtifactName(installationName, definitionName, artifactName string) string {
 	// if this is a nested artifact, it's name contains a /
-	if strings.Contains(name, "/") {
-		name = filepath.Base(name)
+	if strings.Contains(artifactName, "/") {
+		artifactName = filepath.Base(artifactName)
 	}
-	return c.join(installationName, definitionName, name)
+	return c.join(installationName, definitionName, artifactName)
 }
-func containsArtifact(list []artifact.Artifact, name string) (artifact.Artifact, bool) {
+func containsArtifact(list []ArtifactWrapper, name string) (ArtifactWrapper, bool) {
 	for _, a := range list {
-		if a.Name == name || a.ParentProfileArtifactName == name {
+		if a.Name == name || a.NestedProfileArtifactName == name {
 			return a, true
 		}
 	}
-	return artifact.Artifact{}, false
+	return ArtifactWrapper{}, false
 }

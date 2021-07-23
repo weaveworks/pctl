@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	fakegit "github.com/weaveworks/pctl/pkg/git/fakes"
 	"github.com/weaveworks/pctl/pkg/install"
-	"github.com/weaveworks/pctl/pkg/install/artifact"
+	"github.com/weaveworks/pctl/pkg/install/builder"
 	"github.com/weaveworks/pctl/pkg/install/builder/fakes"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,10 +32,10 @@ var _ = Describe("Installer", func() {
 
 		profileURL3        = "github.com/weaveworks/profiles-examples"
 		profileBranch3     = "main"
-		profilePath3       = "some-third-path"
+		profilePath3       = "."
 		profileDefinition3 = profilesv1.ProfileDefinition{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "weaveworks-nginx",
+				Name: "profile-3",
 			},
 			Spec: profilesv1.ProfileDefinitionSpec{
 				Artifacts: []profilesv1.Artifact{
@@ -51,7 +51,7 @@ var _ = Describe("Installer", func() {
 		profilePath2       = "nginx-profile"
 		profileDefinition2 = profilesv1.ProfileDefinition{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "weaveworks-nginx",
+				Name: "profile-2",
 			},
 			Spec: profilesv1.ProfileDefinitionSpec{
 				Artifacts: []profilesv1.Artifact{
@@ -77,7 +77,7 @@ var _ = Describe("Installer", func() {
 		profilePath1       = "weaveworks-nginx"
 		profileDefinition1 = profilesv1.ProfileDefinition{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "weaveworks-nginx",
+				Name: "profile-1",
 			},
 			Spec: profilesv1.ProfileDefinitionSpec{
 				Artifacts: []profilesv1.Artifact{
@@ -163,28 +163,28 @@ var _ = Describe("Installer", func() {
 			profile2RepoKey: profile2CloneDir,
 		}))
 		Expect(artifacts).To(ConsistOf(
-			artifact.Artifact{
+			builder.ArtifactWrapper{
 				Artifact: profilesv1.Artifact{
 					Name: "artifact-1",
 				},
-				ProfilePath:    profilePath1,
-				ProfileRepoKey: profile1RepoKey,
+				PathToProfileClone: filepath.Join(profile1CloneDir, profilePath1),
+				ProfileName:        profileDefinition1.Name,
 			},
-			artifact.Artifact{
+			builder.ArtifactWrapper{
 				Artifact: profilesv1.Artifact{
 					Name: "artifact-2",
 				},
-				ParentProfileArtifactName: "nested-artifact-1",
-				ProfilePath:               profilePath2,
-				ProfileRepoKey:            profile2RepoKey,
+				NestedProfileArtifactName: "nested-artifact-1",
+				PathToProfileClone:        filepath.Join(profile2CloneDir, profilePath2),
+				ProfileName:               profileDefinition2.Name,
 			},
-			artifact.Artifact{
+			builder.ArtifactWrapper{
 				Artifact: profilesv1.Artifact{
 					Name: "artifact-3",
 				},
-				ParentProfileArtifactName: "nested-artifact-2",
-				ProfilePath:               profilePath3,
-				ProfileRepoKey:            profile1RepoKey,
+				NestedProfileArtifactName: "nested-artifact-2",
+				PathToProfileClone:        filepath.Join(profile1CloneDir, profilePath3),
+				ProfileName:               profileDefinition3.Name,
 			},
 		))
 	})

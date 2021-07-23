@@ -4,17 +4,16 @@ package fakes
 import (
 	"sync"
 
-	"github.com/weaveworks/pctl/pkg/install/artifact"
 	"github.com/weaveworks/pctl/pkg/install/builder"
 	"github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 type FakeBuilder struct {
-	WriteStub        func(v1alpha1.ProfileInstallation, []artifact.Artifact, map[string]string) error
+	WriteStub        func(v1alpha1.ProfileInstallation, []builder.ArtifactWrapper, map[string]string) error
 	writeMutex       sync.RWMutex
 	writeArgsForCall []struct {
 		arg1 v1alpha1.ProfileInstallation
-		arg2 []artifact.Artifact
+		arg2 []builder.ArtifactWrapper
 		arg3 map[string]string
 	}
 	writeReturns struct {
@@ -27,17 +26,17 @@ type FakeBuilder struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBuilder) Write(arg1 v1alpha1.ProfileInstallation, arg2 []artifact.Artifact, arg3 map[string]string) error {
-	var arg2Copy []artifact.Artifact
+func (fake *FakeBuilder) Write(arg1 v1alpha1.ProfileInstallation, arg2 []builder.ArtifactWrapper, arg3 map[string]string) error {
+	var arg2Copy []builder.ArtifactWrapper
 	if arg2 != nil {
-		arg2Copy = make([]artifact.Artifact, len(arg2))
+		arg2Copy = make([]builder.ArtifactWrapper, len(arg2))
 		copy(arg2Copy, arg2)
 	}
 	fake.writeMutex.Lock()
 	ret, specificReturn := fake.writeReturnsOnCall[len(fake.writeArgsForCall)]
 	fake.writeArgsForCall = append(fake.writeArgsForCall, struct {
 		arg1 v1alpha1.ProfileInstallation
-		arg2 []artifact.Artifact
+		arg2 []builder.ArtifactWrapper
 		arg3 map[string]string
 	}{arg1, arg2Copy, arg3})
 	stub := fake.WriteStub
@@ -59,13 +58,13 @@ func (fake *FakeBuilder) WriteCallCount() int {
 	return len(fake.writeArgsForCall)
 }
 
-func (fake *FakeBuilder) WriteCalls(stub func(v1alpha1.ProfileInstallation, []artifact.Artifact, map[string]string) error) {
+func (fake *FakeBuilder) WriteCalls(stub func(v1alpha1.ProfileInstallation, []builder.ArtifactWrapper, map[string]string) error) {
 	fake.writeMutex.Lock()
 	defer fake.writeMutex.Unlock()
 	fake.WriteStub = stub
 }
 
-func (fake *FakeBuilder) WriteArgsForCall(i int) (v1alpha1.ProfileInstallation, []artifact.Artifact, map[string]string) {
+func (fake *FakeBuilder) WriteArgsForCall(i int) (v1alpha1.ProfileInstallation, []builder.ArtifactWrapper, map[string]string) {
 	fake.writeMutex.RLock()
 	defer fake.writeMutex.RUnlock()
 	argsForCall := fake.writeArgsForCall[i]

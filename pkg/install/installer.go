@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/install/artifact"
 	"github.com/weaveworks/pctl/pkg/install/builder"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -31,7 +30,6 @@ type Config struct {
 	RootDir          string
 	GitRepoNamespace string
 	GitRepoName      string
-	ProfileName      string
 }
 
 type Installer struct {
@@ -45,7 +43,7 @@ func NewInstaller(cfg Config) *Installer {
 	return &Installer{
 		clonedRepos: make(map[string]string),
 		Config:      cfg,
-		Builder: &builder.ArtifactBuilder2{
+		Builder: &builder.ArtifactBuilder{
 			GitRepositoryName:      cfg.GitRepoName,
 			GitRepositoryNamespace: cfg.GitRepoNamespace,
 			RootDir:                cfg.RootDir,
@@ -61,7 +59,7 @@ func (i *Installer) Install(installation profilesv1.ProfileInstallation) error {
 	return i.Builder.Write(installation, artifacts, i.clonedRepos)
 }
 
-func (i *Installer) composeArtifacts(installation profilesv1.ProfileInstallation, nested bool) ([]artifact.Artifact, error) {
+func (i *Installer) composeArtifacts(installation profilesv1.ProfileInstallation, nested bool) ([]builder.ArtifactWrapper, error) {
 	path := installation.Spec.Source.Path
 	branchOrTag := installation.Spec.Source.Tag
 	if installation.Spec.Source.Tag == "" {
@@ -73,7 +71,7 @@ func (i *Installer) composeArtifacts(installation profilesv1.ProfileInstallation
 	}
 	profileRepoKey := cloneCacheKey(installation.Spec.Source.URL, branchOrTag)
 
-	var artifacts []artifact.Artifact
+	var artifacts []builder.ArtifactWrapper
 	for _, a := range profileDef.Spec.Artifacts {
 		if a.Profile != nil {
 			nestedInstallation := installation.DeepCopyObject().(*profilesv1.ProfileInstallation)
@@ -89,7 +87,7 @@ func (i *Installer) composeArtifacts(installation profilesv1.ProfileInstallation
 				}
 				nestedInstallation.Spec.Source.Path = path
 			}
-			nestedInstallation.Name = filepath.Join(a.Name)
+			nestedInstallation.Name = a.Name
 			nestedArtifacts, err := i.composeArtifacts(*nestedInstallation, true)
 			if err != nil {
 				return nil, err
@@ -97,17 +95,17 @@ func (i *Installer) composeArtifacts(installation profilesv1.ProfileInstallation
 			artifacts = append(artifacts, nestedArtifacts...)
 		} else {
 			if nested {
-				artifacts = append(artifacts, artifact.Artifact{
+				artifacts = append(artifacts, builder.ArtifactWrapper{
 					Artifact:                  a,
-					ProfileRepoKey:            profileRepoKey,
-					ParentProfileArtifactName: installation.Name,
-					ProfilePath:               installation.Spec.Source.Path,
+					NestedProfileArtifactName: installation.Name,
+					PathToProfileClone:        filepath.Join(i.clonedRepos[profileRepoKey], installation.Spec.Source.Path),
+					ProfileName:               profileDef.Name,
 				})
 			} else {
-				artifacts = append(artifacts, artifact.Artifact{
-					Artifact:       a,
-					ProfileRepoKey: profileRepoKey,
-					ProfilePath:    installation.Spec.Source.Path,
+				artifacts = append(artifacts, builder.ArtifactWrapper{
+					Artifact:           a,
+					PathToProfileClone: filepath.Join(i.clonedRepos[profileRepoKey], installation.Spec.Source.Path),
+					ProfileName:        profileDef.Name,
 				})
 			}
 		}
