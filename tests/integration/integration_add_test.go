@@ -26,8 +26,8 @@ const (
 	pctlPrivateProfilesRepositoryName = "git@github.com:weaveworks/profiles-examples-private.git"
 )
 
-var _ = Describe("pctl install", func() {
-	Context("install", func() {
+var _ = Describe("pctl add", func() {
+	Context("add", func() {
 		var (
 			temp      string
 			namespace string
@@ -112,7 +112,7 @@ var _ = Describe("pctl install", func() {
 
 			cmd = exec.Command(
 				binaryPath,
-				"install",
+				"add",
 				"--git-repository",
 				fmt.Sprintf("%s/%s", namespace, gitRepoName),
 				"--namespace", namespace,
@@ -125,7 +125,7 @@ var _ = Describe("pctl install", func() {
 				"--config-map", configMapName)
 			cmd.Dir = temp
 			output, err = cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed: %s", string(output)))
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed: %s", string(output)))
 			Expect(string(output)).To(ContainSubstring(
 				fmt.Sprintf("generating profile installation from source: repository %s, path: %s and branch %s", profileExamplesURL, "weaveworks-nginx", profileBranch),
 			))
@@ -328,7 +328,7 @@ status: {}
 				path := "bitnami-nginx"
 				cmd := exec.Command(
 					binaryPath,
-					"install",
+					"add",
 					"--git-repository",
 					namespace+"/git-repo-name",
 					"--namespace",
@@ -342,7 +342,7 @@ status: {}
 				)
 				cmd.Dir = temp
 				output, err := cmd.CombinedOutput()
-				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
+				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed : %s", string(output)))
 
 				var files []string
 				err = filepath.Walk(temp, func(path string, info os.FileInfo, err error) error {
@@ -391,7 +391,7 @@ status: {}
 				namespace := uuid.New().String()
 				branch := "main"
 				path := "bitnami-nginx"
-				cmd := exec.Command(binaryPath, "install", "--out", temp, "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-url", pctlPrivateProfilesRepositoryName, "--profile-branch", branch, "--profile-path", path)
+				cmd := exec.Command(binaryPath, "add", "--out", temp, "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-url", pctlPrivateProfilesRepositoryName, "--profile-branch", branch, "--profile-path", path)
 				cmd.Dir = temp
 
 				if v := os.Getenv("PRIVATE_EXAMPLES_DEPLOY_KEY"); v != "" {
@@ -399,7 +399,7 @@ status: {}
 					cmd.Env = append(cmd.Env, fmt.Sprintf(`GIT_SSH_COMMAND="ssh -i %s"`, v))
 				}
 				output, err := cmd.CombinedOutput()
-				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
+				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed : %s", string(output)))
 
 				var files []string
 				err = filepath.Walk(temp, func(path string, info os.FileInfo, err error) error {
@@ -436,7 +436,7 @@ status: {}
 			})
 		})
 
-		When("url and catalog entry install format are both defined", func() {
+		When("url and catalog entry add format are both defined", func() {
 			It("will throw a meaningful error", func() {
 				namespace := uuid.New().String()
 				//subName := "pctl-profile"
@@ -444,7 +444,7 @@ status: {}
 				path := "branch-nginx"
 				cmd := exec.Command(
 					binaryPath,
-					"install",
+					"add",
 					"--git-repository",
 					namespace+"/git-repo-name",
 					"--namespace",
@@ -466,7 +466,7 @@ status: {}
 
 		When("a catalog version is provided, but it's an invalid/missing version", func() {
 			It("provide an error saying the profile with these specifics can't be found", func() {
-				cmd := exec.Command(binaryPath, "install", "--git-repository", namespace+"/git-repo-name", "nginx-catalog/weaveworks-nginx/v999.9.9")
+				cmd := exec.Command(binaryPath, "add", "--git-repository", namespace+"/git-repo-name", "nginx-catalog/weaveworks-nginx/v999.9.9")
 				output, err := cmd.CombinedOutput()
 				Expect(err).To(HaveOccurred())
 				Expect(string(output)).To(ContainSubstring(`unable to find profile "weaveworks-nginx" in catalog "nginx-catalog" (with version if provided: v999.9.9)`))
@@ -491,7 +491,7 @@ status: {}
 				Expect(err).NotTo(HaveOccurred())
 				branch := "prtest_" + suffix
 				cmd = exec.Command(binaryPath,
-					"install",
+					"add",
 					"--git-repository", namespace+"/git-repo-name",
 					"--create-pr",
 					"--pr-branch",
@@ -502,7 +502,7 @@ status: {}
 					pctlTestRepositoryOrgName,
 					"nginx-catalog/weaveworks-nginx")
 				output, err := cmd.CombinedOutput()
-				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
+				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed : %s", string(output)))
 				Expect(string(output)).To(ContainSubstring("PR created with number:"))
 			})
 
@@ -510,8 +510,9 @@ status: {}
 				suffix, err := randString(3)
 				Expect(err).NotTo(HaveOccurred())
 				branch := "prtest_" + suffix
-				cmd := exec.Command(binaryPath,
-					"install",
+				cmd := exec.Command(
+					binaryPath,
+					"add",
 					"--git-repository", namespace+"/git-repo-name",
 					"--create-pr",
 					"--pr-branch",
@@ -535,8 +536,9 @@ status: {}
 				suffix, err := randString(3)
 				Expect(err).NotTo(HaveOccurred())
 				branch := "prtest_" + suffix
-				cmd := exec.Command(binaryPath,
-					"install",
+				cmd := exec.Command(
+					binaryPath,
+					"add",
 					"--git-repository", namespace+"/git-repo-name",
 					"--create-pr",
 					"--pr-branch",
@@ -551,7 +553,7 @@ status: {}
 			})
 		})
 	})
-	Context("installing from a single-profile repo", func() {
+	Context("adding from a single-profile repo", func() {
 		var (
 			temp          string
 			namespace     string
@@ -620,11 +622,11 @@ status: {}
 			output, err = cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create source git failed: %s", string(output)))
 
-			By("running the install")
-			cmd = exec.Command(binaryPath, "install", "--namespace", namespace, "--git-repository", fmt.Sprintf("%s/%s", namespace, gitRepoName), "nginx-catalog/nginx/v2.0.1")
+			By("running the add")
+			cmd = exec.Command(binaryPath, "add", "--namespace", namespace, "--git-repository", fmt.Sprintf("%s/%s", namespace, gitRepoName), "nginx-catalog/nginx/v2.0.1")
 			cmd.Dir = temp
 			output, err = cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed : %s", string(output)))
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed : %s", string(output)))
 			Expect(string(output)).To(ContainSubstring("generating profile installation from source: catalog entry nginx-catalog/nginx/v2.0.1"))
 
 			var files []string
