@@ -350,7 +350,7 @@ func (c *Writer) makeKustomization(
 	var dependsOn []dependency.CrossNamespaceDependencyReference
 	for _, dep := range dependencies {
 		dependsOn = append(dependsOn, dependency.CrossNamespaceDependencyReference{
-			Name:      c.makeArtifactName(installation.Name, definitionName, dep.Name),
+			Name:      c.makeArtifactName(installation.Name, dep.ProfileName, dep.Name),
 			Namespace: installation.Namespace,
 		})
 	}

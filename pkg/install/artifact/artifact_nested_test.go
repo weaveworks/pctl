@@ -62,6 +62,7 @@ var _ = Describe("NestedArtifact", func() {
 		var (
 			artifactName2     = "2"
 			artifactName3     = "3"
+			profileName2      = "profile-name-2"
 			nestedProfileName = "nested-profile"
 		)
 		BeforeEach(func() {
@@ -106,7 +107,7 @@ var _ = Describe("NestedArtifact", func() {
 					},
 					NestedProfileArtifactName: nestedProfileName,
 					PathToProfileClone:        filepath.Join(gitDir, profilePath),
-					ProfileName:               profileName,
+					ProfileName:               profileName2,
 				},
 			}
 		})
@@ -160,10 +161,31 @@ var _ = Describe("NestedArtifact", func() {
 							Namespace: namespace,
 						},
 						{
-							Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName3),
+							Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName2, artifactName3),
 							Namespace: namespace,
 						},
 					},
+				},
+			}))
+
+			kustomize = kustomizev1.Kustomization{}
+			decodeFile(filepath.Join(rootDir, "artifacts/nested-profile/3/kustomize-flux.yaml"), &kustomize)
+			Expect(kustomize).To(Equal(kustomizev1.Kustomization{
+				TypeMeta: kustomizeTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName2, artifactName3),
+					Namespace: namespace,
+				},
+				Spec: kustomizev1.KustomizationSpec{
+					Path: filepath.Join(rootDir, "artifacts/nested-profile/3/files/"),
+					SourceRef: kustomizev1.CrossNamespaceSourceReference{
+						Kind:      "GitRepository",
+						Namespace: gitRepoNamespace,
+						Name:      gitRepoName,
+					},
+					Interval:        metav1.Duration{Duration: 300000000000},
+					Prune:           true,
+					TargetNamespace: namespace,
 				},
 			}))
 		})

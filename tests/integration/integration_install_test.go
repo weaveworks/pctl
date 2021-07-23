@@ -13,6 +13,7 @@ import (
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
+	"github.com/fluxcd/pkg/runtime/dependency"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -66,12 +67,13 @@ var _ = Describe("pctl install", func() {
 
 		})
 
-		It("generates valid artifacts to the local directory", func() {
+		FIt("generates valid artifacts to the local directory", func() {
 			if skipTestsThatRequireCredentials {
 				Skip("Skipping this tests as it requires credentials")
 			}
 
-			profileBranch := "main"
+			//TODO change backt to main
+			profileBranch := "depends-nested"
 			subName := "pprof"
 			gitRepoName := "pctl-repo"
 
@@ -175,11 +177,11 @@ spec:
     name: %s
     namespace: %s
   source:
-    branch: main
+    branch: %s
     path: weaveworks-nginx
     url: %s
 status: {}
-`, namespace, configMapName, gitRepoName, namespace, profileExamplesURL)))
+`, namespace, configMapName, gitRepoName, namespace, profileBranch, profileExamplesURL)))
 
 			By("the artifacts being deployable")
 			// Generate the resources into the flux repo, and push them up the repo?
@@ -290,7 +292,38 @@ status: {}
 				Name:      configMapName,
 				ValuesKey: "nginx-server",
 			}))
-			By("successfully deploying the redis resource")
+
+			By("successfully deploying the redis resource with dependsOn")
+			kustomizeName = fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "dependon-chart")
+			Eventually(func() bool {
+				kustomize = &kustomizev1.Kustomization{}
+				err := kClient.Get(context.Background(), client.ObjectKey{Name: kustomizeName, Namespace: namespace}, kustomize)
+				if err != nil {
+					return false
+				}
+				for _, condition := range kustomize.Status.Conditions {
+					if condition.Type == "Ready" && condition.Status == "True" {
+						return true
+					}
+				}
+				return false
+			}, 15*time.Minute, 5*time.Second).Should(BeTrue())
+
+			Expect(kustomize.Spec.DependsOn).To(ConsistOf(
+				dependency.CrossNamespaceDependencyReference{
+					Name:      fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "nginx-deployment"),
+					Namespace: namespace,
+				},
+				dependency.CrossNamespaceDependencyReference{
+					Name:      fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "nginx-chart"),
+					Namespace: namespace,
+				},
+				dependency.CrossNamespaceDependencyReference{
+					Name:      fmt.Sprintf("%s-%s-%s", subName, "bitnami-nginx", "nginx-server"),
+					Namespace: namespace,
+				},
+			))
+
 			helmReleaseName = fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "dependon-chart")
 			Eventually(func() bool {
 				helmRelease = &helmv2.HelmRelease{}
