@@ -45,12 +45,13 @@ var createPRFlags = []cli.Flag{
 	},
 }
 
-func installCmd() *cli.Command {
+func addCmd() *cli.Command {
 	return &cli.Command{
-		Name:  "install",
-		Usage: "generate a profile installation",
-		UsageText: "To install from a profile catalog entry: pctl --catalog-url <URL> install --name pctl-profile --namespace default --profile-branch main --config-map configmap-name <CATALOG>/<PROFILE>[/<VERSION>]\n   " +
-			"To install directly from a profile repository: pctl install --name pctl-profile --namespace default --profile-branch development --profile-url https://github.com/weaveworks/profiles-examples --profile-path bitnami-nginx",
+		Name:    "add",
+		Aliases: []string{"apply"},
+		Usage:   "generate a profile installation",
+		UsageText: "To add from a profile catalog entry: pctl --catalog-url <URL> add --name pctl-profile --namespace default --profile-branch main --config-map configmap-name <CATALOG>/<PROFILE>[/<VERSION>]\n   " +
+			"To add directly from a profile repository: pctl add --name pctl-profile --namespace default --profile-branch development --profile-url https://github.com/weaveworks/profiles-examples --profile-path bitnami-nginx",
 		Flags: append(createPRFlags,
 			&cli.StringFlag{
 				Name:        "name",
@@ -99,7 +100,7 @@ func installCmd() *cli.Command {
 			}),
 		Action: func(c *cli.Context) error {
 			// Run installation main
-			if err := installProfile(c); err != nil {
+			if err := addProfile(c); err != nil {
 				return err
 			}
 			// Create a pull request if desired
@@ -113,8 +114,8 @@ func installCmd() *cli.Command {
 	}
 }
 
-// install runs the install part of the `install` command.
-func installProfile(c *cli.Context) error {
+// add runs the add part of the `add` command.
+func addProfile(c *cli.Context) error {
 	var (
 		err           error
 		catalogClient *client.Client
@@ -133,12 +134,12 @@ func installProfile(c *cli.Context) error {
 	if url == "" {
 		profilePath, catalogClient, err = parseArgs(c)
 		if err != nil {
-			_ = cli.ShowCommandHelp(c, "install")
+			_ = cli.ShowCommandHelp(c, "add")
 			return err
 		}
 		parts := strings.Split(profilePath, "/")
 		if len(parts) < 2 {
-			_ = cli.ShowCommandHelp(c, "install")
+			_ = cli.ShowCommandHelp(c, "add")
 			return errors.New("both catalog name and profile name must be provided")
 		}
 		if len(parts) == 3 {
@@ -216,7 +217,7 @@ func installProfile(c *cli.Context) error {
 	return err
 }
 
-// createPullRequest runs the pull request creation part of the `install` command.
+// createPullRequest runs the pull request creation part of the `add` command.
 func createPullRequest(c *cli.Context) error {
 	branch := c.String("pr-branch")
 	repo := c.String("pr-repo")

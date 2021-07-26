@@ -22,7 +22,7 @@ var (
 	configMapName string
 )
 
-var _ = Describe("install and upgrade", func() {
+var _ = Describe("add and upgrade", func() {
 	BeforeEach(func() {
 		var err error
 		namespace = uuid.New().String()
@@ -62,11 +62,11 @@ var _ = Describe("install and upgrade", func() {
 	})
 
 	It("works", func() {
-		By("installing a profile")
+		By("adding a profile")
 		gitRepoName := "my-git-repo"
 		cmd := exec.Command(
 			binaryPath,
-			"install",
+			"add",
 			"--git-repository",
 			fmt.Sprintf("%s/%s", namespace, gitRepoName),
 			"--namespace", namespace,
@@ -75,7 +75,7 @@ var _ = Describe("install and upgrade", func() {
 
 		cmd.Dir = temp
 		output, err := cmd.CombinedOutput()
-		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed: %s", string(output)))
+		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed: %s", string(output)))
 		Expect(string(output)).To(ContainSubstring("generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0"))
 		Expect(string(output)).To(ContainSubstring("installation completed successfully"))
 
@@ -152,7 +152,7 @@ status: {}
 			"v0.1.1")
 		cmd.Dir = temp
 		output, err = cmd.CombinedOutput()
-		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed: %s", string(output)))
+		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed: %s", string(output)))
 		Expect(string(output)).To(ContainSubstring(`upgrading profile "pctl-profile" from version "v0.1.0" to "v0.1.1"`))
 		Expect(string(output)).To(ContainSubstring("upgrade completed successfully"))
 
@@ -211,7 +211,7 @@ status: {}
 			gitRepoName := "my-git-repo"
 			cmd := exec.Command(
 				binaryPath,
-				"install",
+				"add",
 				"--git-repository",
 				fmt.Sprintf("%s/%s", namespace, gitRepoName),
 				"--namespace", namespace,
@@ -220,7 +220,7 @@ status: {}
 
 			cmd.Dir = temp
 			output, err := cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl install failed: %s", string(output)))
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed: %s", string(output)))
 			Expect(string(output)).To(ContainSubstring("generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0"))
 			Expect(string(output)).To(ContainSubstring("installation completed successfully"))
 
