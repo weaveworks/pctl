@@ -38,6 +38,7 @@ type ArtifactWriter interface {
 
 var _ ArtifactWriter = &Writer{}
 
+//ArtifactWrapper contains an artifact and related information
 type ArtifactWrapper struct {
 	profilesv1.Artifact
 	NestedProfileSubDirectoryName string

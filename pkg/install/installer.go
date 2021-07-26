@@ -32,6 +32,7 @@ type Config struct {
 	GitRepoName      string
 }
 
+//Installer holds the configuration for isntalling a profile
 type Installer struct {
 	Config
 	clonedRepos    map[string]string
@@ -51,8 +52,9 @@ func NewInstaller(cfg Config) *Installer {
 	}
 }
 
+//Install installs the profile
 func (i *Installer) Install(installation profilesv1.ProfileInstallation) error {
-	artifacts, err := i.collectArtifacts(installation, false)
+	artifacts, err := i.collectArtifacts(installation, "")
 	if err != nil {
 		return err
 	}
@@ -60,7 +62,7 @@ func (i *Installer) Install(installation profilesv1.ProfileInstallation) error {
 }
 
 //collectArtifacts goes through the profile definition and any nested profiles to collect all artifacts
-func (i *Installer) collectArtifacts(installation profilesv1.ProfileInstallation, isNestedArtifact bool) ([]artifact.ArtifactWrapper, error) {
+func (i *Installer) collectArtifacts(installation profilesv1.ProfileInstallation, nestedDir string) ([]artifact.ArtifactWrapper, error) {
 	path := installation.Spec.Source.Path
 	branchOrTag := installation.Spec.Source.Tag
 	if installation.Spec.Source.Tag == "" {
@@ -90,20 +92,17 @@ func (i *Installer) collectArtifacts(installation profilesv1.ProfileInstallation
 				nestedInstallation.Spec.Source.Path = path
 			}
 			nestedInstallation.Name = a.Name
-			nestedArtifacts, err := i.collectArtifacts(*nestedInstallation, true)
+			nestedArtifacts, err := i.collectArtifacts(*nestedInstallation, filepath.Join(nestedDir, nestedInstallation.Name))
 			if err != nil {
 				return nil, err
 			}
 			artifacts = append(artifacts, nestedArtifacts...)
 		} else {
 			newArtifact := artifact.ArtifactWrapper{
-				Artifact:           a,
-				PathToProfileClone: filepath.Join(i.clonedRepos[profileRepoKey], installation.Spec.Source.Path),
-				ProfileName:        profileDef.Name,
-			}
-			//if its a nested artifact we want to wrap the artifact in a sub-directory
-			if isNestedArtifact {
-				newArtifact.NestedProfileSubDirectoryName = installation.Name
+				Artifact:                      a,
+				PathToProfileClone:            filepath.Join(i.clonedRepos[profileRepoKey], installation.Spec.Source.Path),
+				ProfileName:                   profileDef.Name,
+				NestedProfileSubDirectoryName: nestedDir,
 			}
 			artifacts = append(artifacts, newArtifact)
 		}

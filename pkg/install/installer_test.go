@@ -176,7 +176,7 @@ var _ = Describe("Installer", func() {
 				Artifact: profilesv1.Artifact{
 					Name: "artifact-3",
 				},
-				NestedProfileSubDirectoryName: "nested-artifact-2",
+				NestedProfileSubDirectoryName: "nested-artifact-1/nested-artifact-2",
 				PathToProfileClone:            filepath.Join(profile1CloneDir, profilePath3),
 				ProfileName:                   profileDefinition3.Name,
 			},
