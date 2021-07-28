@@ -66,7 +66,6 @@ func Upgrade(cfg UpgradeConfig) error {
 			Clients: catalog.Clients{
 				CatalogClient: cfg.CatalogClient,
 				Installer: install.NewInstaller(install.Config{
-					ProfileName:      profileName,
 					GitClient:        git.NewCLIGit(git.CLIGitConfig{}, &runner.CLIRunner{}),
 					RootDir:          cfg.WorkingDir,
 					GitRepoNamespace: gitRepoNamespace,
@@ -111,7 +110,6 @@ func Upgrade(cfg UpgradeConfig) error {
 			Clients: catalog.Clients{
 				CatalogClient: cfg.CatalogClient,
 				Installer: install.NewInstaller(install.Config{
-					ProfileName:      profileName,
 					GitClient:        git.NewCLIGit(git.CLIGitConfig{}, &runner.CLIRunner{}),
 					RootDir:          cfg.WorkingDir,
 					GitRepoNamespace: gitRepoNamespace,

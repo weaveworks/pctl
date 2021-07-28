@@ -1,23 +1,18 @@
 package install
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/otiai10/copy"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
-	"gopkg.in/yaml.v2"
-	"k8s.io/apimachinery/pkg/runtime"
-	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"sigs.k8s.io/kustomize/api/types"
-
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/install/artifact"
-	"github.com/weaveworks/pctl/pkg/install/builder"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // ProfileInstaller installs the profile
@@ -35,178 +30,126 @@ type Config struct {
 	RootDir          string
 	GitRepoNamespace string
 	GitRepoName      string
-	ProfileName      string
 }
 
-// Installer is a profile specific installer
+//Installer holds the configuration for isntalling a profile
 type Installer struct {
 	Config
-	Builder      builder.Builder
-	nestedName   string
-	profileRepos []string
-	cloneCache   map[string]string
+	clonedRepos    map[string]string
+	artifactWriter artifact.ArtifactWriter
 }
 
 // NewInstaller creates a new profiles installer
 func NewInstaller(cfg Config) *Installer {
 	return &Installer{
-		Config: cfg,
-		Builder: &builder.ArtifactBuilder{
-			Config: builder.Config{
-				GitRepositoryName:      cfg.GitRepoName,
-				GitRepositoryNamespace: cfg.GitRepoNamespace,
-				RootDir:                cfg.RootDir,
-			},
+		clonedRepos: make(map[string]string),
+		Config:      cfg,
+		artifactWriter: &artifact.Writer{
+			GitRepositoryName:      cfg.GitRepoName,
+			GitRepositoryNamespace: cfg.GitRepoNamespace,
+			RootDir:                cfg.RootDir,
 		},
-		cloneCache: make(map[string]string),
 	}
 }
 
-// Install installs the artifacts into the configured directory
+//Install installs the profile
 func (i *Installer) Install(installation profilesv1.ProfileInstallation) error {
-	artifacts, err := profilesArtifactsMaker(i, installation)
+	artifacts, err := i.collectArtifacts(installation, "")
 	if err != nil {
-		return fmt.Errorf("failed to build artifact: %w", err)
+		return err
 	}
+	return i.artifactWriter.Write(installation, artifacts)
+}
 
-	artifactsRootDir := filepath.Join(i.RootDir, "artifacts")
-	defer i.cleanCloneCache()
-	for _, artifact := range artifacts {
-		artifactDir := filepath.Join(artifactsRootDir, artifact.Name)
-		if err := os.MkdirAll(artifactDir, 0755); err != nil && !os.IsExist(err) {
-			return fmt.Errorf("failed to create directory")
-		}
-		if artifact.RepoURL != "" {
-			if err := i.getRepositoryLocalArtifacts(artifact, artifactDir); err != nil {
-				return fmt.Errorf("failed to get package local artifacts: %w", err)
-			}
-		}
-		for _, obj := range artifact.Objects {
-			name := obj.GetObjectKind().GroupVersionKind().Kind
-			if obj.Name != "" {
-				name = obj.Name
-			}
-			filename := filepath.Join(artifactDir, fmt.Sprintf("%s.%s", name, "yaml"))
-			if obj.Path != "" {
-				subFolder := filepath.Join(artifactDir, obj.Path)
-				if err := os.MkdirAll(subFolder, 0755); err != nil && !os.IsExist(err) {
-					return fmt.Errorf("failed to create directory")
+//collectArtifacts goes through the profile definition and any nested profiles to collect all artifacts
+func (i *Installer) collectArtifacts(installation profilesv1.ProfileInstallation, nestedDir string) ([]artifact.ArtifactWrapper, error) {
+	path := installation.Spec.Source.Path
+	branchOrTag := installation.Spec.Source.Tag
+	if installation.Spec.Source.Tag == "" {
+		branchOrTag = installation.Spec.Source.Branch
+	}
+	profileDef, err := i.cloneRepoAndGetProfileDefinition(installation.Spec.Source.URL, branchOrTag, path)
+	if err != nil {
+		return nil, err
+	}
+	profileRepoKey := cloneCacheKey(installation.Spec.Source.URL, branchOrTag)
+
+	var artifacts []artifact.ArtifactWrapper
+	for _, a := range profileDef.Spec.Artifacts {
+		//If its a nested profile lets make a recursive call to scans its artifacts
+		if a.Profile != nil {
+			nestedInstallation := installation.DeepCopyObject().(*profilesv1.ProfileInstallation)
+			nestedInstallation.Spec.Source.URL = a.Profile.Source.URL
+			nestedInstallation.Spec.Source.Branch = a.Profile.Source.Branch
+			nestedInstallation.Spec.Source.Tag = a.Profile.Source.Tag
+			nestedInstallation.Spec.Source.Path = a.Profile.Source.Path
+			if a.Profile.Source.Tag != "" {
+				path := "."
+				splitTag := strings.Split(a.Profile.Source.Tag, "/")
+				if len(splitTag) > 1 {
+					path = splitTag[0]
 				}
-				filename = filepath.Join(subFolder, fmt.Sprintf("%s.%s", name, "yaml"))
+				nestedInstallation.Spec.Source.Path = path
 			}
-			if err := i.generateOutput(filename, obj.Object); err != nil {
-				return err
+			nestedInstallation.Name = a.Name
+			nestedArtifacts, err := i.collectArtifacts(*nestedInstallation, filepath.Join(nestedDir, nestedInstallation.Name))
+			if err != nil {
+				return nil, err
 			}
-		}
-		// if we have a local resource, write out the kustomization yaml limiting its visibility.
-		if artifact.Kustomize.LocalResourceLimiter != nil {
-			// This is helmRelease related so it must be inside the sub-folder for the helm release.
-			filename := filepath.Join(artifactDir, artifact.SubFolder, "kustomization.yaml")
-			if err := writeOutKustomizeResource(artifact.Kustomize.LocalResourceLimiter, filename); err != nil {
-				return err
+			artifacts = append(artifacts, nestedArtifacts...)
+		} else {
+			newArtifact := artifact.ArtifactWrapper{
+				Artifact:                      a,
+				PathToProfileClone:            filepath.Join(i.clonedRepos[profileRepoKey], installation.Spec.Source.Path),
+				ProfileName:                   profileDef.Name,
+				NestedProfileSubDirectoryName: nestedDir,
 			}
-		}
-		filename := filepath.Join(artifactDir, "kustomization.yaml")
-		if err := writeOutKustomizeResource(artifact.Kustomize.ObjectWrapper, filename); err != nil {
-			return err
+			artifacts = append(artifacts, newArtifact)
 		}
 	}
-	return i.generateOutput(filepath.Join(i.RootDir, "profile-installation.yaml"), &installation)
+	return artifacts, nil
 }
 
-// writeOutKustomizeResource writes out kustomization resource data if set to a specific file.
-func writeOutKustomizeResource(kustomize *types.Kustomization, filename string) error {
-	data, err := yaml.Marshal(kustomize)
+func (i *Installer) cloneRepoAndGetProfileDefinition(repoURL, branch, path string) (profilesv1.ProfileDefinition, error) {
+	// Add postfix so potential nested profiles don't clone into the same folder.
+	u, err := uuid.NewRandom()
 	if err != nil {
-		return fmt.Errorf("failed to marshal kustomize resource: %w", err)
+		return profilesv1.ProfileDefinition{}, err
 	}
-	if err = os.WriteFile(filename, data, 0644); err != nil {
-		return fmt.Errorf("failed to write file %s: %w", filename, err)
+	// this should not be possible, but I don't like leaving open spots for an index overflow
+	if len(u.String()) < 7 {
+		return profilesv1.ProfileDefinition{}, errors.New("the generated uuid is not long enough")
 	}
-	return nil
-}
 
-// getRepositoryLocalArtifacts clones all repository local artifacts so they can be copied over to the flux repository.
-func (i *Installer) getRepositoryLocalArtifacts(a artifact.Artifact, artifactDir string) error {
 	var (
 		tmp string
-		err error
 	)
-	if v, ok := i.cloneCache[cloneCacheKey(a.RepoURL, a.Branch)]; ok {
+	if v, ok := i.clonedRepos[cloneCacheKey(repoURL, branch)]; ok {
 		tmp = v
 	} else {
-		u := uuid.NewString()[:6]
-		tmp, err = ioutil.TempDir("", "clone_git_repo_"+u)
+		px := u.String()[:6]
+		tmp, err = ioutil.TempDir("", "cloned_profile"+px)
 		if err != nil {
-			return fmt.Errorf("failed to create temp folder: %w", err)
+			return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to create temp folder for cloning repository: %w", err)
 		}
-		if err := i.GitClient.Clone(a.RepoURL, a.Branch, tmp); err != nil {
-			return fmt.Errorf("failed to sparse clone folder with url: %s; branch: %s; with error: %w",
-				a.RepoURL,
-				a.Branch,
-				err)
+		if err := i.GitClient.Clone(repoURL, branch, tmp); err != nil {
+			return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to clone repo %q: %w", repoURL, err)
 		}
-		i.cloneCache[cloneCacheKey(a.RepoURL, a.Branch)] = tmp
+		i.clonedRepos[cloneCacheKey(repoURL, branch)] = tmp
 	}
 
-	for _, path := range a.PathsToCopy {
-		// nginx/chart/...
-		if strings.Contains(path, string(os.PathSeparator)) {
-			path = filepath.Dir(path)
-		}
-		fullPath := filepath.Join(tmp, a.SparseFolder, path)
-		dest := filepath.Join(artifactDir, path)
-		if a.SubFolder != "" {
-			dest = filepath.Join(artifactDir, a.SubFolder, path)
-		}
-		if err := copy.Copy(fullPath, dest); err != nil {
-			return fmt.Errorf("failed to move folder: %w", err)
-		}
-	}
-	return nil
-}
-
-// cleanCloneCache clears all cached cloned folders if there are any.
-func (i *Installer) cleanCloneCache() {
-	for _, c := range i.cloneCache {
-		if err := os.RemoveAll(c); err != nil {
-			fmt.Printf("failed to remove %s cache, please clean by hand", c)
-		}
-	}
-}
-
-func (i *Installer) generateOutput(filename string, o runtime.Object) error {
-	e := kjson.NewSerializerWithOptions(kjson.DefaultMetaFactory, nil, nil, kjson.SerializerOptions{Yaml: true, Strict: true})
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	content, err := ioutil.ReadFile(filepath.Join(tmp, path, "profile.yaml"))
 	if err != nil {
-		return err
+		return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to read profile.yaml in repo %q branch %q path %q: %w", repoURL, branch, path, err)
 	}
-	defer func(f *os.File) {
-		if err := f.Close(); err != nil {
-			fmt.Printf("Failed to properly close file %s\n", f.Name())
-		}
-	}(f)
-	if err := e.Encode(o, f); err != nil {
-		return err
-	}
-	return nil
 
-}
-
-func profileRepo(installation profilesv1.ProfileInstallation) string {
-	if installation.Spec.Source.Tag != "" {
-		return installation.Spec.Source.URL + ":" + installation.Spec.Source.Tag
+	profile := profilesv1.ProfileDefinition{}
+	err = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(content), 4096).Decode(&profile)
+	if err != nil {
+		return profilesv1.ProfileDefinition{}, fmt.Errorf("failed to parse profile.yaml: %w", err)
 	}
-	return installation.Spec.Source.URL + ":" + installation.Spec.Source.Branch + ":" + installation.Spec.Source.Path
-}
 
-func containsKey(list []string, key string) bool {
-	for _, value := range list {
-		if value == key {
-			return true
-		}
-	}
-	return false
+	return profile, nil
 }
 
 func cloneCacheKey(url, branch string) string {

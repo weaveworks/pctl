@@ -181,7 +181,6 @@ func addProfile(c *cli.Context) error {
 		gitRepoName = split[1]
 	}
 	installer := install.NewInstaller(install.Config{
-		ProfileName:      profileName,
 		GitClient:        g,
 		RootDir:          filepath.Join(dir, profileName),
 		GitRepoNamespace: gitRepoNamespace,
