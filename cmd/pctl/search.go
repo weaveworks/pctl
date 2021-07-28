@@ -17,8 +17,8 @@ import (
 func getCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "get",
-		Usage: "search for a profile",
-		UsageText: "pctl get [--output table|json <QUERY> --installed --catalog --version --all] \n\n" +
+		Usage: "get a profile",
+		UsageText: "pctl get [--output table|json <QUERY> --installed --catalog --version] \n\n" +
 			"   example: pctl get nginx",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -29,31 +29,26 @@ func getCmd() *cli.Command {
 				Usage:       "Output format. json|table",
 			},
 			&cli.BoolFlag{
-				Name:    "all",
-				Aliases: []string{"a"},
-				Usage:   "Search all available profiles",
-			},
-			&cli.BoolFlag{
 				Name:    "installed",
 				Aliases: []string{"i"},
-				Usage:   "Search all installed profiles",
+				Usage:   "Get all installed profiles",
 			},
 			&cli.BoolFlag{
 				Name:    "catalog",
 				Aliases: []string{"c"},
-				Usage:   "Search all profiles in a catalog",
+				Usage:   "Get all profiles in a catalog",
 			},
 			&cli.StringFlag{
 				Name:    "version",
 				Aliases: []string{"v"},
-				Usage:   "display information about a profile from a catalog",
+				Usage: "Get information about a profile \n\n" +
+					"   pctl [--kubeconfig=<kubeconfig-path>] get <CATALOG>/<PROFILE>\n\n" +
+					"   example: pctl get catalog/weaveworks-nginx --version v0.1.0",
 			},
 		},
 		Action: func(c *cli.Context) error {
-			var profiles []profilesv1.ProfileCatalogEntry
 			outFormat := c.String("output")
-			manager := &catalog.Manager{}
-			
+
 			cl, err := buildK8sClient(c.String("kubeconfig"))
 			if err != nil {
 				return err
@@ -64,48 +59,82 @@ func getCmd() *cli.Command {
 				return err
 			}
 
-			if c.Args().Len() > 0 && c.Bool("installed") {
-				return getInstalledProfiles(c, cl, catalogClient)
+			if c.Args().Len() < 1 && c.Bool("installed") {
+				return getInstalledProfiles(cl, catalogClient, "", outFormat)
 			}
 
-			if c.Args().Len() > 0 {
-				profiles, err = manager.Search(catalogClient, "")
+			// get all installed and catalog profiles
+			if c.Args().Len() < 1 {
+				err := getInstalledProfiles(cl, catalogClient, "", outFormat)
 				if err != nil {
 					return err
 				}
+				return getCatalogProfiles(catalogClient, "", outFormat)
 			} else {
-				searchName, catalogClient, err := parseArgs(c)
+				name, catalogClient, err := parseArgs(c)
 				if err != nil {
 					_ = cli.ShowCommandHelp(c, "get")
 					return err
 				}
 
-				// check if other flags are passed along with the searchname
+				// check if other flags are passed along with the name
+				if c.String("version") != "" {
+					return getCatalogProfilesWithVersion(c, catalogClient, name, c.String("version"), outFormat)
+				}
+
 				if c.Bool("catalog") {
-					profiles, err = manager.Search(catalogClient, searchName)
-					if err != nil {
-						return err
-					}
-				} else if c.Bool("version") {
-					profiles, err = manager.Search(catalogClient, searchName)
-					if err != nil {
-						return err
-					}
-				} else {
-					// defaull get all installed and profiles from a catalog
-					profiles, err = manager.Search(catalogClient, searchName)
-					if err != nil {
-						return err
-					}
+					err = getCatalogProfiles(catalogClient, name, outFormat)
+				}
+
+				if c.Bool("installed") {
+					err = getInstalledProfiles(cl, catalogClient, name, outFormat)
+				}
+
+				if err != nil {
+					return err
 				}
 			}
-
-			return formatOutput(profiles, outFormat)
+			return nil
 		},
 	}
 }
 
-func searchDataFunc(profiles []profilesv1.ProfileCatalogEntry) func() interface{} {
+func getCatalogProfiles(catalogClient *client.Client, name string, outFormat string) error {
+	manager := &catalog.Manager{}
+	profiles, err := manager.Search(catalogClient, name)
+	if err != nil {
+		return err
+	}
+	return formatOutput(profiles, outFormat)
+}
+
+func getInstalledProfiles(cl runtimeclient.Client, catalogClient *client.Client, name string, outFormat string) error {
+	manager := &catalog.Manager{}
+	data, err := manager.List(cl, catalogClient)
+	if err != nil {
+		return err
+	}
+
+	return formatInstalledProfilesOutput(data, outFormat)
+}
+
+func getCatalogProfilesWithVersion(c *cli.Context, catalogClient *client.Client, name string, version string, outFormat string) error {
+	parts := strings.Split(name, "/")
+	if len(parts) < 2 {
+		_ = cli.ShowCommandHelp(c, "get")
+		return fmt.Errorf("both catalog name and profile name must be provided example: pctl get catalog/weaveworks-nginx --version v0.1.0")
+	}
+	catalogName, profileName := parts[0], parts[1]
+	manager := &catalog.Manager{}
+	profile, err := manager.Show(catalogClient, catalogName, profileName, version)
+	if err != nil {
+		return err
+	}
+
+	return formatCatlogProfilesOutput(profile, outFormat)
+}
+
+func profilesDataFunc(profiles []profilesv1.ProfileCatalogEntry) func() interface{} {
 	return func() interface{} {
 		tc := formatter.TableContents{
 			Headers: []string{"Catalog/Profile", "Version", "Description"},
@@ -121,66 +150,7 @@ func searchDataFunc(profiles []profilesv1.ProfileCatalogEntry) func() interface{
 	}
 }
 
-func formatOutput(profiles []profilesv1.ProfileCatalogEntry, outFormat string) error {
-	if len(profiles) == 0 {
-		fmt.Println("No profiles found")
-		return nil
-	}
-
-	var f formatter.Formatter
-	f = formatter.NewTableFormatter()
-	getter := searchDataFunc(profiles)
-
-	if outFormat == "json" {
-		f = formatter.NewJSONFormatter()
-		getter = func() interface{} { return profiles }
-	}
-
-	out, err := f.Format(getter)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(out)
-	return nil
-}
-
-func formatInstalledProfilesOutput(data []catalog.ProfileData, outFormat string) error {
-	if len(data) == 0 {
-		fmt.Println("no profiles installed")
-		return nil
-	}
-
-	var f formatter.Formatter
-	f = formatter.NewTableFormatter()
-	getter := listDataFunc(data)
-
-	if outFormat == "json" {
-		f = formatter.NewJSONFormatter()
-		getter = func() interface{} { return data }
-	}
-
-	out, err := f.Format(getter)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(out)
-	return nil
-}
-
-func getInstalledProfiles(c *cli.Context, cl runtimeclient.Client, catalogClient *client.Client) error {
-	manager := &catalog.Manager{}
-	data, err := manager.List(cl, catalogClient)
-	if err != nil {
-		return err
-	}
-
-	outFormat := c.String("output")
-	return formatInstalledProfilesOutput(data, outFormat)
-}
-
-func listDataFunc(data []catalog.ProfileData) func() interface{} {
+func installedProfilesDataFunc(data []catalog.ProfileData) func() interface{} {
 	return func() interface{} {
 		tc := formatter.TableContents{
 			Headers: []string{"Namespace", "Name", "Source", "Available Updates"},
@@ -199,4 +169,89 @@ func listDataFunc(data []catalog.ProfileData) func() interface{} {
 		}
 		return tc
 	}
+}
+
+func profileWithVersionDataFunc(profile profilesv1.ProfileCatalogEntry) func() interface{} {
+	return func() interface{} {
+		return formatter.TableContents{
+			Data: [][]string{
+				{"Catalog", profile.CatalogSource},
+				{"Name", profile.Name},
+				{"Version", profilesv1.GetVersionFromTag(profile.Tag)},
+				{"Description", profile.Description},
+				{"URL", profile.URL},
+				{"Maintainer", profile.Maintainer},
+				{"Prerequisites", strings.Join(profile.Prerequisites, ", ")},
+			},
+		}
+	}
+}
+
+func formatOutput(profiles []profilesv1.ProfileCatalogEntry, outFormat string) error {
+	if len(profiles) == 0 {
+		fmt.Println("No profiles found")
+		return nil
+	}
+
+	var f formatter.Formatter
+	f = formatter.NewTableFormatter()
+	getter := profilesDataFunc(profiles)
+
+	if outFormat == "json" {
+		f = formatter.NewJSONFormatter()
+		getter = func() interface{} { return profiles }
+	}
+
+	out, err := f.Format(getter)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("PACKAGE CATALOG")
+	fmt.Println(out)
+	return nil
+}
+
+func formatInstalledProfilesOutput(data []catalog.ProfileData, outFormat string) error {
+	if len(data) == 0 {
+		fmt.Println("no profiles installed")
+		return nil
+	}
+
+	var f formatter.Formatter
+	f = formatter.NewTableFormatter()
+	getter := installedProfilesDataFunc(data)
+
+	if outFormat == "json" {
+		f = formatter.NewJSONFormatter()
+		getter = func() interface{} { return data }
+	}
+
+	out, err := f.Format(getter)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("INSTALLED PACKAGES")
+	fmt.Println(out)
+	return nil
+}
+
+func formatCatlogProfilesOutput(profile profilesv1.ProfileCatalogEntry, outFormat string) error {
+	var f formatter.Formatter
+	f = formatter.NewTableFormatter()
+	getter := profileWithVersionDataFunc(profile)
+
+	if outFormat == "json" {
+		f = formatter.NewJSONFormatter()
+		getter = func() interface{} { return profile }
+	}
+
+	out, err := f.Format(getter)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(out)
+	return nil
 }

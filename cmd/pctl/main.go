@@ -26,9 +26,7 @@ func main() {
 		Flags:   globalFlags(),
 		Commands: []*cli.Command{
 			getCmd(),
-			showCmd(),
 			addCmd(),
-			listCmd(),
 			prepareCmd(),
 			docgenCmd(),
 			upgradeCmd(),
