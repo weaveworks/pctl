@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/weaveworks/pctl/pkg/formatter"
 
@@ -61,23 +60,23 @@ func listCmd() *cli.Command {
 	}
 }
 
-func listDataFunc(data []catalog.ProfileData) func() interface{} {
-	return func() interface{} {
-		tc := formatter.TableContents{
-			Headers: []string{"Namespace", "Name", "Source", "Available Updates"},
-		}
-		for _, d := range data {
-			source := fmt.Sprintf("%s/%s/%s", d.Profile.Catalog, d.Profile.Profile, d.Profile.Version)
-			if d.Profile.Catalog == "-" {
-				source = fmt.Sprintf("%s:%s:%s", d.Profile.URL, d.Profile.Branch, d.Profile.Path)
-			}
-			tc.Data = append(tc.Data, []string{
-				d.Profile.Namespace,
-				d.Profile.Name,
-				source,
-				strings.Join(d.AvailableVersionUpdates, ","),
-			})
-		}
-		return tc
-	}
-}
+// func listDataFunc(data []catalog.ProfileData) func() interface{} {
+// 	return func() interface{} {
+// 		tc := formatter.TableContents{
+// 			Headers: []string{"Namespace", "Name", "Source", "Available Updates"},
+// 		}
+// 		for _, d := range data {
+// 			source := fmt.Sprintf("%s/%s/%s", d.Profile.Catalog, d.Profile.Profile, d.Profile.Version)
+// 			if d.Profile.Catalog == "-" {
+// 				source = fmt.Sprintf("%s:%s:%s", d.Profile.URL, d.Profile.Branch, d.Profile.Path)
+// 			}
+// 			tc.Data = append(tc.Data, []string{
+// 				d.Profile.Namespace,
+// 				d.Profile.Name,
+// 				source,
+// 				strings.Join(d.AvailableVersionUpdates, ","),
+// 			})
+// 		}
+// 		return tc
+// 	}
+// }
