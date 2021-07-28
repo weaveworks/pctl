@@ -72,8 +72,7 @@ var _ = Describe("pctl add", func() {
 				Skip("Skipping this tests as it requires credentials")
 			}
 
-			//TODO change backt to main
-			profileBranch := "depends-nested"
+			profileBranch := "main"
 			subName := "pprof"
 			gitRepoName := "pctl-repo"
 
