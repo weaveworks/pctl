@@ -379,6 +379,8 @@ Steps:
    correct by doing something like: `git log --first-parent tag1..tag2`._
 
 1. PR the release notes into main.
+_Note_ that you should also update the `var Version` in `pkg/version/release.go` file with the same tag which is created in the following step
+This should be automated with #233
 
 1. Create and push a tag with the new version:
    ```sh
