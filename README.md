@@ -8,15 +8,13 @@ and run: mdtoc -inplace README.md
 
  <!-- toc -->
 - [Usage](#usage)
-  - [Search](#search)
-  - [Show](#show)
+  - [Get](#get)
   - [Add](#add)
     - [Add via Catalog](#add-via-catalog)
     - [Add via URL](#add-via-url)
     - [Configuring a profile](#configuring-a-profile)
     - [Cloning repository resources](#cloning-repository-resources)
     - [Architecture](#architecture)
-  - [List](#list)
   - [Prepare](#prepare)
     - [Pre-Flight check](#pre-flight-check)
   - [Catalog service options](#catalog-service-options)
@@ -34,18 +32,34 @@ and run: mdtoc -inplace README.md
 
 For more information on all commands, run `pctl --help` or `pctl <subcommand> --help`.
 
-### Search
-pctl can be used to search a catalog for profiles, example:
+### Get
+pctl can be used to get installed and catalog profiles, example:
 ```sh
-$ pctl search nginx
+$ pctl get nginx
+INSTALLED PACKAGES
+NAMESPACE       NAME            SOURCE                                  AVAILABLE UPDATES
+default         nginx-profile    nginx-catalog/weaveworks-nginx/v0.1.0   v0.1.1
+CATALOG/PROFILE                                   VERSION DESCRIPTION
+nginx-catalog-1/weaveworks-nginx                  0.0.1   This installs nginx.
+nginx-catalog-1/bitnami-nginx                     1.0.1   This installs bitnami nginx.
+nginx-catalog-1/some-other-nginx                  1.0.1   This installs some other nginx.
+```
+
+pctl can be used to get a catalog for profiles, example:
+```sh
+$ pctl get nginx --catalog
+PACKAGE CATALOG  
 CATALOG/PROFILE                         VERSION DESCRIPTION
 nginx-catalog-1/weaveworks-nginx        0.0.1   This installs nginx.
 nginx-catalog-1/some-other-nginx        1.0.1   This installs some other nginx.
 ```
 
-pctl search also lists all available profiles with `--all` option, example:
+pctl get also lists all available profiles and installed profiles, example:
 ```sh
-$ pctl search --all
+$ pctl get 
+INSTALLED PACKAGES
+NAMESPACE       NAME            SOURCE                                  AVAILABLE UPDATES
+default         pctl-profile    nginx-catalog/weaveworks-nginx/v0.1.0   v0.1.1
 CATALOG/PROFILE                                   VERSION DESCRIPTION
 nginx-catalog-1/weaveworks-nginx                  0.0.1   This installs nginx.
 nginx-catalog-1/bitnami-nginx                     1.0.1   This installs bitnami nginx.
@@ -53,12 +67,10 @@ nginx-catalog-1/some-other-nginx                  1.0.1   This installs some oth
 prometheus-catalog-1/weaveworks-prometheus        0.0.4   This installs prometheus.
 ```
 
-### Show
-
 pctl can be used to get more information about a specific profile, example:
 
 ```
-$ pctl show nginx-catalog-1/weaveworks-nginx
+$ pctl get nginx-catalog-1/weaveworks-nginx --version v0.0.1
 Catalog         nginx-catalog-1
 Name            weaveworks-nginx
 Version         0.0.1
@@ -67,6 +79,29 @@ URL             https://github.com/weaveworks/nginx-profile
 Maintainer      weaveworks (https://github.com/weaveworks/profiles)
 Prerequisites   Kubernetes 1.18+
 ```
+
+pctl can be used to get the profile installed in a cluster, example:
+```
+pctl get --installed
+INSTALLED PACKAGES
+NAMESPACE       NAME            SOURCE                                  AVAILABLE UPDATES
+default         pctl-profile    nginx-catalog/weaveworks-nginx/v0.1.0   v0.1.1
+```
+
+It also includes profiles installed through a direct link and a branch:
+
+```
+pctl get --installed
+NAMESPACE       NAME            SOURCE                                                                          AVAILABLE UPDATES
+default         pctl-profile    nginx-catalog/weaveworks-nginx/v0.1.0                                           -
+default         update-profile  https://github.com/weaveworks/profiles-examples:branch-and-url:bitnami-nginx    -
+```
+
+The source, in case of a branch install, is put together as follows: `url:branch:profile-name`.
+
+Available updates can be viewed in case of profiles which have been installed through a catalog.
+If that catalog contains an earlier version, `AVAILABLE UPDATES` section will list them.
+
 
 ### Add
 
@@ -229,29 +264,6 @@ edit, export, save as image (size small) and commit. Easy.
 -->
 ![](/docs/assets/pctl_install.png)
 
-
-
-### List
-pctl can be used to list the profile installed in a cluster, example:
-```
-pctl list
-NAMESPACE       NAME            SOURCE                                  AVAILABLE UPDATES
-default         pctl-profile    nginx-catalog/weaveworks-nginx/v0.1.0   v0.1.1
-```
-
-It also includes profiles installed through a direct link and a branch:
-
-```
-pctl list
-NAMESPACE       NAME            SOURCE                                                                          AVAILABLE UPDATES
-default         pctl-profile    nginx-catalog/weaveworks-nginx/v0.1.0                                           -
-default         update-profile  https://github.com/weaveworks/profiles-examples:branch-and-url:bitnami-nginx    -
-```
-
-The source, in case of a branch install, is put together as follows: `url:branch:profile-name`.
-
-Available updates can be viewed in case of profiles which have been installed through a catalog.
-If that catalog contains an earlier version, `AVAILABLE UPDATES` section will list them.
 
 ### Prepare
 
