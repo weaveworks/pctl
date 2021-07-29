@@ -3,12 +3,14 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/urfave/cli/v2"
 
+	"github.com/weaveworks/pctl/pkg/bootstrap"
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
 	"github.com/weaveworks/pctl/pkg/git"
@@ -179,6 +181,16 @@ func addProfile(c *cli.Context) error {
 		}
 		gitRepoNamespace = split[0]
 		gitRepoName = split[1]
+	} else {
+		wd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to fetch current working directory: %w", err)
+		}
+		config, err := bootstrap.GetConfig(wd)
+		if err == nil {
+			gitRepoNamespace = config.GitRepository.Namespace
+			gitRepoName = config.GitRepository.Name
+		}
 	}
 	installer := install.NewInstaller(install.Config{
 		GitClient:        g,

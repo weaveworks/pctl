@@ -32,8 +32,8 @@ var _ = Describe("PCTL", func() {
 
 			files, err := ioutil.ReadDir(tmpDir)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(files)).To(Equal(6))
-			commands := []string{"add", "prepare", "list", "show", "search", "upgrade"}
+			Expect(len(files)).To(Equal(7))
+			commands := []string{"add", "bootstrap", "prepare", "list", "show", "search", "upgrade"}
 			for _, cmd := range commands {
 				filename := filepath.Join(tmpDir, fmt.Sprintf("pctl-%s-cmd.md", cmd))
 				Expect(filename).To(BeAnExistingFile())
