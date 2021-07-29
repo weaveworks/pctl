@@ -70,7 +70,7 @@ prometheus-catalog-1/weaveworks-prometheus        0.0.4   This installs promethe
 pctl can be used to get more information about a specific profile, example:
 
 ```
-$ pctl get nginx-catalog-1/weaveworks-nginx --version v0.0.1
+$ pctl get nginx-catalog-1/weaveworks-nginx --profile-version v0.0.1
 Catalog         nginx-catalog-1
 Name            weaveworks-nginx
 Version         0.0.1
