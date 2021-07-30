@@ -140,10 +140,10 @@ var _ = Describe("pctl get", func() {
 			}
 
 			Eventually(getCmd).Should(ContainElements(
-				"INSTALLED PACKAGES \n",
+				"INSTALLED PACKAGES",
 				"NAMESPACE\tNAME                       \tSOURCE                               \tAVAILABLE UPDATES ",
 				"default  \tlong-name-to-ensure-padding\tnginx-catalog/weaveworks-nginx/v0.1.0\tv0.1.1           \t",
-				"PACKAGE CATALOG  \n",
+				"PACKAGE CATALOG",
 				"CATALOG/PROFILE               	VERSION	DESCRIPTION                     \n"+
 					"nginx-catalog/weaveworks-nginx	v0.1.0 	This installs nginx.           \t\n"+
 					"nginx-catalog/weaveworks-nginx	v0.1.1 	This installs nginx.           \t\n"+
