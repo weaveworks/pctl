@@ -132,25 +132,23 @@ var _ = Describe("pctl get", func() {
 		})
 
 		It("returns all the installations and catalog profiles", func() {
-			getCmd := func() []string {
-				cmd := exec.Command(binaryPath, "get")
-				session, err := cmd.CombinedOutput()
-				Expect(err).ToNot(HaveOccurred())
-				return strings.Split(string(session), "\n")
-			}
+			cmd := exec.Command(binaryPath, "get")
+			session, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred())
 
-			Eventually(getCmd).Should(ContainElements(
-				"INSTALLED PACKAGES",
-				"NAMESPACE\tNAME                       \tSOURCE                               \tAVAILABLE UPDATES ",
-				"default  \tlong-name-to-ensure-padding\tnginx-catalog/weaveworks-nginx/v0.1.0\tv0.1.1           \t",
-				"PACKAGE CATALOG",
-				"CATALOG/PROFILE               	VERSION	DESCRIPTION                     \n"+
-					"nginx-catalog/weaveworks-nginx	v0.1.0 	This installs nginx.           \t\n"+
-					"nginx-catalog/weaveworks-nginx	v0.1.1 	This installs nginx.           \t\n"+
-					"nginx-catalog/bitnami-nginx   	v0.0.1 	This installs nginx.           \t\n"+
-					"nginx-catalog/nginx           	v2.0.1 	This installs nginx.           \t\n"+
-					"nginx-catalog/some-other-nginx	       	This installs some other nginx.\t\n\n",
-			))
+			expected := "PACKAGE CATALOG\n" +
+				"CATALOG/PROFILE               	VERSION	DESCRIPTION                     \n" +
+				"nginx-catalog/weaveworks-nginx	v0.1.0 	This installs nginx.           \t\n" +
+				"nginx-catalog/weaveworks-nginx	v0.1.1 	This installs nginx.           \t\n" +
+				"nginx-catalog/bitnami-nginx   	v0.0.1 	This installs nginx.           \t\n" +
+				"nginx-catalog/nginx           	v2.0.1 	This installs nginx.           \t\n" +
+				"nginx-catalog/some-other-nginx	       	This installs some other nginx.\t\n\n"
+			Expect(string(session)).To(ContainSubstring(expected))
+
+			expected = "INSTALLED PACKAGES\n" +
+				"NAMESPACE\tNAME                       \tSOURCE                               \tAVAILABLE UPDATES \n" +
+				"default  \tlong-name-to-ensure-padding\tnginx-catalog/weaveworks-nginx/v0.1.0\tv0.1.1           \t\n"
+			Expect(string(session)).To(ContainSubstring(expected))
 		})
 	})
 

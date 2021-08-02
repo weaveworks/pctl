@@ -117,7 +117,7 @@ func getCatalogProfiles(catalogClient *client.Client, name string, outFormat str
 
 func getInstalledProfiles(cl runtimeclient.Client, catalogClient *client.Client, name string, outFormat string) error {
 	manager := &catalog.Manager{}
-	data, err := manager.List(cl, catalogClient)
+	data, err := manager.List(cl, catalogClient, name)
 	if err != nil {
 		return err
 	}

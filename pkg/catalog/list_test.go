@@ -82,7 +82,7 @@ var _ = Describe("List", func() {
 ]}
 `)
 		fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
-		out, err := manager.List(fakeRuntimeClient, fakeCatalogClient)
+		out, err := manager.List(fakeRuntimeClient, fakeCatalogClient, "")
 		Expect(err).NotTo(HaveOccurred())
 		expected := []catalog.ProfileData{
 			{
@@ -106,7 +106,7 @@ var _ = Describe("List", func() {
 			scheme := runtime.NewScheme()
 			Expect(profilesv1.AddToScheme(scheme)).To(Succeed())
 			fakeRuntimeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
-			out, err := manager.List(fakeRuntimeClient, fakeCatalogClient)
+			out, err := manager.List(fakeRuntimeClient, fakeCatalogClient, "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).To(BeEmpty())
 		})
@@ -115,7 +115,7 @@ var _ = Describe("List", func() {
 		It("returns the profile without any version updates", func() {
 			httpBody := []byte(`{"items":[]}`)
 			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
-			out, err := manager.List(fakeRuntimeClient, fakeCatalogClient)
+			out, err := manager.List(fakeRuntimeClient, fakeCatalogClient, "")
 			Expect(err).NotTo(HaveOccurred())
 			expected := []catalog.ProfileData{
 				{
@@ -139,7 +139,7 @@ var _ = Describe("List", func() {
 	When("get greater than fails to query the catalog", func() {
 		It("returns a sane error", func() {
 			fakeCatalogClient.DoRequestReturns(nil, 400, nil)
-			out, err := manager.List(fakeRuntimeClient, fakeCatalogClient)
+			out, err := manager.List(fakeRuntimeClient, fakeCatalogClient, "")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("failed to get available updates: failed to fetch available updates for profile, status code 400"))
 			Expect(out).To(BeNil())
@@ -150,7 +150,7 @@ var _ = Describe("List", func() {
 		It("returns a sane error", func() {
 			fakeRuntimeClient = fake.NewClientBuilder().Build()
 			fakeCatalogClient.DoRequestReturns(nil, 200, nil)
-			_, err := manager.List(fakeRuntimeClient, fakeCatalogClient)
+			_, err := manager.List(fakeRuntimeClient, fakeCatalogClient, "")
 			Expect(err).To(MatchError("failed to list profile installations: no kind is registered for the type v1alpha1.ProfileInstallationList in scheme \"pkg/runtime/scheme.go:100\""))
 		})
 	})
@@ -228,7 +228,7 @@ var _ = Describe("List", func() {
 			fakeCatalogClient.DoRequestReturnsOnCall(0, return1, 200, nil)
 			fakeCatalogClient.DoRequestReturnsOnCall(1, return2, 200, nil)
 			fakeCatalogClient.DoRequestReturnsOnCall(2, return3, 200, nil)
-			out, err := manager.List(fakeRuntimeClient, fakeCatalogClient)
+			out, err := manager.List(fakeRuntimeClient, fakeCatalogClient, "")
 			Expect(err).NotTo(HaveOccurred())
 			expected := []catalog.ProfileData{
 				{
