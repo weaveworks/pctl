@@ -74,7 +74,7 @@ var _ = BeforeSuite(func() {
 	kubeconfig := ctrl.GetConfigOrDie()
 	kClient, err = client.New(kubeconfig, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
-	err = integration.PrepareTestCluster(binaryPath)
+	err = integration.InstallClusterComponents(binaryPath)
 	Expect(err).NotTo(HaveOccurred())
 })
 

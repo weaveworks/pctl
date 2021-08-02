@@ -39,10 +39,10 @@ var (
 	}
 )
 
-// PrepareTestCluster will create a test cluster using pctl `prepare` command.
+// installTestCluster will create a test cluster using pctl `install` command.
 // @binary -- location of the built pctl binary.
-func PrepareTestCluster(binaryPath string) error {
-	tmp, err := ioutil.TempDir("", "prepare_integration_test_01")
+func InstallClusterComponents(binaryPath string) error {
+	tmp, err := ioutil.TempDir("", "install_integration_test_01")
 	if err != nil {
 		return fmt.Errorf("failed to create temp folder for test: %w", err)
 	}
@@ -51,11 +51,11 @@ func PrepareTestCluster(binaryPath string) error {
 			fmt.Printf("failed to remove temporary folder at location: %s. Please clean manually.", tmp)
 		}
 	}()
-	cmd := exec.Command(binaryPath, "prepare", "--dry-run", "--out", tmp, "--keep")
+	cmd := exec.Command(binaryPath, "install", "--dry-run", "--out", tmp, "--keep")
 	output, err := cmd.CombinedOutput()
 	if err != nil || !bytes.Contains(output, []byte("kind: List")) {
-		fmt.Println("Output of prepare was: ", string(output))
-		return fmt.Errorf("failed to run prepare command: %w", err)
+		fmt.Println("Output of install was: ", string(output))
+		return fmt.Errorf("failed to run install command: %w", err)
 	}
 	fmt.Println("Install file generated successfully.")
 
@@ -69,8 +69,8 @@ func PrepareTestCluster(binaryPath string) error {
 	fmt.Println("done.")
 
 	fmt.Print("Applying modified prepare.yaml...")
-	applyPrepareArgs := []string{"apply", "-f", "-"}
-	cmd = exec.Command("kubectl", applyPrepareArgs...)
+	applyinstallArgs := []string{"apply", "-f", "-"}
+	cmd = exec.Command("kubectl", applyinstallArgs...)
 	in, err := cmd.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("failed to get in pipe for kubectl: %w", err)
@@ -88,7 +88,7 @@ func PrepareTestCluster(binaryPath string) error {
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("\nOutput from kubectl apply: ", string(output))
-		return fmt.Errorf("failed to apply prepare yaml: %w", err)
+		return fmt.Errorf("failed to apply prepare.yaml: %w", err)
 	}
 	fmt.Println("done.")
 
