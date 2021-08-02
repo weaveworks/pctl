@@ -150,6 +150,44 @@ var _ = Describe("pctl get", func() {
 				"default  \tlong-name-to-ensure-padding\tnginx-catalog/weaveworks-nginx/v0.1.0\tv0.1.1           \t\n"
 			Expect(string(session)).To(ContainSubstring(expected))
 		})
+
+		It("returns all the installations and catalog profiles with matching name", func() {
+			profileURL := "https://github.com/weaveworks/profiles-examples"
+			bitnamiSub := profilesv1.ProfileInstallation{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ProfileInstallation",
+					APIVersion: "profileinstallations.weave.works/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bitnami-nginx",
+					Namespace: namespace,
+				},
+				Spec: profilesv1.ProfileInstallationSpec{
+					Source: &profilesv1.Source{
+						URL: profileURL,
+						Tag: "bitnami-nginx/v0.0.1",
+					},
+					Catalog: &profilesv1.Catalog{
+						Catalog: "nginx-catalog",
+						Profile: "bitnami-nginx",
+						Version: "v0.0.1",
+					},
+				},
+			}
+			Expect(kClient.Create(ctx, &bitnamiSub)).Should(Succeed())
+
+			cmd := exec.Command(binaryPath, "get", "bitnami-nginx")
+			session, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred())
+
+			expected := "INSTALLED PACKAGES\n" +
+				"NAMESPACE\tNAME         \tSOURCE                            \tAVAILABLE UPDATES \n" +
+				"default  \tbitnami-nginx\tnginx-catalog/bitnami-nginx/v0.0.1\t-                \t\n\n" +
+				"PACKAGE CATALOG\n" +
+				"CATALOG/PROFILE            	VERSION	DESCRIPTION          \n" +
+				"nginx-catalog/bitnami-nginx	v0.0.1 	This installs nginx.\t\n\n"
+			Expect(string(session)).To(ContainSubstring(expected))
+		})
 	})
 
 	Context("installed profiles with get", func() {
@@ -242,6 +280,47 @@ var _ = Describe("pctl get", func() {
 					"NAMESPACE\tNAME                       \tSOURCE                               \tAVAILABLE UPDATES ",
 					"default  \tbitnami-profile            \tnginx-catalog/bitnami-nginx/v0.0.1   \t-                \t",
 					"default  \tlong-name-to-ensure-padding\tnginx-catalog/weaveworks-nginx/v0.1.0\tv0.1.1           \t",
+				))
+				Expect(kClient.Delete(ctx, &bitnamiSub)).Should(Succeed())
+			})
+
+			It("returns the installation matching name", func() {
+				profileURL := "https://github.com/weaveworks/profiles-examples"
+				bitnamiSub := profilesv1.ProfileInstallation{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ProfileInstallation",
+						APIVersion: "profileinstallations.weave.works/v1alpha1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "bitnami-profile",
+						Namespace: namespace,
+					},
+					Spec: profilesv1.ProfileInstallationSpec{
+						Source: &profilesv1.Source{
+							URL: profileURL,
+							Tag: "bitnami-nginx/v0.0.1",
+						},
+						Catalog: &profilesv1.Catalog{
+							Catalog: "nginx-catalog",
+							Profile: "bitnami-nginx",
+							Version: "v0.0.1",
+						},
+					},
+				}
+				Expect(kClient.Create(ctx, &bitnamiSub)).Should(Succeed())
+				getCmd := func() []string {
+					cmd := exec.Command(binaryPath, "get", "--installed", "bitnami-profile")
+					session, err := cmd.CombinedOutput()
+					Expect(err).ToNot(HaveOccurred())
+					return strings.Split(string(session), "\n")
+				}
+
+				Eventually(getCmd).Should(ConsistOf(
+					"INSTALLED PACKAGES",
+					"NAMESPACE\tNAME           \tSOURCE                            \tAVAILABLE UPDATES ",
+					"default  \tbitnami-profile\tnginx-catalog/bitnami-nginx/v0.0.1\t-                \t",
+					"",
+					"",
 				))
 				Expect(kClient.Delete(ctx, &bitnamiSub)).Should(Succeed())
 			})
