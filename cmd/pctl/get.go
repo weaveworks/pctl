@@ -63,6 +63,10 @@ func getCmd() *cli.Command {
 				return getInstalledProfiles(cl, catalogClient, "", outFormat)
 			}
 
+			if c.Args().Len() < 1 && c.Bool("catalog") {
+				return getCatalogProfiles(catalogClient, "", outFormat)
+			}
+
 			// get all installed and catalog profiles
 			if c.Args().Len() < 1 {
 				err := getInstalledProfiles(cl, catalogClient, "", outFormat)
@@ -214,7 +218,10 @@ func formatOutput(profiles []profilesv1.ProfileCatalogEntry, outFormat string) e
 		return err
 	}
 
-	fmt.Println("PACKAGE CATALOG")
+	if outFormat == "table" {
+		fmt.Println("PACKAGE CATALOG")
+	}
+
 	fmt.Println(out)
 	return nil
 }
@@ -239,7 +246,10 @@ func formatInstalledProfilesOutput(data []catalog.ProfileData, outFormat string)
 		return err
 	}
 
-	fmt.Println("INSTALLED PACKAGES")
+	if outFormat == "table" {
+		fmt.Println("INSTALLED PACKAGES")
+	}
+
 	fmt.Println(out)
 	return nil
 }

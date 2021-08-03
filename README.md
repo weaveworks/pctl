@@ -54,6 +54,16 @@ nginx-catalog-1/weaveworks-nginx        0.0.1   This installs nginx.
 nginx-catalog-1/some-other-nginx        1.0.1   This installs some other nginx.
 ```
 
+pctl can be also used to get all catalog for profiles, example:
+```sh
+$ pctl get --catalog
+PACKAGE CATALOG  
+CATALOG/PROFILE                                   VERSION DESCRIPTION
+nginx-catalog-1/weaveworks-nginx                  0.0.1   This installs nginx.
+nginx-catalog-1/bitnami-nginx                     1.0.1   This installs bitnami nginx.
+nginx-catalog-1/some-other-nginx                  1.0.1   This installs some other nginx.
+```
+
 pctl get also lists all available profiles and installed profiles, example:
 ```sh
 $ pctl get 
