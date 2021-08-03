@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"fmt"
+	"strings"
 
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -16,7 +17,7 @@ type ProfileData struct {
 }
 
 // List will fetch all installed profiles on the cluster and check if there are updated versions available.
-func (m *Manager) List(k8sClient runtimeclient.Client, catalogClient CatalogClient) ([]ProfileData, error) {
+func (m *Manager) List(k8sClient runtimeclient.Client, catalogClient CatalogClient, name string) ([]ProfileData, error) {
 	profiles, err := installation.NewManager(k8sClient).List()
 	if err != nil {
 		return nil, err
@@ -40,10 +41,22 @@ func (m *Manager) List(k8sClient runtimeclient.Client, catalogClient CatalogClie
 		if len(versions) == 0 {
 			versions = append(versions, "-")
 		}
-		profileData = append(profileData, ProfileData{
-			Profile:                 p,
-			AvailableVersionUpdates: versions,
-		})
+
+		// filter results if name is provided
+		if name != "" {
+			if strings.Contains(p.Name, name) {
+				profileData = append(profileData, ProfileData{
+					Profile:                 p,
+					AvailableVersionUpdates: versions,
+				})
+			}
+		} else {
+			profileData = append(profileData, ProfileData{
+				Profile:                 p,
+				AvailableVersionUpdates: versions,
+			})
+		}
+
 	}
 	return profileData, nil
 }
