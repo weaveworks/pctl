@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("pctl list", func() {
+var _ = Describe("bootstrap", func() {
 	var (
 		temp string
 	)
