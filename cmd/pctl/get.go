@@ -59,16 +59,16 @@ func getCmd() *cli.Command {
 				return err
 			}
 
-			if c.Args().Len() < 1 && c.Bool("installed") {
-				return getInstalledProfiles(cl, catalogClient, "", outFormat)
-			}
-
-			if c.Args().Len() < 1 && c.Bool("catalog") {
-				return getCatalogProfiles(catalogClient, "", outFormat)
-			}
-
 			// get all installed and catalog profiles
 			if c.Args().Len() < 1 {
+				if c.Bool("installed") {
+					return getInstalledProfiles(cl, catalogClient, "", outFormat)
+				}
+	
+				if c.Bool("catalog") {
+					return getCatalogProfiles(catalogClient, "", outFormat)
+				}
+
 				err := getInstalledProfiles(cl, catalogClient, "", outFormat)
 				if err != nil {
 					return err
