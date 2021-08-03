@@ -64,7 +64,6 @@ func getCmd() *cli.Command {
 				if c.Bool("installed") {
 					return getInstalledProfiles(cl, catalogClient, "", outFormat)
 				}
-	
 				if c.Bool("catalog") {
 					return getCatalogProfiles(catalogClient, "", outFormat)
 				}
