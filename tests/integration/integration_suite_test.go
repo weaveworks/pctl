@@ -1,9 +1,13 @@
 package integration_test
 
 import (
+	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -11,6 +15,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -22,6 +28,7 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
 	"github.com/weaveworks/pctl/tests/integration"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 var (
@@ -33,6 +40,10 @@ var (
 	// used for flux repository branch creation
 	pctlTestRepositoryHTTP = "https://github.com/weaveworks/pctl-test-repo"
 	kClient                client.Client
+	temp                   string
+	namespace              string
+	configMapName          string
+	branch                 string
 )
 
 func TestIntegration(t *testing.T) {
@@ -81,3 +92,122 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
 })
+
+var _ = BeforeEach(func() {
+	var err error
+	temp, err = ioutil.TempDir("", "pctl_tmp")
+	Expect(err).ToNot(HaveOccurred())
+})
+
+var _ = AfterEach(func() {
+	_ = os.RemoveAll(temp)
+})
+
+func pctl(args ...string) []string {
+	cmd := exec.Command(binaryPath, args...)
+	cmd.Dir = temp
+	session, err := cmd.CombinedOutput()
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), fmt.Sprintf("error occurred running: pctl %s. Output: %s", strings.Join(args, " "), string(session)))
+	return sanitiseString(string(session))
+}
+
+func pctlWithError(args ...string) []string {
+	cmd := exec.Command(binaryPath, args...)
+	cmd.Dir = temp
+	session, err := cmd.CombinedOutput()
+	ExpectWithOffset(1, err).To(HaveOccurred(), fmt.Sprintf("error occurred running: pctl %s. Output: %s", strings.Join(args, " "), string(session)))
+
+	return sanitiseString(string(session))
+}
+
+func pctlWithRawOutput(args ...string) string {
+	cmd := exec.Command(binaryPath, args...)
+	cmd.Dir = temp
+	session, err := cmd.CombinedOutput()
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), fmt.Sprintf("error occurred running: pctl %s. Output: %s", strings.Join(args, " "), string(session)))
+	return string(session)
+}
+
+func sanitiseString(session string) []string {
+	session = strings.Replace(session, "\t", " ", -1)
+	session = strings.TrimSuffix(session, "\n")
+	parts := strings.Split(session, "\n")
+
+	var newParts []string
+	for _, part := range parts {
+		if part != "" {
+			newParts = append(newParts, strings.TrimSpace(part))
+		}
+	}
+
+	return newParts
+}
+
+func filesInDir(profileDir string) []string {
+	var files []string
+	err := filepath.Walk(profileDir, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			files = append(files, strings.TrimPrefix(path, profileDir+"/"))
+		}
+		return nil
+	})
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return files
+}
+
+func catFile(filename string) string {
+	content, err := ioutil.ReadFile(filename)
+	ExpectWithOffset(1, err).ToNot(HaveOccurred())
+	return string(content)
+}
+
+func cloneAndCheckoutBranch(temp, branch string) {
+	// check out the branch
+	cmd := exec.Command("git", "clone", pctlTestRepositoryName, temp)
+	output, err := cmd.CombinedOutput()
+	ExpectWithOffset(1, err).ToNot(HaveOccurred(), fmt.Sprintf("clone failed: %s", string(output)))
+	cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "checkout", "-b", branch)
+	output, err = cmd.CombinedOutput()
+	ExpectWithOffset(1, err).ToNot(HaveOccurred(), fmt.Sprintf("checkout branch failed: %s", string(output)))
+
+	cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "push", "-u", "origin", branch)
+	output, err = cmd.CombinedOutput()
+	ExpectWithOffset(1, err).ToNot(HaveOccurred(), fmt.Sprintf("git push failed : %s", string(output)))
+	// setup the gitrepository resources. Requires the branch to exist first
+}
+
+func gitAddAndPush(dir, branch string) {
+	cmd := exec.Command("git", "--git-dir", filepath.Join(dir, ".git"), "--work-tree", dir, "add", ".")
+	output, err := cmd.CombinedOutput()
+	ExpectWithOffset(1, err).ToNot(HaveOccurred(), fmt.Sprintf("git add . failed: %s", string(output)))
+	cmd = exec.Command("git", "--git-dir", filepath.Join(dir, ".git"), "--work-tree", dir, "commit", "-am", "new content")
+	output, err = cmd.CombinedOutput()
+	ExpectWithOffset(1, err).ToNot(HaveOccurred(), fmt.Sprintf("git commit failed : %s", string(output)))
+	cmd = exec.Command("git", "--git-dir", filepath.Join(dir, ".git"), "--work-tree", dir, "push", "-u", "origin", branch)
+	output, err = cmd.CombinedOutput()
+	ExpectWithOffset(1, err).ToNot(HaveOccurred(), fmt.Sprintf("git push failed : %s", string(output)))
+}
+
+func createNamespace(namespace string) {
+	nsp := v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+	ExpectWithOffset(1, kClient.Create(context.Background(), &nsp)).To(Succeed())
+}
+func deleteNamespace(namespace string) {
+	nsp := v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+	_ = kClient.Delete(context.Background(), &nsp)
+	EventuallyWithOffset(1, func() error {
+		err := kClient.Get(context.Background(), client.ObjectKey{Name: namespace}, &nsp)
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("delete not finished yet: %w", err)
+	}, "2m", "1s").Should(Succeed())
+}

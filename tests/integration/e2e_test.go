@@ -8,23 +8,28 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
+	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
+	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	appv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var (
-	temp          string
-	namespace     string
-	configMapName string
-)
+var _ = Describe("end to end flow", func() {
+	var (
+		gitRepoName             = "pctl-repo"
+		profileInstallationName = "pctl-profile"
+	)
 
-var _ = Describe("add and upgrade", func() {
 	BeforeEach(func() {
 		var err error
+		branch = "flux_repo_test_" + uuid.NewString()[:6]
 		namespace = uuid.New().String()
 		temp, err = ioutil.TempDir("", "pctl_test_install_upgrade")
 		Expect(err).ToNot(HaveOccurred())
@@ -48,70 +53,83 @@ var _ = Describe("add and upgrade", func() {
 		}
 		Expect(kClient.Create(context.Background(), &configMap)).To(Succeed())
 
+		cloneAndCheckoutBranch(temp, branch)
+
+		cmd := exec.Command("flux", "create", "source", "git", gitRepoName, "--url", pctlTestRepositoryHTTP, "--branch", branch, "--namespace", namespace)
+		output, err := cmd.CombinedOutput()
+		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create source git failed: %s", string(output)))
 	})
 
 	AfterEach(func() {
-		_ = os.RemoveAll(temp)
-		nsp := v1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: namespace,
-			},
+		cmd := exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "push", "-d", "origin", branch)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Println("git delete remote branch failed ", string(output))
 		}
-		_ = kClient.Delete(context.Background(), &nsp)
 
+		cmd = exec.Command("flux", "delete", "source", "git", gitRepoName, "--namespace", namespace, "-s")
+		output, err = cmd.CombinedOutput()
+		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux delete source git failed: %s", string(output)))
+
+		_ = os.RemoveAll(temp)
+		deleteNamespace(namespace)
 	})
 
-	It("works", func() {
-		By("adding a profile")
-		gitRepoName := "my-git-repo"
-		cmd := exec.Command(
-			binaryPath,
-			"add",
-			"--git-repository",
-			fmt.Sprintf("%s/%s", namespace, gitRepoName),
-			"--namespace", namespace,
-			"--config-map", configMapName,
-			"nginx-catalog/weaveworks-nginx/v0.1.0")
+	It("works end-to-end", func() {
+		if skipTestsThatRequireCredentials {
+			Skip("Skipping this tests as it requires credentials")
+		}
+		By("searching for the desired weaveworks-nginx profile", func() {
+			Expect(pctl("get", "--catalog", "weaveworks-nginx")).To(ContainElement(
+				"nginx-catalog/weaveworks-nginx v0.1.0  This installs nginx.",
+			))
 
-		cmd.Dir = temp
-		output, err := cmd.CombinedOutput()
-		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed: %s", string(output)))
-		Expect(string(output)).To(ContainSubstring("generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0"))
-		Expect(string(output)).To(ContainSubstring("installation completed successfully"))
-
-		var files []string
-		profileDir := filepath.Join(temp, "weaveworks-nginx")
-		err = filepath.Walk(profileDir, func(path string, info os.FileInfo, err error) error {
-			if !info.IsDir() {
-				files = append(files, strings.TrimPrefix(path, profileDir+"/"))
-			}
-			return nil
+			Expect(pctl("get", "-p", "v0.1.0", "nginx-catalog/weaveworks-nginx")).To(ContainElements(
+				"Catalog       nginx-catalog",
+				"Name          weaveworks-nginx",
+				"Version       v0.1.0",
+				"Description   This installs nginx.",
+				"URL           https://github.com/weaveworks/profiles-examples",
+				"Maintainer    weaveworks (https://github.com/weaveworks/profiles)",
+				"Prerequisites Kubernetes 1.18+",
+			))
 		})
-		Expect(err).NotTo(HaveOccurred())
 
-		By("creating the artifacts")
-		Expect(files).To(ContainElements(
-			"profile-installation.yaml",
-			"artifacts/nginx-deployment/kustomization.yaml",
-			"artifacts/nginx-deployment/kustomize-flux.yaml",
-			"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
-			"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
-			"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
-			"artifacts/nginx-chart/kustomization.yaml",
-			"artifacts/nginx-chart/kustomize-flux.yaml",
-			"artifacts/nested-profile/nginx-server/helm-chart/HelmRelease.yaml",
-			"artifacts/nested-profile/nginx-server/kustomization.yaml",
-			"artifacts/nested-profile/nginx-server/kustomize-flux.yaml",
-		))
+		By("installing the desired profile", func() {
+			pctlAddOutput := pctl(
+				"add",
+				"--git-repository",
+				fmt.Sprintf("%s/%s", namespace, gitRepoName),
+				"--namespace", namespace,
+				"--config-map", configMapName,
+				"nginx-catalog/weaveworks-nginx/v0.1.0",
+			)
+			Expect(pctlAddOutput).To(ConsistOf(
+				"generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0",
+				"installation completed successfully",
+			))
 
-		filename := filepath.Join(profileDir, "profile-installation.yaml")
-		content, err := ioutil.ReadFile(filename)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
+			By("creating the artifacts")
+			profileDir := filepath.Join(temp, "weaveworks-nginx")
+			Expect(filesInDir(profileDir)).To(ContainElements(
+				"profile-installation.yaml",
+				"artifacts/nginx-deployment/kustomization.yaml",
+				"artifacts/nginx-deployment/kustomize-flux.yaml",
+				"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
+				"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
+				"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
+				"artifacts/nginx-chart/kustomization.yaml",
+				"artifacts/nginx-chart/kustomize-flux.yaml",
+				"artifacts/nested-profile/nginx-server/helm-chart/HelmRelease.yaml",
+				"artifacts/nested-profile/nginx-server/kustomization.yaml",
+				"artifacts/nested-profile/nginx-server/kustomize-flux.yaml",
+			))
+
+			Expect(catFile(filepath.Join(profileDir, "profile-installation.yaml"))).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
 kind: ProfileInstallation
 metadata:
   creationTimestamp: null
-  name: pctl-profile
+  name: %s
   namespace: %s
 spec:
   catalog:
@@ -127,105 +145,71 @@ spec:
     tag: weaveworks-nginx/v0.1.0
     url: https://github.com/weaveworks/profiles-examples
 status: {}
-`, namespace, configMapName, gitRepoName, namespace)))
+`, profileInstallationName, namespace, configMapName, gitRepoName, namespace)))
 
-		By("manual editing the profile")
-		deploymentFile := filepath.Join(profileDir, "artifacts/nginx-deployment/nginx/deployment/deployment.yaml")
-		input, err := ioutil.ReadFile(deploymentFile)
-		Expect(err).NotTo(HaveOccurred())
+			By("manual editing the profile")
+			deploymentFile := filepath.Join(profileDir, "artifacts/nginx-deployment/nginx/deployment/deployment.yaml")
+			input := catFile(deploymentFile)
+			//the latest version changes this to 3, checking its curerntly 2 for sanity
+			Expect(strings.Contains(input, "replicas: 2")).To(BeTrue())
+			//sanity check its currently set to 90
+			Expect(strings.Contains(input, "containerPort: 80")).To(BeTrue())
+			//modify the containerPort to 30
+			input = strings.Replace(input, "containerPort: 80", "containerPort: 30", -1)
+			Expect(ioutil.WriteFile(deploymentFile, []byte(input), 0644)).To(Succeed())
 
-		//the latest version changes this to 3, checking its curerntly 2 for sanity
-		Expect(strings.Contains(string(input), "replicas: 2")).To(BeTrue())
-		//sanity check its currently set to 90
-		Expect(strings.Contains(string(input), "containerPort: 80")).To(BeTrue())
-		//modify the containerPort to 30
-		input = []byte(strings.Replace(string(input), "containerPort: 80", "containerPort: 30", -1))
+			By("pushing the profile to the flux repo")
+			gitAddAndPush(temp, branch)
+			cmd := exec.Command("flux", "reconcile", "source", "git", "--namespace", namespace, gitRepoName)
+			output, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux reconcile source git failed : %s", string(output)))
 
-		err = ioutil.WriteFile(deploymentFile, []byte(input), 0644)
-		Expect(err).NotTo(HaveOccurred())
+			cmd = exec.Command("flux", "create", "kustomization", "kustomization", "--source", fmt.Sprintf("GitRepository/%s", gitRepoName), "--path", ".", "--namespace", namespace)
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create kustomization failed : %s", string(output)))
 
-		By("upgrading a profile")
-		cmd = exec.Command(
-			binaryPath,
-			"upgrade",
-			profileDir,
-			"v0.1.1")
-		cmd.Dir = temp
-		output, err = cmd.CombinedOutput()
-		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed: %s", string(output)))
-		Expect(string(output)).To(ContainSubstring(`upgrading profile "pctl-profile" from version "v0.1.0" to "v0.1.1"`))
-		Expect(string(output)).To(ContainSubstring("upgrade completed successfully"))
+			By("the profile deploying successfully")
+			//replicas=3 in v0.1.0
+			ensureArtifactDeployedSuccessfully(profileInstallationName, 2)
+			By("the profile being returned in pctl get")
+			getCmd := func() []string {
+				cmd := exec.Command(binaryPath, "get", "--installed", profileInstallationName)
+				session, err := cmd.CombinedOutput()
+				Expect(err).ToNot(HaveOccurred())
+				return sanitiseString(string(session))
+			}
 
-		By("updating the artifacts")
-		Expect(files).To(ContainElements(
-			"profile-installation.yaml",
-			"artifacts/nginx-deployment/kustomization.yaml",
-			"artifacts/nginx-deployment/kustomize-flux.yaml",
-			"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
-			"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
-			"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
-			"artifacts/nginx-chart/kustomization.yaml",
-			"artifacts/nginx-chart/kustomize-flux.yaml",
-			"artifacts/nested-profile/nginx-server/helm-chart/HelmRelease.yaml",
-			"artifacts/nested-profile/nginx-server/kustomization.yaml",
-			"artifacts/nested-profile/nginx-server/kustomize-flux.yaml",
-		))
+			Eventually(getCmd).Should(ContainElements(
+				"INSTALLED PACKAGES",
+				"NAMESPACE                            NAME         SOURCE                                AVAILABLE UPDATES",
+				fmt.Sprintf("%s %s nginx-catalog/weaveworks-nginx/v0.1.0 v0.1.1", namespace, profileInstallationName),
+			))
+		})
 
-		content, err = ioutil.ReadFile(filename)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
-kind: ProfileInstallation
-metadata:
-  creationTimestamp: null
-  name: pctl-profile
-  namespace: %s
-spec:
-  catalog:
-    catalog: nginx-catalog
-    profile: weaveworks-nginx
-    version: v0.1.1
-  configMap: %s
-  gitRepository:
-    name: %s
-    namespace: %s
-  source:
-    path: weaveworks-nginx
-    tag: weaveworks-nginx/v0.1.1
-    url: https://github.com/weaveworks/profiles-examples
-status: {}
-`, namespace, configMapName, gitRepoName, namespace)))
+		By("updating the profile to the latest version", func() {
+			Expect(pctl("get", "-p", "v0.1.1", "nginx-catalog/weaveworks-nginx")).To(ContainElements(
+				"Catalog       nginx-catalog",
+				"Name          weaveworks-nginx",
+				"Version       v0.1.1",
+				"Description   This installs nginx.",
+				"URL           https://github.com/weaveworks/profiles-examples",
+				"Maintainer    weaveworks (https://github.com/weaveworks/profiles)",
+				"Prerequisites Kubernetes 1.18+",
+			))
 
-		By("user changes and upstream changes being applied")
-		input, err = ioutil.ReadFile(deploymentFile)
-		Expect(err).NotTo(HaveOccurred())
-
-		//the latest version changes this to 3
-		Expect(strings.Contains(string(input), "replicas: 3")).To(BeTrue())
-		//manual changes should be preserved
-		Expect(strings.Contains(string(input), "containerPort: 30")).To(BeTrue())
-	})
-
-	When("merge conflicts occur", func() {
-		It("informs the user of where the conflicts are", func() {
-			By("installing a profile")
-			gitRepoName := "my-git-repo"
+			profileDir := filepath.Join(temp, "weaveworks-nginx")
 			cmd := exec.Command(
 				binaryPath,
-				"add",
-				"--git-repository",
-				fmt.Sprintf("%s/%s", namespace, gitRepoName),
-				"--namespace", namespace,
-				"--config-map", configMapName,
-				"nginx-catalog/weaveworks-nginx/v0.1.0")
-
+				"upgrade",
+				profileDir,
+				"v0.1.1")
 			cmd.Dir = temp
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed: %s", string(output)))
-			Expect(string(output)).To(ContainSubstring("generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0"))
-			Expect(string(output)).To(ContainSubstring("installation completed successfully"))
+			Expect(string(output)).To(ContainSubstring(`upgrading profile "pctl-profile" from version "v0.1.0" to "v0.1.1"`))
+			Expect(string(output)).To(ContainSubstring("upgrade completed successfully"))
 
 			var files []string
-			profileDir := filepath.Join(temp, "weaveworks-nginx")
 			err = filepath.Walk(profileDir, func(path string, info os.FileInfo, err error) error {
 				if !info.IsDir() {
 					files = append(files, strings.TrimPrefix(path, profileDir+"/"))
@@ -233,8 +217,6 @@ status: {}
 				return nil
 			})
 			Expect(err).NotTo(HaveOccurred())
-
-			By("creating the artifacts")
 			Expect(files).To(ContainElements(
 				"profile-installation.yaml",
 				"artifacts/nginx-deployment/kustomization.yaml",
@@ -262,87 +244,149 @@ spec:
   catalog:
     catalog: nginx-catalog
     profile: weaveworks-nginx
-    version: v0.1.0
-  configMap: %s
-  gitRepository:
-    name: my-git-repo
-    namespace: %s
-  source:
-    path: weaveworks-nginx
-    tag: weaveworks-nginx/v0.1.0
-    url: https://github.com/weaveworks/profiles-examples
-status: {}
-`, namespace, configMapName, namespace)))
-
-			By("manual editing the profile")
-			deploymentFile := filepath.Join(profileDir, "artifacts/nginx-deployment/nginx/deployment/deployment.yaml")
-			input, err := ioutil.ReadFile(deploymentFile)
-			Expect(err).NotTo(HaveOccurred())
-
-			//the latest version changes this to 3, checking its curerntly 2 for sanity
-			Expect(strings.Contains(string(input), "replicas: 2")).To(BeTrue())
-			//modify the replicas to cause a merger conflict
-			input = []byte(strings.Replace(string(input), "replicas: 2", "replicas: 10", -1))
-
-			err = ioutil.WriteFile(deploymentFile, []byte(input), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("upgrading a profile")
-			cmd = exec.Command(
-				binaryPath,
-				"upgrade",
-				profileDir,
-				"v0.1.1")
-			cmd.Dir = temp
-			output, err = cmd.CombinedOutput()
-			Expect(err).To(HaveOccurred())
-			Expect(strings.Split(string(output), "\n")).To(
-				ConsistOf(
-					`upgrading profile "pctl-profile" from version "v0.1.0" to "v0.1.1"`,
-					"upgrade succeeded but merge conflicts have occurred, please resolve manually. Files containing conflicts:",
-					fmt.Sprintf("- %s", deploymentFile),
-					"",
-				),
-			)
-
-			By("updating the artifacts")
-			Expect(files).To(ContainElements(
-				"profile-installation.yaml",
-				"artifacts/nginx-deployment/kustomization.yaml",
-				"artifacts/nginx-deployment/kustomize-flux.yaml",
-				"artifacts/nginx-deployment/nginx/deployment/deployment.yaml",
-				"artifacts/nginx-chart/helm-chart/HelmRelease.yaml",
-				"artifacts/nginx-chart/helm-chart/HelmRepository.yaml",
-				"artifacts/nginx-chart/kustomization.yaml",
-				"artifacts/nginx-chart/kustomize-flux.yaml",
-				"artifacts/nested-profile/nginx-server/helm-chart/HelmRelease.yaml",
-				"artifacts/nested-profile/nginx-server/kustomization.yaml",
-				"artifacts/nested-profile/nginx-server/kustomize-flux.yaml",
-			))
-
-			content, err = ioutil.ReadFile(filename)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
-kind: ProfileInstallation
-metadata:
-  creationTimestamp: null
-  name: pctl-profile
-  namespace: %s
-spec:
-  catalog:
-    catalog: nginx-catalog
-    profile: weaveworks-nginx
     version: v0.1.1
   configMap: %s
   gitRepository:
-    name: my-git-repo
+    name: %s
     namespace: %s
   source:
     path: weaveworks-nginx
     tag: weaveworks-nginx/v0.1.1
     url: https://github.com/weaveworks/profiles-examples
 status: {}
-`, namespace, configMapName, namespace)))
+`, namespace, configMapName, gitRepoName, namespace)))
+
+			By("user changes and upstream changes being applied")
+			deploymentFile := filepath.Join(profileDir, "artifacts/nginx-deployment/nginx/deployment/deployment.yaml")
+			input, err := ioutil.ReadFile(deploymentFile)
+			Expect(err).NotTo(HaveOccurred())
+
+			//the latest version changes this to 3
+			Expect(strings.Contains(string(input), "replicas: 3")).To(BeTrue())
+			//manual changes should be preserved
+			Expect(strings.Contains(string(input), "containerPort: 30")).To(BeTrue())
+
+			By("pushing the updates to the flux repository")
+			gitAddAndPush(temp, branch)
+
+			cmd = exec.Command("flux", "reconcile", "source", "git", "--namespace", namespace, gitRepoName)
+			cmd.Dir = temp
+			output, err = cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux reconcile source git failed : %s", string(output)))
+
+			By("the updating succeeding")
+			getCmd := func() []string {
+				cmd := exec.Command(binaryPath, "get", "--installed", profileInstallationName)
+				session, err := cmd.CombinedOutput()
+				Expect(err).ToNot(HaveOccurred())
+				return sanitiseString(string(session))
+			}
+			Eventually(getCmd).Should(ContainElements(
+				"INSTALLED PACKAGES",
+				"NAMESPACE                            NAME         SOURCE                                AVAILABLE UPDATES",
+				fmt.Sprintf("%s %s nginx-catalog/weaveworks-nginx/v0.1.1 -", namespace, profileInstallationName),
+			))
+
+			//replicas=3 in v0.1.1
+			ensureArtifactDeployedSuccessfully(profileInstallationName, 3)
 		})
 	})
 })
+
+func ensureArtifactDeployedSuccessfully(profileInstallationName string, replicas int) {
+	By("successfully deploying the kustomize resource")
+	kustomizeName := fmt.Sprintf("%s-%s-%s", profileInstallationName, "weaveworks-nginx", "nginx-deployment")
+	var kustomize *kustomizev1.Kustomization
+	Eventually(func() bool {
+		kustomize = &kustomizev1.Kustomization{}
+		err := kClient.Get(context.Background(), client.ObjectKey{Name: kustomizeName, Namespace: namespace}, kustomize)
+		if err != nil {
+			return false
+		}
+		for _, condition := range kustomize.Status.Conditions {
+			if condition.Type == "Ready" && condition.Status == "True" {
+				return true
+			}
+		}
+		return false
+	}, 2*time.Minute, 5*time.Second).Should(BeTrue())
+
+	kustomizeOpts := []client.ListOption{
+		client.InNamespace(namespace),
+		client.MatchingLabels{"app": "nginx"},
+	}
+	var podList *v1.PodList
+	Eventually(func() v1.PodPhase {
+		podList = &v1.PodList{}
+		err := kClient.List(context.Background(), podList, kustomizeOpts...)
+		ExpectWithOffset(1, err).NotTo(HaveOccurred())
+		if len(podList.Items) == 0 {
+			return v1.PodPhase("no pods found")
+		}
+		return podList.Items[0].Status.Phase
+	}, 2*time.Minute, 5*time.Second).Should(Equal(v1.PodPhase("Running")))
+	Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("nginx:1.14.2"))
+
+	var dep appv1.Deployment
+	Eventually(func() int {
+		err := kClient.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: "nginx-deployment"}, &dep)
+		if err != nil {
+			return 0
+		}
+		return int(*dep.Spec.Replicas)
+	}, 2*time.Minute, 5*time.Second).Should(Equal(replicas))
+
+	By("successfully deploying the helmrelease resource")
+	helmReleaseName := fmt.Sprintf("%s-%s-%s", profileInstallationName, "weaveworks-nginx", "nginx-chart")
+	var helmRelease *helmv2.HelmRelease
+	Eventually(func() bool {
+		helmRelease = &helmv2.HelmRelease{}
+		err := kClient.Get(context.Background(), client.ObjectKey{Name: helmReleaseName, Namespace: namespace}, helmRelease)
+		if err != nil {
+			return false
+		}
+		for _, condition := range helmRelease.Status.Conditions {
+			if condition.Type == "Ready" && condition.Status == "True" {
+				return true
+			}
+		}
+		return false
+	}, 2*time.Minute, 5*time.Second).Should(BeTrue())
+
+	Expect(helmRelease.Spec.ValuesFrom).To(HaveLen(2))
+	Expect(helmRelease.Spec.ValuesFrom).To(ConsistOf(
+		helmv2.ValuesReference{
+			Kind:      "ConfigMap",
+			Name:      fmt.Sprintf("%s-nginx-chart-defaultvalues", profileInstallationName),
+			ValuesKey: "default-values.yaml",
+		},
+		helmv2.ValuesReference{
+			Kind:      "ConfigMap",
+			Name:      configMapName,
+			ValuesKey: "nginx-chart",
+		},
+	))
+
+	By("successfully deploying the nested helmrelease resource")
+	helmReleaseName = fmt.Sprintf("%s-%s-%s", profileInstallationName, "bitnami-nginx", "nginx-server")
+	Eventually(func() bool {
+		helmRelease = &helmv2.HelmRelease{}
+		err := kClient.Get(context.Background(), client.ObjectKey{Name: helmReleaseName, Namespace: namespace}, helmRelease)
+		if err != nil {
+			return false
+		}
+		for _, condition := range helmRelease.Status.Conditions {
+			if condition.Type == "Ready" && condition.Status == "True" {
+				return true
+			}
+		}
+		return false
+	}, 5*time.Minute, 5*time.Second).Should(BeTrue())
+
+	Expect(helmRelease.Spec.ValuesFrom).To(HaveLen(1))
+	Expect(helmRelease.Spec.ValuesFrom[0]).To(Equal(helmv2.ValuesReference{
+		Kind:      "ConfigMap",
+		Name:      configMapName,
+		ValuesKey: "nginx-server",
+	}))
+}
