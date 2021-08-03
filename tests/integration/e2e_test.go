@@ -16,13 +16,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var (
-	temp          string
-	namespace     string
-	configMapName string
-)
-
 var _ = Describe("add and upgrade", func() {
+	var (
+		temp          string
+		namespace     string
+		configMapName string
+		gitRepoName   = "my-git-repo"
+	)
+
 	BeforeEach(func() {
 		var err error
 		namespace = uuid.New().String()
@@ -62,19 +63,32 @@ var _ = Describe("add and upgrade", func() {
 	})
 
 	It("works", func() {
-		By("adding a profile")
-		gitRepoName := "my-git-repo"
-		cmd := exec.Command(
+		By("bootstrapping the repository")
+		cmd := exec.Command("git", "init", temp)
+		output, err := cmd.CombinedOutput()
+		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
+
+		cmd = exec.Command(
 			binaryPath,
-			"add",
+			"bootstrap",
 			"--git-repository",
 			fmt.Sprintf("%s/%s", namespace, gitRepoName),
+			temp)
+		cmd.Dir = temp
+		output, err = cmd.CombinedOutput()
+		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl bootstrap failed: %s", string(output)))
+		Expect(string(output)).To(ContainSubstring("bootstrap completed"))
+
+		By("adding a profile")
+		cmd = exec.Command(
+			binaryPath,
+			"add",
 			"--namespace", namespace,
 			"--config-map", configMapName,
 			"nginx-catalog/weaveworks-nginx/v0.1.0")
 
 		cmd.Dir = temp
-		output, err := cmd.CombinedOutput()
+		output, err = cmd.CombinedOutput()
 		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed: %s", string(output)))
 		Expect(string(output)).To(ContainSubstring("generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0"))
 		Expect(string(output)).To(ContainSubstring("installation completed successfully"))

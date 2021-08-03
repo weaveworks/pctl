@@ -30,6 +30,7 @@ func main() {
 			prepareCmd(),
 			docgenCmd(),
 			upgradeCmd(),
+			bootstrapCmd(),
 		},
 	}
 
