@@ -187,7 +187,7 @@ func addProfile(c *cli.Context) error {
 			return fmt.Errorf("failed to fetch current working directory: %w", err)
 		}
 		config, err := bootstrap.GetConfig(wd)
-		if err == nil {
+		if err == nil && config != nil {
 			gitRepoNamespace = config.GitRepository.Namespace
 			gitRepoName = config.GitRepository.Name
 		}

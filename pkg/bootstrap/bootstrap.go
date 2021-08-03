@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+//Config contains the pctl bootstrap configuration
 type Config struct {
 	// GitRepository is the git repository flux resource the installation uses
 	GitRepository profilesv1.GitRepository `json:"gitRepository,omitempty"`
@@ -18,6 +19,7 @@ type Config struct {
 
 var r runner.Runner = &runner.CLIRunner{}
 
+//CreateConfig creates the bootstrap config
 func CreateConfig(namespace, name, directory string) error {
 	out, err := r.Run("git", "-C", directory, "rev-parse", "--show-toplevel")
 	if err != nil {
@@ -45,13 +47,14 @@ func CreateConfig(namespace, name, directory string) error {
 	return os.WriteFile(filepath.Join(pctlDir, "config.yaml"), data, 0644)
 }
 
+//GetConfig gets the bootstrap config
 func GetConfig(directory string) (*Config, error) {
 	out, err := r.Run("git", "-C", directory, "rev-parse", "--show-toplevel")
 	if err != nil {
 		if strings.Contains(string(out), "not a git repository") {
 			return nil, fmt.Errorf("the target directory %q is not a git repository", directory)
 		}
-		return nil, fmt.Errorf("failed to get git dir location: %w", err)
+		return nil, fmt.Errorf("failed to get git directory location: %w", err)
 	}
 	configPath := filepath.Join(strings.TrimSuffix(string(out), "\n"), ".pctl", "config.yaml")
 
@@ -61,8 +64,7 @@ func GetConfig(directory string) (*Config, error) {
 	}
 
 	config := &Config{}
-	err = yaml.Unmarshal(out, config)
-	if err != nil {
+	if err = yaml.Unmarshal(out, config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config file: %w", err)
 	}
 	return config, nil

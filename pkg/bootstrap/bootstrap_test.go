@@ -60,7 +60,7 @@ var _ = Describe("Bootstrap", func() {
 			})
 		})
 
-		When("the directory is not a git directory", func() {
+		When("it fails to check if its a git repository", func() {
 			BeforeEach(func() {
 				fakeRunner := new(fakes.FakeRunner)
 				bootstrap.SetRunner(fakeRunner)
@@ -117,6 +117,19 @@ var _ = Describe("Bootstrap", func() {
 				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
 				_, err = bootstrap.GetConfig(temp)
 				Expect(err).To(MatchError(ContainSubstring("failed to read config file")))
+			})
+		})
+
+		When("it fails to check if its a git repository", func() {
+			BeforeEach(func() {
+				fakeRunner := new(fakes.FakeRunner)
+				bootstrap.SetRunner(fakeRunner)
+				fakeRunner.RunReturns([]byte(""), fmt.Errorf("foo"))
+			})
+
+			It("returns an error", func() {
+				_, err := bootstrap.GetConfig(temp)
+				Expect(err).To(MatchError("failed to get git directory location: foo"))
 			})
 		})
 
