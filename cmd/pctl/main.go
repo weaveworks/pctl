@@ -25,10 +25,8 @@ func main() {
 		Usage:   "A cli tool for interacting with profiles",
 		Flags:   globalFlags(),
 		Commands: []*cli.Command{
-			searchCmd(),
-			showCmd(),
+			getCmd(),
 			addCmd(),
-			listCmd(),
 			prepareCmd(),
 			docgenCmd(),
 			upgradeCmd(),

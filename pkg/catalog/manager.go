@@ -11,7 +11,7 @@ type CatalogManager interface {
 	Show(CatalogClient, string, string, string) (profilesv1.ProfileCatalogEntry, error)
 	Search(CatalogClient, string) ([]profilesv1.ProfileCatalogEntry, error)
 	Install(InstallConfig) error
-	List(runtimeclient.Client, CatalogClient) ([]ProfileData, error)
+	List(runtimeclient.Client, CatalogClient, string) ([]ProfileData, error)
 }
 
 // Manager is responsible for manager interactions with the catalog API
