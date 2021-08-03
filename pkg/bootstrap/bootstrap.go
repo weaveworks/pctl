@@ -21,15 +21,12 @@ var r runner.Runner = &runner.CLIRunner{}
 
 //CreateConfig creates the bootstrap config
 func CreateConfig(namespace, name, directory string) error {
-	out, err := r.Run("git", "-C", directory, "rev-parse", "--show-toplevel")
+	gitDir, err := getGitRepoPath(directory)
 	if err != nil {
-		if strings.Contains(string(out), "not a git repository") {
-			return fmt.Errorf("the target directory %q is not a git repository", directory)
-		}
-		return fmt.Errorf("failed to get git directory location: %w", err)
+		return err
 	}
 
-	pctlDir := filepath.Join(strings.TrimSuffix(string(out), "\n"), ".pctl")
+	pctlDir := filepath.Join(gitDir, ".pctl")
 	if err := os.Mkdir(pctlDir, 0755); err != nil {
 		return fmt.Errorf("failed to create .pctl dir %q: %w", pctlDir, err)
 	}
@@ -49,16 +46,13 @@ func CreateConfig(namespace, name, directory string) error {
 
 //GetConfig gets the bootstrap config
 func GetConfig(directory string) (*Config, error) {
-	out, err := r.Run("git", "-C", directory, "rev-parse", "--show-toplevel")
+	gitDir, err := getGitRepoPath(directory)
 	if err != nil {
-		if strings.Contains(string(out), "not a git repository") {
-			return nil, fmt.Errorf("the target directory %q is not a git repository", directory)
-		}
-		return nil, fmt.Errorf("failed to get git directory location: %w", err)
+		return nil, err
 	}
-	configPath := filepath.Join(strings.TrimSuffix(string(out), "\n"), ".pctl", "config.yaml")
+	configPath := filepath.Join(gitDir, ".pctl", "config.yaml")
 
-	out, err = os.ReadFile(configPath)
+	out, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -68,4 +62,16 @@ func GetConfig(directory string) (*Config, error) {
 		return nil, fmt.Errorf("failed to unmarshal config file: %w", err)
 	}
 	return config, nil
+}
+
+func getGitRepoPath(directory string) (string, error) {
+	out, err := r.Run("git", "-C", directory, "rev-parse", "--show-toplevel")
+	if err != nil {
+		if strings.Contains(string(out), "not a git repository") {
+			return "", fmt.Errorf("the target directory %q is not a git repository", directory)
+		}
+		return "", fmt.Errorf("failed to get git directory location: %w", err)
+	}
+	gitDir := strings.TrimSuffix(string(out), "\n")
+	return gitDir, nil
 }
