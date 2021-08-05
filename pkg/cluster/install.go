@@ -51,14 +51,14 @@ type Applier struct {
 
 // Installer will install an environment.
 type Installer struct {
-	PrepConfig
+	InstallConfig
 	Applier *Applier
 	Fetcher *Fetcher
 	Runner  runner.Runner
 }
 
-// PrepConfig defines configuration options for install.
-type PrepConfig struct {
+// InstallConfig defines configuration options for install.
+type InstallConfig struct {
 	// BaseURL is given even one would like to download manifests from a fork
 	// or a test repo.
 	BaseURL               string
@@ -73,8 +73,8 @@ type PrepConfig struct {
 	K8sClient             client.Client
 }
 
-// NewInstaller creates a installr with set dependencies ready to be used.
-func NewInstaller(cfg PrepConfig) (*Installer, error) {
+// NewInstaller creates an installer with set dependencies ready to be used.
+func NewInstaller(cfg InstallConfig) (*Installer, error) {
 	if cfg.Location == "" {
 		tmp, err := ioutil.TempDir("", "pctl-manifests")
 		if err != nil {
@@ -84,7 +84,7 @@ func NewInstaller(cfg PrepConfig) (*Installer, error) {
 	}
 	r := &runner.CLIRunner{}
 	return &Installer{
-		PrepConfig: cfg,
+		InstallConfig: cfg,
 		Fetcher: &Fetcher{
 			Client: http.DefaultClient,
 		},
@@ -102,31 +102,31 @@ func NewInstaller(cfg PrepConfig) (*Installer, error) {
 }
 
 // Install will install an environment with everything that is needed to run profiles.
-func (p *Installer) Install() error {
+func (i *Installer) Install() error {
 	defer func() {
-		if p.Keep {
+		if i.Keep {
 			return
 		}
-		if err := os.RemoveAll(p.Location); err != nil {
-			fmt.Printf("failed to remove temporary folder at location: %s. Please clean manually.", p.Location)
+		if err := os.RemoveAll(i.Location); err != nil {
+			fmt.Printf("failed to remove temporary folder at location: %s. Please clean manually.", i.Location)
 		}
 	}()
-	if err := p.PreFlightCheck(); err != nil {
+	if err := i.PreFlightCheck(); err != nil {
 		return err
 	}
-	if err := p.Fetcher.Fetch(context.Background(), p.BaseURL, p.Version, p.Location); err != nil {
+	if err := i.Fetcher.Fetch(context.Background(), i.BaseURL, i.Version, i.Location); err != nil {
 		return err
 	}
-	return p.Applier.Apply(p.Location, p.KubeContext, p.KubeConfig, p.DryRun)
+	return i.Applier.Apply(i.Location, i.KubeContext, i.KubeConfig, i.DryRun)
 }
 
 // PreFlightCheck checks whether install can run or not.
-func (p *Installer) PreFlightCheck() error {
+func (i *Installer) PreFlightCheck() error {
 	fmt.Print("Checking if flux namespace exists...")
-	args := []string{"get", "namespace", p.FluxNamespace, "--output", "name"}
-	if output, err := p.Runner.Run(kubectlCmd, args...); err != nil {
+	args := []string{"get", "namespace", i.FluxNamespace, "--output", "name"}
+	if output, err := i.Runner.Run(kubectlCmd, args...); err != nil {
 		fmt.Println("\nOutput from kubectl command: ", string(output))
-		if p.IgnorePreflightErrors {
+		if i.IgnorePreflightErrors {
 			fmt.Println("WARNING: failed to get flux namespace. Flux is required for profiles to work.")
 		} else {
 			return fmt.Errorf("failed to get flux namespace: %w\nTo ignore this error, please see the  --ignore-preflight-checks flag.", err)
@@ -134,9 +134,9 @@ func (p *Installer) PreFlightCheck() error {
 	}
 	fmt.Println("done.")
 	fmt.Print("Checking for flux CRDs...")
-	output, err := p.Runner.Run(kubectlCmd, "get", "crds", "--output", "jsonpath='{.items[*].spec.names.singular}'")
+	output, err := i.Runner.Run(kubectlCmd, "get", "crds", "--output", "jsonpath='{.items[*].spec.names.singular}'")
 	if err != nil {
-		if p.IgnorePreflightErrors {
+		if i.IgnorePreflightErrors {
 			fmt.Println("WARNING: failed to list all installed crds. Flux is required for profiles to work.")
 		} else {
 			return fmt.Errorf("failed to list all installed crds: %w", err)
@@ -151,7 +151,7 @@ func (p *Installer) PreFlightCheck() error {
 	}
 	for _, crd := range FluxCRDs {
 		if _, ok := crds[crd]; !ok {
-			if p.IgnorePreflightErrors {
+			if i.IgnorePreflightErrors {
 				fmt.Println("WARNING: failed to find flux crd resource. Flux is required for profiles to work.")
 			} else {
 				return fmt.Errorf("failed to get crd %s\nTo ignore this error, please see the  --ignore-preflight-checks flag.", crd)

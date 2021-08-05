@@ -62,7 +62,7 @@ var _ = Describe("Install", func() {
 				},
 			}
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					Location: tempDir,
 					DryRun:   true,
 				},
@@ -100,7 +100,7 @@ var _ = Describe("Install", func() {
 				},
 			}
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:  "https://github.com/weaveworks/profiles/releases",
 					Location: tempDir,
 				},
@@ -139,7 +139,7 @@ var _ = Describe("Install", func() {
 				},
 			}
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:     "https://github.com/weaveworks/profiles/releases",
 					Location:    tempDir,
 					KubeContext: "context",
@@ -180,7 +180,7 @@ var _ = Describe("Install", func() {
 				},
 			}
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:     "https://github.com/weaveworks/profiles/releases",
 					KubeContext: "context",
 					KubeConfig:  "kubeconfig",
@@ -206,7 +206,7 @@ var _ = Describe("Install", func() {
 			}))
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:     server.URL,
 					Version:     "v0.0.1",
 					KubeContext: "context",
@@ -238,7 +238,7 @@ var _ = Describe("Install", func() {
 				},
 			}
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					Location: tempDir,
 					DryRun:   true,
 					Keep:     true,
@@ -267,7 +267,7 @@ var _ = Describe("Install", func() {
 			}))
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:     server.URL,
 					Version:     "0.0.1",
 					KubeContext: "context",
@@ -294,7 +294,7 @@ var _ = Describe("Install", func() {
 			}))
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:     server.URL,
 					KubeContext: "context",
 					KubeConfig:  "kubeconfig",
@@ -313,7 +313,7 @@ var _ = Describe("Install", func() {
 		It("will provide a sensible failure", func() {
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL: "invalid",
 				},
 				Fetcher: &cluster.Fetcher{
@@ -340,7 +340,7 @@ var _ = Describe("Install", func() {
 				},
 			}
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:  "https://github.com/weaveworks/profiles/releases",
 					Location: tempDir,
 					Keep:     true,
@@ -375,7 +375,7 @@ var _ = Describe("Install", func() {
 				},
 			}
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:  "https://github.com/weaveworks/profiles/releases",
 					Location: tempDir,
 				},
@@ -409,7 +409,7 @@ var _ = Describe("Install", func() {
 				},
 			}
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:  "https://github.com/weaveworks/profiles/releases",
 					Location: tempDir,
 				},
@@ -441,7 +441,7 @@ var _ = Describe("Install", func() {
 				},
 			}
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:       "https://github.com/weaveworks/profiles/releases",
 					Location:      tempDir,
 					FluxNamespace: "flux",
@@ -481,7 +481,7 @@ var _ = Describe("Install", func() {
 				},
 			}
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:       "https://github.com/weaveworks/profiles/releases",
 					Location:      tempDir,
 					FluxNamespace: "flux",
@@ -514,7 +514,7 @@ var _ = Describe("Install", func() {
 				},
 			}
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:       "https://github.com/weaveworks/profiles/releases",
 					Location:      tempDir,
 					FluxNamespace: "flux",
@@ -547,7 +547,7 @@ var _ = Describe("Install", func() {
 				},
 			}
 			p := &cluster.Installer{
-				PrepConfig: cluster.PrepConfig{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:               "https://github.com/weaveworks/profiles/releases",
 					Location:              tempDir,
 					FluxNamespace:         "flux",

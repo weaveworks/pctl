@@ -69,8 +69,8 @@ func InstallClusterComponents(binaryPath string) error {
 	fmt.Println("done.")
 
 	fmt.Print("Applying modified prepare.yaml...")
-	applyinstallArgs := []string{"apply", "-f", "-"}
-	cmd = exec.Command("kubectl", applyinstallArgs...)
+	applyInstallArgs := []string{"apply", "-f", "-"}
+	cmd = exec.Command("kubectl", applyInstallArgs...)
 	in, err := cmd.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("failed to get in pipe for kubectl: %w", err)

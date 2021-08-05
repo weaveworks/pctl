@@ -12,11 +12,11 @@ const (
 	fluxNamespace = "flux-system"
 )
 
-func prepareCmd() *cli.Command {
+func installCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "install",
 		Usage:     "install the profile controllers and custom resource definitions",
-		UsageText: "pctl prepare",
+		UsageText: "pctl install",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:  "dry-run",
@@ -66,7 +66,7 @@ func prepareCmd() *cli.Command {
 			if err != nil {
 				return fmt.Errorf("failed to build kubernetes client: %w", err)
 			}
-			p, err := cluster.NewInstaller(cluster.PrepConfig{
+			p, err := cluster.NewInstaller(cluster.InstallConfig{
 				BaseURL:               c.String("baseurl"),
 				Version:               c.String("version"),
 				KubeConfig:            c.String("kubeconfig"),

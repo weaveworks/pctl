@@ -29,7 +29,7 @@ func main() {
 			showCmd(),
 			addCmd(),
 			listCmd(),
-			prepareCmd(),
+			installCmd(),
 			docgenCmd(),
 			upgradeCmd(),
 		},
