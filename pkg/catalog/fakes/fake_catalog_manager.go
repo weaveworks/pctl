@@ -21,11 +21,12 @@ type FakeCatalogManager struct {
 	installReturnsOnCall map[int]struct {
 		result1 error
 	}
-	ListStub        func(client.Client, catalog.CatalogClient) ([]catalog.ProfileData, error)
+	ListStub        func(client.Client, catalog.CatalogClient, string) ([]catalog.ProfileData, error)
 	listMutex       sync.RWMutex
 	listArgsForCall []struct {
 		arg1 client.Client
 		arg2 catalog.CatalogClient
+		arg3 string
 	}
 	listReturns struct {
 		result1 []catalog.ProfileData
@@ -130,19 +131,20 @@ func (fake *FakeCatalogManager) InstallReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeCatalogManager) List(arg1 client.Client, arg2 catalog.CatalogClient) ([]catalog.ProfileData, error) {
+func (fake *FakeCatalogManager) List(arg1 client.Client, arg2 catalog.CatalogClient, arg3 string) ([]catalog.ProfileData, error) {
 	fake.listMutex.Lock()
 	ret, specificReturn := fake.listReturnsOnCall[len(fake.listArgsForCall)]
 	fake.listArgsForCall = append(fake.listArgsForCall, struct {
 		arg1 client.Client
 		arg2 catalog.CatalogClient
-	}{arg1, arg2})
+		arg3 string
+	}{arg1, arg2, arg3})
 	stub := fake.ListStub
 	fakeReturns := fake.listReturns
-	fake.recordInvocation("List", []interface{}{arg1, arg2})
+	fake.recordInvocation("List", []interface{}{arg1, arg2, arg3})
 	fake.listMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -156,17 +158,17 @@ func (fake *FakeCatalogManager) ListCallCount() int {
 	return len(fake.listArgsForCall)
 }
 
-func (fake *FakeCatalogManager) ListCalls(stub func(client.Client, catalog.CatalogClient) ([]catalog.ProfileData, error)) {
+func (fake *FakeCatalogManager) ListCalls(stub func(client.Client, catalog.CatalogClient, string) ([]catalog.ProfileData, error)) {
 	fake.listMutex.Lock()
 	defer fake.listMutex.Unlock()
 	fake.ListStub = stub
 }
 
-func (fake *FakeCatalogManager) ListArgsForCall(i int) (client.Client, catalog.CatalogClient) {
+func (fake *FakeCatalogManager) ListArgsForCall(i int) (client.Client, catalog.CatalogClient, string) {
 	fake.listMutex.RLock()
 	defer fake.listMutex.RUnlock()
 	argsForCall := fake.listArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeCatalogManager) ListReturns(result1 []catalog.ProfileData, result2 error) {
