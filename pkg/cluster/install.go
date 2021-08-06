@@ -22,13 +22,13 @@ import (
 
 const (
 	kubectlCmd = "kubectl"
-	// profiles bundles ready to be installed files under `prepare`. The rest of the resources
+	// profiles bundles ready to be installed files under `install`. The rest of the resources
 	// are left for manual configuration.
-	prepareManifestFile = "prepare.yaml"
+	installManifestFile = "prepare.yaml"
 	namespace           = "profiles-system"
 )
 
-// FluxCRDs are CRDs which prepare is checking if they are present in the cluster or not.
+// FluxCRDs are CRDs which install is checking if they are present in the cluster or not.
 var FluxCRDs = []string{
 	strings.ToLower(helmv2.HelmReleaseKind),
 	strings.ToLower(kustomizev1.KustomizationKind),
@@ -49,16 +49,16 @@ type Applier struct {
 	Waiter Waiter
 }
 
-// Preparer will prepare an environment.
-type Preparer struct {
-	PrepConfig
+// Installer will install an environment.
+type Installer struct {
+	InstallConfig
 	Applier *Applier
 	Fetcher *Fetcher
 	Runner  runner.Runner
 }
 
-// PrepConfig defines configuration options for prepare.
-type PrepConfig struct {
+// InstallConfig defines configuration options for install.
+type InstallConfig struct {
 	// BaseURL is given even one would like to download manifests from a fork
 	// or a test repo.
 	BaseURL               string
@@ -73,8 +73,8 @@ type PrepConfig struct {
 	K8sClient             client.Client
 }
 
-// NewPreparer creates a preparer with set dependencies ready to be used.
-func NewPreparer(cfg PrepConfig) (*Preparer, error) {
+// NewInstaller creates an installer with set dependencies ready to be used.
+func NewInstaller(cfg InstallConfig) (*Installer, error) {
 	if cfg.Location == "" {
 		tmp, err := ioutil.TempDir("", "pctl-manifests")
 		if err != nil {
@@ -83,8 +83,8 @@ func NewPreparer(cfg PrepConfig) (*Preparer, error) {
 		cfg.Location = tmp
 	}
 	r := &runner.CLIRunner{}
-	return &Preparer{
-		PrepConfig: cfg,
+	return &Installer{
+		InstallConfig: cfg,
 		Fetcher: &Fetcher{
 			Client: http.DefaultClient,
 		},
@@ -101,32 +101,32 @@ func NewPreparer(cfg PrepConfig) (*Preparer, error) {
 	}, nil
 }
 
-// Prepare will prepare an environment with everything that is needed to run profiles.
-func (p *Preparer) Prepare() error {
+// Install will install an environment with everything that is needed to run profiles.
+func (i *Installer) Install() error {
 	defer func() {
-		if p.Keep {
+		if i.Keep {
 			return
 		}
-		if err := os.RemoveAll(p.Location); err != nil {
-			fmt.Printf("failed to remove temporary folder at location: %s. Please clean manually.", p.Location)
+		if err := os.RemoveAll(i.Location); err != nil {
+			fmt.Printf("failed to remove temporary folder at location: %s. Please clean manually.", i.Location)
 		}
 	}()
-	if err := p.PreFlightCheck(); err != nil {
+	if err := i.PreFlightCheck(); err != nil {
 		return err
 	}
-	if err := p.Fetcher.Fetch(context.Background(), p.BaseURL, p.Version, p.Location); err != nil {
+	if err := i.Fetcher.Fetch(context.Background(), i.BaseURL, i.Version, i.Location); err != nil {
 		return err
 	}
-	return p.Applier.Apply(p.Location, p.KubeContext, p.KubeConfig, p.DryRun)
+	return i.Applier.Apply(i.Location, i.KubeContext, i.KubeConfig, i.DryRun)
 }
 
-// PreFlightCheck checks whether prepare can run or not.
-func (p *Preparer) PreFlightCheck() error {
+// PreFlightCheck checks whether install can run or not.
+func (i *Installer) PreFlightCheck() error {
 	fmt.Print("Checking if flux namespace exists...")
-	args := []string{"get", "namespace", p.FluxNamespace, "--output", "name"}
-	if output, err := p.Runner.Run(kubectlCmd, args...); err != nil {
+	args := []string{"get", "namespace", i.FluxNamespace, "--output", "name"}
+	if output, err := i.Runner.Run(kubectlCmd, args...); err != nil {
 		fmt.Println("\nOutput from kubectl command: ", string(output))
-		if p.IgnorePreflightErrors {
+		if i.IgnorePreflightErrors {
 			fmt.Println("WARNING: failed to get flux namespace. Flux is required for profiles to work.")
 		} else {
 			return fmt.Errorf("failed to get flux namespace: %w\nTo ignore this error, please see the  --ignore-preflight-checks flag.", err)
@@ -134,9 +134,9 @@ func (p *Preparer) PreFlightCheck() error {
 	}
 	fmt.Println("done.")
 	fmt.Print("Checking for flux CRDs...")
-	output, err := p.Runner.Run(kubectlCmd, "get", "crds", "--output", "jsonpath='{.items[*].spec.names.singular}'")
+	output, err := i.Runner.Run(kubectlCmd, "get", "crds", "--output", "jsonpath='{.items[*].spec.names.singular}'")
 	if err != nil {
-		if p.IgnorePreflightErrors {
+		if i.IgnorePreflightErrors {
 			fmt.Println("WARNING: failed to list all installed crds. Flux is required for profiles to work.")
 		} else {
 			return fmt.Errorf("failed to list all installed crds: %w", err)
@@ -151,7 +151,7 @@ func (p *Preparer) PreFlightCheck() error {
 	}
 	for _, crd := range FluxCRDs {
 		if _, ok := crds[crd]; !ok {
-			if p.IgnorePreflightErrors {
+			if i.IgnorePreflightErrors {
 				fmt.Println("WARNING: failed to find flux crd resource. Flux is required for profiles to work.")
 			} else {
 				return fmt.Errorf("failed to get crd %s\nTo ignore this error, please see the  --ignore-preflight-checks flag.", crd)
@@ -165,10 +165,10 @@ func (p *Preparer) PreFlightCheck() error {
 
 // Fetch the latest or a version of the released manifest files for profiles.
 func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
-	ghURL := fmt.Sprintf("%s/latest/download/%s", url, prepareManifestFile)
+	ghURL := fmt.Sprintf("%s/latest/download/%s", url, installManifestFile)
 	hasVersionPrefix := strings.HasPrefix(version, "v")
 	if hasVersionPrefix {
-		ghURL = fmt.Sprintf("%s/download/%s/%s", url, version, prepareManifestFile)
+		ghURL = fmt.Sprintf("%s/download/%s/%s", url, version, installManifestFile)
 	}
 
 	req, err := http.NewRequest("GET", ghURL, nil)
@@ -195,7 +195,7 @@ func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
 		return fmt.Errorf("failed to read body of the response: %w", err)
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(dir, prepareManifestFile), content, os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(dir, installManifestFile), content, os.ModePerm); err != nil {
 		return fmt.Errorf("failed to write out file to location: %w", err)
 	}
 
@@ -204,7 +204,7 @@ func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
 
 // Apply applies the fetched manifest files to a cluster.
 func (a *Applier) Apply(folder string, kubeContext string, kubeConfig string, dryRun bool) error {
-	kubectlArgs := []string{"apply", "-f", filepath.Join(folder, prepareManifestFile)}
+	kubectlArgs := []string{"apply", "-f", filepath.Join(folder, installManifestFile)}
 	if dryRun {
 		kubectlArgs = append(kubectlArgs, "--dry-run=client", "--output=yaml")
 	}
