@@ -54,7 +54,7 @@ func upgrade(c *cli.Context) error {
 			fmt.Printf("warning: failed to cleanup temp directory %q: %v", tmpDir, err)
 		}
 	}()
-
+	message := c.String("pr-message")
 	cfg := upgr.UpgradeConfig{
 		ProfileDir:     profilePath,
 		Version:        profileVersion,
@@ -63,8 +63,10 @@ func upgrade(c *cli.Context) error {
 		RepoManager: repo.NewManager(git.NewCLIGit(git.CLIGitConfig{
 			Directory: tmpDir,
 			Quiet:     true,
+			Message:   message,
 		}, &runner.CLIRunner{})),
 		WorkingDir: tmpDir,
+		Message:    message,
 	}
 	return upgr.Upgrade(cfg)
 }
