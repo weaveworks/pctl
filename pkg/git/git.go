@@ -48,6 +48,7 @@ type CLIGitConfig struct {
 	Directory string
 	Branch    string
 	Remote    string
+	Message   string
 	Base      string
 	Quiet     bool
 }
@@ -121,7 +122,7 @@ func (g *CLIGit) Commit() error {
 		"--work-tree", g.Directory,
 		"commit",
 		"-am",
-		"Push changes to remote",
+		g.Message,
 	}
 	if err := g.runGitCmd(args...); err != nil {
 		return fmt.Errorf("failed to run commit: %w", err)

@@ -151,6 +151,7 @@ var _ = Describe("git", func() {
 					Directory: "location",
 					Branch:    "main",
 					Remote:    "origin",
+					Message:   "Another commit message",
 				}, runner)
 				err := g.Commit()
 				Expect(err).NotTo(HaveOccurred())
@@ -160,7 +161,7 @@ var _ = Describe("git", func() {
 				Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "status", "-s"}))
 				arg, args = runner.RunArgsForCall(1)
 				Expect(arg).To(Equal("git"))
-				Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "commit", "-am", "Push changes to remote"}))
+				Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "commit", "-am", "Another commit message"}))
 			})
 		})
 		When("the flow is disrupted with errors", func() {
@@ -171,6 +172,7 @@ var _ = Describe("git", func() {
 					Directory: "location",
 					Branch:    "main",
 					Remote:    "origin",
+					Message:   "Commit Message",
 				}, runner)
 				err := g.Commit()
 				Expect(err).To(MatchError(`failed to run commit: nope`))
@@ -180,7 +182,7 @@ var _ = Describe("git", func() {
 				Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "status", "-s"}))
 				arg, args = runner.RunArgsForCall(1)
 				Expect(arg).To(Equal("git"))
-				Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "commit", "-am", "Push changes to remote"}))
+				Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "commit", "-am", "Commit Message"}))
 			})
 		})
 	})

@@ -26,6 +26,7 @@ type UpgradeConfig struct {
 	CatalogManager catalog.CatalogManager
 	RepoManager    repo.RepoManager
 	WorkingDir     string
+	Message        string
 }
 
 var copy func(src, dest string) error = func(src, dest string) error {
@@ -66,7 +67,9 @@ func Upgrade(cfg UpgradeConfig) error {
 			Clients: catalog.Clients{
 				CatalogClient: cfg.CatalogClient,
 				Installer: install.NewInstaller(install.Config{
-					GitClient:        git.NewCLIGit(git.CLIGitConfig{}, &runner.CLIRunner{}),
+					GitClient: git.NewCLIGit(git.CLIGitConfig{
+						Message: cfg.Message,
+					}, &runner.CLIRunner{}),
 					RootDir:          cfg.WorkingDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
@@ -110,7 +113,9 @@ func Upgrade(cfg UpgradeConfig) error {
 			Clients: catalog.Clients{
 				CatalogClient: cfg.CatalogClient,
 				Installer: install.NewInstaller(install.Config{
-					GitClient:        git.NewCLIGit(git.CLIGitConfig{}, &runner.CLIRunner{}),
+					GitClient: git.NewCLIGit(git.CLIGitConfig{
+						Message: cfg.Message,
+					}, &runner.CLIRunner{}),
 					RootDir:          cfg.WorkingDir,
 					GitRepoNamespace: gitRepoNamespace,
 					GitRepoName:      gitRepoName,
