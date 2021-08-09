@@ -400,24 +400,18 @@ Steps:
    _Note: sometimes the release drafter is a bit of a pain, verify that the notes are
    correct by doing something like: `git log --first-parent tag1..tag2`._
 
-1. PR the release notes into main.
-_Note_ that you should also update the `var Version` in `pkg/version/release.go` file with the same tag which is created in the following step
-This should be automated with #233
+1. Update the `var Version` in `pkg/version/release.go` file to be the desired version.
 
-1. Create and push a tag with the new version:
-   ```sh
-   git tag <version>
-   git push origin <version>
-   ```
+1. PR the release notes and version bump into main.
 
-1. The `Create release` action should run. Verify that:
+1. Navigate to the `Actions` tab and manually trigger the `Release` job. When the job finishes verify that:
   1. The release has been created in Github
     1. With the correct assets
     1. With the correct release notes
   1. The image has been pushed to docker
   1. The image can be pulled and used in a deployment
 
-_Note_ that `<version>` must be in the following format: `v0.0.1`. 
+_Note_ that `<version>` must be in the following format: `v0.0.1`.
 
 ### Tests
 
