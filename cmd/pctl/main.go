@@ -27,9 +27,10 @@ func main() {
 		Commands: []*cli.Command{
 			getCmd(),
 			addCmd(),
-			prepareCmd(),
+			installCmd(),
 			docgenCmd(),
 			upgradeCmd(),
+			bootstrapCmd(),
 		},
 	}
 

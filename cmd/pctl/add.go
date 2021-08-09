@@ -3,12 +3,14 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/urfave/cli/v2"
 
+	"github.com/weaveworks/pctl/pkg/bootstrap"
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
 	"github.com/weaveworks/pctl/pkg/git"
@@ -21,6 +23,13 @@ var createPRFlags = []cli.Flag{
 		Name:  "create-pr",
 		Value: false,
 		Usage: "If given, upgrade will create a PR for the modifications it outputs.",
+	},
+	&cli.StringFlag{
+		Name:        "pr-message",
+		Value:       "Push changes to remote",
+		DefaultText: "Push changes to remote",
+		Usage:       "The message to use for committing.",
+		Aliases:     []string{"m"},
 	},
 	&cli.StringFlag{
 		Name:        "pr-remote",
@@ -155,6 +164,7 @@ func addProfile(c *cli.Context) error {
 	dir := c.String("out")
 	path := c.String("profile-path")
 	gitRepository := c.String("git-repository")
+	message := c.String("pr-message")
 
 	var source string
 	if url != "" && path != "" {
@@ -167,7 +177,9 @@ func addProfile(c *cli.Context) error {
 
 	fmt.Printf("generating profile installation from source: %s\n", source)
 	r := &runner.CLIRunner{}
-	g := git.NewCLIGit(git.CLIGitConfig{}, r)
+	g := git.NewCLIGit(git.CLIGitConfig{
+		Message: message,
+	}, r)
 	var (
 		gitRepoNamespace string
 		gitRepoName      string
@@ -179,6 +191,16 @@ func addProfile(c *cli.Context) error {
 		}
 		gitRepoNamespace = split[0]
 		gitRepoName = split[1]
+	} else {
+		wd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to fetch current working directory: %w", err)
+		}
+		config, err := bootstrap.GetConfig(wd)
+		if err == nil && config != nil {
+			gitRepoNamespace = config.GitRepository.Namespace
+			gitRepoName = config.GitRepository.Name
+		}
 	}
 	installer := install.NewInstaller(install.Config{
 		GitClient:        g,
@@ -224,6 +246,7 @@ func createPullRequest(c *cli.Context) error {
 	base := c.String("pr-base")
 	remote := c.String("pr-remote")
 	directory := c.String("out")
+	message := c.String("pr-message")
 	if repo == "" {
 		return errors.New("repo must be defined if create-pr is true")
 	}
@@ -237,6 +260,7 @@ func createPullRequest(c *cli.Context) error {
 		Branch:    branch,
 		Remote:    remote,
 		Base:      base,
+		Message:   message,
 	}, r)
 	scmClient, err := git.NewClient(git.SCMConfig{
 		Branch: branch,

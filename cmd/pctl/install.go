@@ -12,11 +12,11 @@ const (
 	fluxNamespace = "flux-system"
 )
 
-func prepareCmd() *cli.Command {
+func installCmd() *cli.Command {
 	return &cli.Command{
-		Name:      "prepare",
-		Usage:     "prepares the cluster for profiles by deploying the profile controllers and custom resource definitions",
-		UsageText: "pctl prepare",
+		Name:      "install",
+		Usage:     "install the profile controllers and custom resource definitions",
+		UsageText: "pctl install",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:  "dry-run",
@@ -51,7 +51,7 @@ func prepareCmd() *cli.Command {
 			},
 			&cli.StringFlag{
 				Name:        "out",
-				Usage:       "Specify the output location of the downloaded prepare file.",
+				Usage:       "Specify the output location of the downloaded installation file.",
 				Value:       "",
 				DefaultText: "os.Temp",
 			},
@@ -66,7 +66,7 @@ func prepareCmd() *cli.Command {
 			if err != nil {
 				return fmt.Errorf("failed to build kubernetes client: %w", err)
 			}
-			p, err := cluster.NewPreparer(cluster.PrepConfig{
+			p, err := cluster.NewInstaller(cluster.InstallConfig{
 				BaseURL:               c.String("baseurl"),
 				Version:               c.String("version"),
 				KubeConfig:            c.String("kubeconfig"),
@@ -81,7 +81,7 @@ func prepareCmd() *cli.Command {
 			if err != nil {
 				return err
 			}
-			return p.Prepare()
+			return p.Install()
 		},
 	}
 }

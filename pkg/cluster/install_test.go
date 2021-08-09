@@ -26,7 +26,7 @@ func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return t.res, nil
 }
 
-var _ = Describe("prepare", func() {
+var _ = Describe("Install", func() {
 	var (
 		waiter          *fakes.FakeWaiter
 		applyRunner     *runnerfake.FakeRunner
@@ -40,7 +40,7 @@ var _ = Describe("prepare", func() {
 		preflightRunner = &runnerfake.FakeRunner{}
 
 		var err error
-		tempDir, err = ioutil.TempDir("", "prepare-tests")
+		tempDir, err = ioutil.TempDir("", "install-tests")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -49,7 +49,7 @@ var _ = Describe("prepare", func() {
 	})
 
 	When("dry run is set", func() {
-		It("can prepare the environment with everything that profiles needs without actually modifying the cluster", func() {
+		It("can install the environment with everything that profiles needs without actually modifying the cluster", func() {
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
@@ -61,8 +61,8 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					Location: tempDir,
 					DryRun:   true,
 				},
@@ -75,7 +75,7 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err = p.Prepare()
+			err = p.Install()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(preflightRunner.RunCallCount()).To(Equal(2))
 
@@ -99,8 +99,8 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:  "https://github.com/weaveworks/profiles/releases",
 					Location: tempDir,
 				},
@@ -113,7 +113,7 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err = p.Prepare()
+			err = p.Install()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(preflightRunner.RunCallCount()).To(Equal(2))
 			Expect(applyRunner.RunCallCount()).To(Equal(1))
@@ -138,8 +138,8 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:     "https://github.com/weaveworks/profiles/releases",
 					Location:    tempDir,
 					KubeContext: "context",
@@ -154,7 +154,7 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err = p.Prepare()
+			err = p.Install()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(applyRunner.RunCallCount()).To(Equal(1))
 			arg, args := applyRunner.RunArgsForCall(0)
@@ -179,8 +179,8 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:     "https://github.com/weaveworks/profiles/releases",
 					KubeContext: "context",
 					KubeConfig:  "kubeconfig",
@@ -195,7 +195,7 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err = p.Prepare()
+			err = p.Install()
 			Expect(err).To(MatchError("install failed: nope"))
 		})
 	})
@@ -205,8 +205,8 @@ var _ = Describe("prepare", func() {
 				Expect(r.URL.String()).To(Equal("/download/v0.0.1/prepare.yaml"))
 			}))
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:     server.URL,
 					Version:     "v0.0.1",
 					KubeContext: "context",
@@ -223,7 +223,7 @@ var _ = Describe("prepare", func() {
 				Runner: preflightRunner,
 			}
 			// we deliberately ignore the error here. the important part is the called url.
-			_ = p.Prepare()
+			_ = p.Install()
 		})
 		It("the controller has the right version in the file", func() {
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
@@ -237,8 +237,8 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					Location: tempDir,
 					DryRun:   true,
 					Keep:     true,
@@ -253,7 +253,7 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err = p.Prepare()
+			err = p.Install()
 			Expect(err).NotTo(HaveOccurred())
 			content, err = ioutil.ReadFile(filepath.Join(tempDir, "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
@@ -266,8 +266,8 @@ var _ = Describe("prepare", func() {
 				Expect(r.URL.String()).To(Equal("/latest/download/prepare.yaml"))
 			}))
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:     server.URL,
 					Version:     "0.0.1",
 					KubeContext: "context",
@@ -284,7 +284,7 @@ var _ = Describe("prepare", func() {
 				Runner: preflightRunner,
 			}
 			// we deliberately ignore the error here. the important part is the called url.
-			_ = p.Prepare()
+			_ = p.Install()
 		})
 	})
 	When("there is an error accessing the given URL", func() {
@@ -293,8 +293,8 @@ var _ = Describe("prepare", func() {
 				w.WriteHeader(http.StatusBadGateway)
 			}))
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:     server.URL,
 					KubeContext: "context",
 					KubeConfig:  "kubeconfig",
@@ -304,7 +304,7 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err := p.Prepare()
+			err := p.Install()
 			msg := fmt.Sprintf("failed to download prepare.yaml from %s/latest/download/prepare.yaml, status: 502 Bad Gateway", server.URL)
 			Expect(err).To(MatchError(msg))
 		})
@@ -312,8 +312,8 @@ var _ = Describe("prepare", func() {
 	When("the base url is invalid", func() {
 		It("will provide a sensible failure", func() {
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL: "invalid",
 				},
 				Fetcher: &cluster.Fetcher{
@@ -321,7 +321,7 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err := p.Prepare()
+			err := p.Install()
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("unsupported protocol scheme"))
 		})
@@ -339,8 +339,8 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:  "https://github.com/weaveworks/profiles/releases",
 					Location: tempDir,
 					Keep:     true,
@@ -354,7 +354,7 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err = p.Prepare()
+			err = p.Install()
 			Expect(err).NotTo(HaveOccurred())
 			downloadedContent, err := ioutil.ReadFile(filepath.Join(tempDir, "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
@@ -374,8 +374,8 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:  "https://github.com/weaveworks/profiles/releases",
 					Location: tempDir,
 				},
@@ -388,14 +388,14 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err = p.Prepare()
+			err = p.Install()
 			Expect(err).NotTo(HaveOccurred())
 			_, err = os.Stat(tempDir)
 			Expect(os.IsNotExist(err)).To(BeTrue())
 		})
 	})
 	When("the waiter fails to wait", func() {
-		It("prepare should fail in a meaningful way", func() {
+		It("install should fail in a meaningful way", func() {
 			waiter.WaitReturns(errors.New("nope"))
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
@@ -408,8 +408,8 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:  "https://github.com/weaveworks/profiles/releases",
 					Location: tempDir,
 				},
@@ -422,13 +422,13 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err = p.Prepare()
+			err = p.Install()
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("failed to wait for resources to be ready: nope"))
 		})
 	})
-	When("prepare is executed", func() {
-		It("runs a preflight check which will determine if prepare can run", func() {
+	When("install is executed", func() {
+		It("runs a preflight check which will determine if install can run", func() {
 			preflightRunner.RunReturnsOnCall(1, []byte("bucket gitrepository helmchart helmrelease helmrepository kustomization"), nil)
 			content, err := ioutil.ReadFile(filepath.Join("testdata", "prepare.yaml"))
 			Expect(err).NotTo(HaveOccurred())
@@ -440,8 +440,8 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:       "https://github.com/weaveworks/profiles/releases",
 					Location:      tempDir,
 					FluxNamespace: "flux",
@@ -455,7 +455,7 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err = p.Prepare()
+			err = p.Install()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(preflightRunner.RunCallCount()).To(Equal(2))
 			arg, args := preflightRunner.RunArgsForCall(0)
@@ -480,8 +480,8 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:       "https://github.com/weaveworks/profiles/releases",
 					Location:      tempDir,
 					FluxNamespace: "flux",
@@ -495,7 +495,7 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err = p.Prepare()
+			err = p.Install()
 			Expect(err).To(MatchError("failed to get flux namespace: nope\nTo ignore this error, please see the  --ignore-preflight-checks flag."))
 			Expect(applyRunner.RunCallCount()).To(Equal(0))
 		})
@@ -513,8 +513,8 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:       "https://github.com/weaveworks/profiles/releases",
 					Location:      tempDir,
 					FluxNamespace: "flux",
@@ -528,7 +528,7 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err = p.Prepare()
+			err = p.Install()
 			Expect(err).To(MatchError("failed to get crd helmrelease\nTo ignore this error, please see the  --ignore-preflight-checks flag."))
 			Expect(applyRunner.RunCallCount()).To(Equal(0))
 		})
@@ -546,8 +546,8 @@ var _ = Describe("prepare", func() {
 					},
 				},
 			}
-			p := &cluster.Preparer{
-				PrepConfig: cluster.PrepConfig{
+			p := &cluster.Installer{
+				InstallConfig: cluster.InstallConfig{
 					BaseURL:               "https://github.com/weaveworks/profiles/releases",
 					Location:              tempDir,
 					FluxNamespace:         "flux",
@@ -562,7 +562,7 @@ var _ = Describe("prepare", func() {
 				},
 				Runner: preflightRunner,
 			}
-			err = p.Prepare()
+			err = p.Install()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(applyRunner.RunCallCount()).To(Equal(1))
 		})

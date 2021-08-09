@@ -95,11 +95,12 @@ var _ = Describe("end to end flow", func() {
 			))
 		})
 
+		By("bootstraping the repo")
+		Expect(pctl("bootstrap", "--git-repository", fmt.Sprintf("%s/%s", namespace, gitRepoName), temp)).To(ContainElement("bootstrap completed"))
+
 		By("installing the desired profile", func() {
 			pctlAddOutput := pctl(
 				"add",
-				"--git-repository",
-				fmt.Sprintf("%s/%s", namespace, gitRepoName),
 				"--namespace", namespace,
 				"--config-map", configMapName,
 				"nginx-catalog/weaveworks-nginx/v0.1.0",
@@ -164,7 +165,7 @@ status: {}
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux reconcile source git failed : %s", string(output)))
 
-			cmd = exec.Command("flux", "create", "kustomization", "kustomization", "--source", fmt.Sprintf("GitRepository/%s", gitRepoName), "--path", ".", "--namespace", namespace)
+			cmd = exec.Command("flux", "create", "kustomization", "kustomization", "--path", "weaveworks-nginx/", "--source", fmt.Sprintf("GitRepository/%s", gitRepoName), "--namespace", namespace)
 			output, err = cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create kustomization failed : %s", string(output)))
 
