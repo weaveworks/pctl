@@ -209,12 +209,12 @@ with the following parameters:
 pctl add --name pctl-profile \
              --namespace default \
              --profile-branch devel \
-             --profile-url https://github.com/<usr>/<repo> \
+             --profile-repo-url https://github.com/<usr>/<repo> \
              --profile-path bitnami-nginx \
              --out <optional sub-folder inside the flux repository>
 ```
 
-It's the user's responsibility to make sure that the local `git` setup has access to the url provided with `profile-url`.
+It's the user's responsibility to make sure that the local `git` setup has access to the url provided with `profile-repo-url`.
 It can be any form of url as long as `git clone` understands it.
 
 
@@ -256,7 +256,7 @@ This looks as follows if installing via a URL:
 pctl add --name pctl-profile \
              --namespace [default] \
              --profile-branch [main] \
-             --profile-url git@github.com:org/private-profile-repo \
+             --profile-repo-url git@github.com:org/private-profile-repo \
              --profile-path <profile-name> \
              --git-repository <namespace>/<name> \
              --out <location of my flux repository>
