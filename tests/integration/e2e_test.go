@@ -53,6 +53,9 @@ var _ = Describe("end to end flow", func() {
 		}
 		Expect(kClient.Create(context.Background(), &configMap)).To(Succeed())
 
+		if skipTestsThatRequireCredentials {
+			Skip("Skipping this tests as it requires credentials")
+		}
 		cloneAndCheckoutBranch(temp, branch)
 
 		cmd := exec.Command("flux", "create", "source", "git", gitRepoName, "--url", pctlTestRepositoryHTTP, "--branch", branch, "--namespace", namespace)
@@ -76,9 +79,6 @@ var _ = Describe("end to end flow", func() {
 	})
 
 	It("works end-to-end", func() {
-		if skipTestsThatRequireCredentials {
-			Skip("Skipping this tests as it requires credentials")
-		}
 		By("searching for the desired weaveworks-nginx profile", func() {
 			Expect(pctl("get", "--catalog", "weaveworks-nginx")).To(ContainElement(
 				"nginx-catalog/weaveworks-nginx v0.1.0  This installs nginx.",
