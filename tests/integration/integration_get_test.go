@@ -2,9 +2,9 @@ package integration_test
 
 import (
 	"context"
-	"os/exec"
-	"strings"
+	"fmt"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
@@ -14,37 +14,32 @@ import (
 var _ = Describe("pctl get", func() {
 	Context("get catalog profiles", func() {
 		It("returns the matching profiles", func() {
-			cmd := exec.Command(binaryPath, "get", "--catalog", "nginx")
-			session, err := cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred())
-			expected := "CATALOG/PROFILE               	VERSION	DESCRIPTION                     \n" +
-				"nginx-catalog/weaveworks-nginx	v0.1.0 	This installs nginx.           \t\n" +
-				"nginx-catalog/weaveworks-nginx	v0.1.1 	This installs nginx.           \t\n" +
-				"nginx-catalog/bitnami-nginx   	v0.0.1 	This installs nginx.           \t\n" +
-				"nginx-catalog/nginx           	v2.0.1 	This installs nginx.           \t\n" +
-				"nginx-catalog/some-other-nginx	       	This installs some other nginx.\t\n\n"
-			Expect(string(session)).To(ContainSubstring(expected))
+			Expect(pctl("get", "--catalog", "nginx")).To(ConsistOf(
+				"PACKAGE CATALOG",
+				"CATALOG/PROFILE                VERSION DESCRIPTION",
+				"nginx-catalog/weaveworks-nginx v0.1.0  This installs nginx.",
+				"nginx-catalog/weaveworks-nginx v0.1.1  This installs nginx.",
+				"nginx-catalog/bitnami-nginx    v0.0.1  This installs nginx.",
+				"nginx-catalog/nginx            v2.0.1  This installs nginx.",
+				"nginx-catalog/some-other-nginx         This installs some other nginx.",
+			))
 		})
 
 		It("returns all the catalog profiles", func() {
-			cmd := exec.Command(binaryPath, "get", "--catalog")
-			session, err := cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred())
-			expected := "CATALOG/PROFILE               	VERSION	DESCRIPTION                     \n" +
-				"nginx-catalog/weaveworks-nginx	v0.1.0 	This installs nginx.           \t\n" +
-				"nginx-catalog/weaveworks-nginx	v0.1.1 	This installs nginx.           \t\n" +
-				"nginx-catalog/bitnami-nginx   	v0.0.1 	This installs nginx.           \t\n" +
-				"nginx-catalog/nginx           	v2.0.1 	This installs nginx.           \t\n" +
-				"nginx-catalog/some-other-nginx	       	This installs some other nginx.\t\n\n"
-			Expect(string(session)).To(ContainSubstring(expected))
+			Expect(pctl("get", "--catalog")).To(ConsistOf(
+				"PACKAGE CATALOG",
+				"CATALOG/PROFILE                VERSION DESCRIPTION",
+				"nginx-catalog/weaveworks-nginx v0.1.0  This installs nginx.",
+				"nginx-catalog/weaveworks-nginx v0.1.1  This installs nginx.",
+				"nginx-catalog/bitnami-nginx    v0.0.1  This installs nginx.",
+				"nginx-catalog/nginx            v2.0.1  This installs nginx.",
+				"nginx-catalog/some-other-nginx         This installs some other nginx.",
+			))
 		})
 
 		When("-o is set to json", func() {
 			It("returns the matching profiles in json", func() {
-				cmd := exec.Command(binaryPath, "get", "-o", "json", "--catalog", "nginx")
-				session, err := cmd.CombinedOutput()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(session)).To(ContainSubstring(`{
+				Expect(pctlWithRawOutput("get", "-o", "json", "--catalog", "nginx")).To(ContainSubstring(`{
     "tag": "weaveworks-nginx/v0.1.0",
     "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
@@ -96,10 +91,7 @@ var _ = Describe("pctl get", func() {
 			})
 
 			It("returns all catalog profiles in json", func() {
-				cmd := exec.Command(binaryPath, "get", "-o", "json", "--catalog")
-				session, err := cmd.CombinedOutput()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(session)).To(ContainSubstring(`{
+				Expect(pctlWithRawOutput("get", "-o", "json", "--catalog")).To(ContainSubstring(`{
     "tag": "weaveworks-nginx/v0.1.0",
     "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
@@ -151,34 +143,28 @@ var _ = Describe("pctl get", func() {
 			})
 		})
 
-		It("doesnt not break json output", func() {
-			cmd := exec.Command(binaryPath, "get", "-o", "json", "--catalog")
-			session, err := cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred())
-			Expect(string(session)).ToNot(ContainSubstring("PACKAGE CATALOG"))
-		})
-
 		When("kubeconfig is incorrectly set", func() {
 			It("returns a useful error", func() {
-				cmd := exec.Command(binaryPath, "--kubeconfig=/non-existing/path/kubeconfig", "get", "nginx")
-				session, err := cmd.CombinedOutput()
-				Expect(err).To(HaveOccurred())
-				Expect(string(session)).To(ContainSubstring("failed to create config from kubeconfig path"))
+				Expect(pctlWithError("--kubeconfig=/non-existing/path/kubeconfig", "get", "nginx")).To(ContainElement(
+					"failed to create config from kubeconfig path \"/non-existing/path/kubeconfig\": stat /non-existing/path/kubeconfig: no such file or directory",
+				))
 			})
 		})
 	})
 
 	Context("installed profiles and catalog profiles with get", func() {
 		var (
-			namespace        = "default"
 			installationName = "long-name-to-ensure-padding"
 			ctx              = context.TODO()
-			pSub             profilesv1.ProfileInstallation
+			pInstallation    profilesv1.ProfileInstallation
 		)
 
 		BeforeEach(func() {
+			namespace = uuid.New().String()
+			createNamespace(namespace)
+
 			profileURL := "https://github.com/weaveworks/profiles-examples"
-			pSub = profilesv1.ProfileInstallation{
+			pInstallation = profilesv1.ProfileInstallation{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ProfileInstallation",
 					APIVersion: "profileinstallations.weave.works/v1alpha1",
@@ -199,36 +185,30 @@ var _ = Describe("pctl get", func() {
 					},
 				},
 			}
-			Expect(kClient.Create(ctx, &pSub)).Should(Succeed())
+			Expect(kClient.Create(ctx, &pInstallation)).Should(Succeed())
 		})
 
 		AfterEach(func() {
-			Expect(kClient.Delete(ctx, &pSub)).Should(Succeed())
+			deleteNamespace(namespace)
 		})
 
 		It("returns all the installations and catalog profiles", func() {
-			cmd := exec.Command(binaryPath, "get")
-			session, err := cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred())
-
-			expected := "PACKAGE CATALOG\n" +
-				"CATALOG/PROFILE               	VERSION	DESCRIPTION                     \n" +
-				"nginx-catalog/weaveworks-nginx	v0.1.0 	This installs nginx.           \t\n" +
-				"nginx-catalog/weaveworks-nginx	v0.1.1 	This installs nginx.           \t\n" +
-				"nginx-catalog/bitnami-nginx   	v0.0.1 	This installs nginx.           \t\n" +
-				"nginx-catalog/nginx           	v2.0.1 	This installs nginx.           \t\n" +
-				"nginx-catalog/some-other-nginx	       	This installs some other nginx.\t\n\n"
-			Expect(string(session)).To(ContainSubstring(expected))
-
-			expected = "INSTALLED PACKAGES\n" +
-				"NAMESPACE\tNAME                       \tSOURCE                               \tAVAILABLE UPDATES \n" +
-				"default  \tlong-name-to-ensure-padding\tnginx-catalog/weaveworks-nginx/v0.1.0\tv0.1.1           \t\n"
-			Expect(string(session)).To(ContainSubstring(expected))
+			Expect(pctl("get")).To(ConsistOf(
+				"INSTALLED PACKAGES",
+				"NAMESPACE                            NAME                        SOURCE                                AVAILABLE UPDATES",
+				fmt.Sprintf("%s long-name-to-ensure-padding nginx-catalog/weaveworks-nginx/v0.1.0 v0.1.1", namespace),
+				"PACKAGE CATALOG",
+				"CATALOG/PROFILE                VERSION DESCRIPTION",
+				"nginx-catalog/weaveworks-nginx v0.1.0  This installs nginx.",
+				"nginx-catalog/weaveworks-nginx v0.1.1  This installs nginx.",
+				"nginx-catalog/bitnami-nginx    v0.0.1  This installs nginx.",
+				"nginx-catalog/nginx            v2.0.1  This installs nginx.",
+				"nginx-catalog/some-other-nginx         This installs some other nginx.",
+			))
 		})
 
 		It("returns all the installations and catalog profiles with matching name", func() {
-			profileURL := "https://github.com/weaveworks/profiles-examples"
-			bitnamiSub := profilesv1.ProfileInstallation{
+			Expect(kClient.Create(ctx, &profilesv1.ProfileInstallation{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ProfileInstallation",
 					APIVersion: "profileinstallations.weave.works/v1alpha1",
@@ -239,7 +219,7 @@ var _ = Describe("pctl get", func() {
 				},
 				Spec: profilesv1.ProfileInstallationSpec{
 					Source: &profilesv1.Source{
-						URL: profileURL,
+						URL: "https://github.com/weaveworks/profiles-examples",
 						Tag: "bitnami-nginx/v0.0.1",
 					},
 					Catalog: &profilesv1.Catalog{
@@ -248,33 +228,30 @@ var _ = Describe("pctl get", func() {
 						Version: "v0.0.1",
 					},
 				},
-			}
-			Expect(kClient.Create(ctx, &bitnamiSub)).Should(Succeed())
+			})).Should(Succeed())
 
-			cmd := exec.Command(binaryPath, "get", "bitnami-nginx")
-			session, err := cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred())
-
-			expected := "INSTALLED PACKAGES\n" +
-				"NAMESPACE\tNAME         \tSOURCE                            \tAVAILABLE UPDATES \n" +
-				"default  \tbitnami-nginx\tnginx-catalog/bitnami-nginx/v0.0.1\t-                \t\n\n" +
-				"PACKAGE CATALOG\n" +
-				"CATALOG/PROFILE            	VERSION	DESCRIPTION          \n" +
-				"nginx-catalog/bitnami-nginx	v0.0.1 	This installs nginx.\t\n\n"
-			Expect(string(session)).To(ContainSubstring(expected))
+			Expect(pctl("get", "bitnami-nginx")).To(ConsistOf(
+				"INSTALLED PACKAGES",
+				"NAMESPACE                            NAME          SOURCE                             AVAILABLE UPDATES",
+				fmt.Sprintf("%s bitnami-nginx nginx-catalog/bitnami-nginx/v0.0.1 -", namespace),
+				"PACKAGE CATALOG",
+				"CATALOG/PROFILE             VERSION DESCRIPTION",
+				"nginx-catalog/bitnami-nginx v0.0.1  This installs nginx.",
+			))
 		})
 	})
 
 	Context("installed profiles with get", func() {
 		var (
-			namespace        = "default"
 			installationName = "long-name-to-ensure-padding"
 			ctx              = context.TODO()
 			pSub             profilesv1.ProfileInstallation
 		)
 
 		BeforeEach(func() {
-			profileURL := "https://github.com/weaveworks/profiles-examples"
+			namespace = uuid.New().String()
+			createNamespace(namespace)
+
 			pSub = profilesv1.ProfileInstallation{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ProfileInstallation",
@@ -286,7 +263,7 @@ var _ = Describe("pctl get", func() {
 				},
 				Spec: profilesv1.ProfileInstallationSpec{
 					Source: &profilesv1.Source{
-						URL: profileURL,
+						URL: "https://github.com/weaveworks/profiles-examples",
 						Tag: "weaveworks-nginx/v0.1.0",
 					},
 					Catalog: &profilesv1.Catalog{
@@ -300,29 +277,17 @@ var _ = Describe("pctl get", func() {
 		})
 
 		AfterEach(func() {
-			Expect(kClient.Delete(ctx, &pSub)).Should(Succeed())
+			deleteNamespace(namespace)
 		})
 
 		It("returns the installations", func() {
-			getCmd := func() []string {
-				cmd := exec.Command(binaryPath, "get", "--installed")
-				session, err := cmd.CombinedOutput()
-				Expect(err).ToNot(HaveOccurred())
-				return strings.Split(string(session), "\n")
-			}
-
-			Eventually(getCmd).Should(ContainElements(
+			Eventually(func() []string {
+				return pctl("get", "--installed")
+			}).Should(ConsistOf(
 				"INSTALLED PACKAGES",
-				"NAMESPACE\tNAME                       \tSOURCE                               \tAVAILABLE UPDATES ",
-				"default  \tlong-name-to-ensure-padding\tnginx-catalog/weaveworks-nginx/v0.1.0\tv0.1.1           \t",
+				"NAMESPACE                            NAME                        SOURCE                                AVAILABLE UPDATES",
+				fmt.Sprintf("%s long-name-to-ensure-padding nginx-catalog/weaveworks-nginx/v0.1.0 v0.1.1", namespace),
 			))
-		})
-
-		It("doesnt not break json output", func() {
-			cmd := exec.Command(binaryPath, "get", "-o", "json", "--installed")
-			session, err := cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred())
-			Expect(string(session)).ToNot(ContainSubstring("INSTALLED PACKAGES"))
 		})
 
 		When("there are no available updates", func() {
@@ -350,20 +315,14 @@ var _ = Describe("pctl get", func() {
 					},
 				}
 				Expect(kClient.Create(ctx, &bitnamiSub)).Should(Succeed())
-				getCmd := func() []string {
-					cmd := exec.Command(binaryPath, "get", "--installed")
-					session, err := cmd.CombinedOutput()
-					Expect(err).ToNot(HaveOccurred())
-					return strings.Split(string(session), "\n")
-				}
-
-				Eventually(getCmd).Should(ContainElements(
+				Eventually(func() []string {
+					return pctl("get", "--installed")
+				}).Should(ContainElements(
 					"INSTALLED PACKAGES",
-					"NAMESPACE\tNAME                       \tSOURCE                               \tAVAILABLE UPDATES ",
-					"default  \tbitnami-profile            \tnginx-catalog/bitnami-nginx/v0.0.1   \t-                \t",
-					"default  \tlong-name-to-ensure-padding\tnginx-catalog/weaveworks-nginx/v0.1.0\tv0.1.1           \t",
+					"NAMESPACE                            NAME                        SOURCE                                AVAILABLE UPDATES",
+					fmt.Sprintf("%s bitnami-profile             nginx-catalog/bitnami-nginx/v0.0.1    -", namespace),
+					fmt.Sprintf("%s long-name-to-ensure-padding nginx-catalog/weaveworks-nginx/v0.1.0 v0.1.1", namespace),
 				))
-				Expect(kClient.Delete(ctx, &bitnamiSub)).Should(Succeed())
 			})
 
 			It("returns the installation matching name", func() {
@@ -390,21 +349,13 @@ var _ = Describe("pctl get", func() {
 					},
 				}
 				Expect(kClient.Create(ctx, &bitnamiSub)).Should(Succeed())
-				getCmd := func() []string {
-					cmd := exec.Command(binaryPath, "get", "--installed", "bitnami-profile")
-					session, err := cmd.CombinedOutput()
-					Expect(err).ToNot(HaveOccurred())
-					return strings.Split(string(session), "\n")
-				}
-
-				Eventually(getCmd).Should(ConsistOf(
+				Eventually(func() []string {
+					return pctl("get", "--installed", "bitnami-profile")
+				}).Should(ContainElements(
 					"INSTALLED PACKAGES",
-					"NAMESPACE\tNAME           \tSOURCE                            \tAVAILABLE UPDATES ",
-					"default  \tbitnami-profile\tnginx-catalog/bitnami-nginx/v0.0.1\t-                \t",
-					"",
-					"",
+					"NAMESPACE                            NAME            SOURCE                             AVAILABLE UPDATES",
+					fmt.Sprintf("%s bitnami-profile nginx-catalog/bitnami-nginx/v0.0.1 -", namespace),
 				))
-				Expect(kClient.Delete(ctx, &bitnamiSub)).Should(Succeed())
 			})
 		})
 	})
@@ -412,26 +363,21 @@ var _ = Describe("pctl get", func() {
 	Context("version", func() {
 		When("version is used in the get command", func() {
 			It("shows the right profile", func() {
-				cmd := exec.Command(binaryPath, "get", "--profile-version", "v0.1.0", "nginx-catalog/weaveworks-nginx")
-				output, err := cmd.CombinedOutput()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(output)).To(ContainSubstring("Catalog      \tnginx-catalog                                      \t\n" +
-					"Name         \tweaveworks-nginx                                   \t\n" +
-					"Version      \tv0.1.0                                             \t\n" +
-					"Description  \tThis installs nginx.                               \t\n" +
-					"URL          \thttps://github.com/weaveworks/profiles-examples    \t\n" +
-					"Maintainer   \tweaveworks (https://github.com/weaveworks/profiles)\t\n" +
-					"Prerequisites\tKubernetes 1.18+                                   \t\n",
+				Expect(pctl("get", "--profile-version", "v0.1.0", "nginx-catalog/weaveworks-nginx")).To(ConsistOf(
+					"Catalog       nginx-catalog",
+					"Name          weaveworks-nginx",
+					"Version       v0.1.0",
+					"Description   This installs nginx.",
+					"URL           https://github.com/weaveworks/profiles-examples",
+					"Maintainer    weaveworks (https://github.com/weaveworks/profiles)",
+					"Prerequisites Kubernetes 1.18+",
 				))
 			})
 		})
 
 		When("-o is set to json", func() {
 			It("returns the profile info in json", func() {
-				cmd := exec.Command(binaryPath, "get", "-o", "json", "--profile-version", "v0.1.0", "nginx-catalog/weaveworks-nginx")
-				session, err := cmd.CombinedOutput()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(session)).To(ContainSubstring(`{
+				Expect(pctlWithRawOutput("get", "-o", "json", "--profile-version", "v0.1.0", "nginx-catalog/weaveworks-nginx")).To(ContainSubstring(`{
   "tag": "weaveworks-nginx/v0.1.0",
   "catalogSource": "nginx-catalog",
   "url": "https://github.com/weaveworks/profiles-examples",
@@ -447,10 +393,9 @@ var _ = Describe("pctl get", func() {
 
 		When("a name argument is not provided correctly", func() {
 			It("returns a useful error", func() {
-				cmd := exec.Command(binaryPath, "get", "--profile-version", "v0.1.0", "test-profile")
-				session, err := cmd.CombinedOutput()
-				Expect(err).To(HaveOccurred())
-				Expect(string(session)).To(ContainSubstring("both catalog name and profile name must be provided example: pctl get catalog/weaveworks-nginx --version v0.1.0"))
+				Expect(pctlWithError("get", "--profile-version", "v0.1.0", "test-profile")).To(ContainElement(
+					"both catalog name and profile name must be provided example: pctl get catalog/weaveworks-nginx --version v0.1.0",
+				))
 			})
 		})
 	})

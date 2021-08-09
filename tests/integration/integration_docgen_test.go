@@ -13,29 +13,17 @@ import (
 
 var _ = Describe("PCTL", func() {
 	Context("docgen", func() {
-		var tmpDir string
-
-		BeforeEach(func() {
-			var err error
-			tmpDir, err = ioutil.TempDir("", "docgen")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			_ = os.RemoveAll(tmpDir)
-		})
-
 		It("writes pctl command help to markdown files", func() {
-			cmd := exec.Command(binaryPath, "docgen", "--path", tmpDir)
+			cmd := exec.Command(binaryPath, "docgen", "--path", temp)
 			_, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred())
 
-			files, err := ioutil.ReadDir(tmpDir)
+			files, err := ioutil.ReadDir(temp)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(files)).To(Equal(5))
 			commands := []string{"add", "bootstrap", "install", "get", "upgrade"}
 			for _, cmd := range commands {
-				filename := filepath.Join(tmpDir, fmt.Sprintf("pctl-%s-cmd.md", cmd))
+				filename := filepath.Join(temp, fmt.Sprintf("pctl-%s-cmd.md", cmd))
 				Expect(filename).To(BeAnExistingFile())
 				contents, err := ioutil.ReadFile(filename)
 				Expect(err).NotTo(HaveOccurred())
@@ -47,7 +35,7 @@ var _ = Describe("PCTL", func() {
 
 		When("the provided output directory does not exist", func() {
 			It("creates it", func() {
-				newDir := filepath.Join(tmpDir, "does-not-exist")
+				newDir := filepath.Join(temp, "does-not-exist")
 				Expect(newDir).ToNot(BeAnExistingFile())
 
 				cmd := exec.Command(binaryPath, "docgen", "--path", newDir)
@@ -58,8 +46,8 @@ var _ = Describe("PCTL", func() {
 
 			When("creating the docs dir fails", func() {
 				It("exits 1", func() {
-					newDir := filepath.Join(tmpDir, "does-not-exist")
-					Expect(os.Chmod(tmpDir, 0600)).To(Succeed())
+					newDir := filepath.Join(temp, "does-not-exist")
+					Expect(os.Chmod(temp, 0600)).To(Succeed())
 
 					cmd := exec.Command(binaryPath, "docgen", "--path", newDir)
 					_, err := cmd.CombinedOutput()
@@ -70,9 +58,9 @@ var _ = Describe("PCTL", func() {
 
 		When("writing the docs files fails", func() {
 			It("exits 1", func() {
-				Expect(os.Chmod(tmpDir, 0600)).To(Succeed())
+				Expect(os.Chmod(temp, 0600)).To(Succeed())
 
-				cmd := exec.Command(binaryPath, "docgen", "--path", tmpDir)
+				cmd := exec.Command(binaryPath, "docgen", "--path", temp)
 				_, err := cmd.CombinedOutput()
 				Expect(err).To(HaveOccurred())
 			})
