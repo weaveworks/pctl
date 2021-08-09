@@ -87,7 +87,7 @@ var _ = Describe("pctl add", func() {
 			subName,
 			"--profile-branch",
 			profileBranch,
-			"--profile-url", profileExamplesURL,
+			"--profile-repo-url", profileExamplesURL,
 			"--profile-path", "weaveworks-nginx",
 			"--config-map", configMapName,
 		}
@@ -313,7 +313,7 @@ status: {}
 				namespace + "/git-repo-name",
 				"--namespace",
 				namespace,
-				"--profile-url",
+				"--profile-repo-url",
 				profileExamplesURL,
 				"--profile-branch",
 				branch,
@@ -358,7 +358,7 @@ status: {}
 			namespace := uuid.New().String()
 			branch := "main"
 			path := "bitnami-nginx"
-			cmd := exec.Command(binaryPath, "add", "--out", temp, "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-url", pctlPrivateProfilesRepositoryName, "--profile-branch", branch, "--profile-path", path)
+			cmd := exec.Command(binaryPath, "add", "--out", temp, "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-repo-url", pctlPrivateProfilesRepositoryName, "--profile-branch", branch, "--profile-path", path)
 			cmd.Dir = temp
 
 			if v := os.Getenv("PRIVATE_EXAMPLES_DEPLOY_KEY"); v != "" {
@@ -408,7 +408,7 @@ status: {}
 				namespace+"/git-repo-name",
 				"--namespace",
 				namespace,
-				"--profile-url",
+				"--profile-repo-url",
 				profileExamplesURL,
 				"--profile-branch",
 				branch,

@@ -60,7 +60,7 @@ func addCmd() *cli.Command {
 		Aliases: []string{"apply"},
 		Usage:   "generate a profile installation",
 		UsageText: "To add from a profile catalog entry: pctl --catalog-url <URL> add --name pctl-profile --namespace default --profile-branch main --config-map configmap-name <CATALOG>/<PROFILE>[/<VERSION>]\n   " +
-			"To add directly from a profile repository: pctl add --name pctl-profile --namespace default --profile-branch development --profile-url https://github.com/weaveworks/profiles-examples --profile-path bitnami-nginx",
+			"To add directly from a profile repository: pctl add --name pctl-profile --namespace default --profile-branch development --profile-repo-url https://github.com/weaveworks/profiles-examples --profile-path bitnami-nginx",
 		Flags: append(createPRFlags,
 			&cli.StringFlag{
 				Name:        "name",
@@ -92,9 +92,9 @@ func addCmd() *cli.Command {
 				Usage:       "Optional location to create the profile installation folder in. This should be relative to the current working directory.",
 			},
 			&cli.StringFlag{
-				Name:  "profile-url",
+				Name:  "profile-repo-url",
 				Value: "",
-				Usage: "Optional value defining the URL of the profile.",
+				Usage: "Optional value defining the URL of the repository that contains the profile to be added.",
 			},
 			&cli.StringFlag{
 				Name:        "profile-path",
@@ -135,7 +135,7 @@ func addProfile(c *cli.Context) error {
 	)
 
 	// only set up the catalog if a url is not provided
-	url := c.String("profile-url")
+	url := c.String("profile-repo-url")
 	if url != "" && c.Args().Len() > 0 {
 		return errors.New("it looks like you provided a url with a catalog entry; please choose either format: url/branch/path or <CATALOG>/<PROFILE>[/<VERSION>]")
 	}

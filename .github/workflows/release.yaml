@@ -1,8 +1,7 @@
 name: Release
 
 on:
-  push:
-    tags: [ 'v*' ]
+  workflow_dispatch: {}
 
 env:
   IMAGE: pctl
@@ -33,12 +32,13 @@ jobs:
       - name: Prepare
         id: prep
         run: |
-          VERSION=sha-${GITHUB_SHA::8}
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            VERSION=${GITHUB_REF/refs\/tags\//}
-          fi
+          VERSION=v$(go run pkg/version/generate/release_generate.go full-version)
           echo ::set-output name=BUILD_DATE::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           echo ::set-output name=VERSION::${VERSION}
+      - name: Tag
+        run: |
+          git tag ${{ steps.prep.outputs.VERSION }}
+          git push origin ${{ steps.prep.outputs.VERSION }}
       - name: Publish multi-arch container image
         uses: docker/build-push-action@v2
         with:
@@ -72,12 +72,8 @@ jobs:
         id: vars
         run: echo ::set-output name=release_notes::$(cat docs/release_notes/${{ steps.prep.outputs.VERSION }}.md)
       - name: Notify slack of new release
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.WEAVEWORKS_SLACK_PROFILESBOT_TOKEN }}
-        uses: pullreminders/slack-action@a5a262c896a1cc80dcbae59ba95513e2dfb21439
+        uses: skarlso/slack-notification-action@28f5c1166e2fba7ed5a1d9ceaeb4f2c89a4e5bc5
         with:
-          args: |
-            {
-              "channel": "C01M9BYDE5U",
-              "message": ":sparkles: A new release has been created for pctl! :sparkles:\n\n${{ steps.vars.outputs.release_notes }}"
-            }
+          token: ${{ secrets.WEAVEWORKS_SLACK_PROFILESBOT_TOKEN }}
+          message: ":sparkles: A new release has been created for Pctl! :sparkles:\n\n${{ steps.vars.outputs.release_notes }}"
+          channel: C01M9BYDE5U
