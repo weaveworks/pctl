@@ -3,10 +3,13 @@ package git
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/jenkins-x/go-scm/scm"
 	"github.com/jenkins-x/go-scm/scm/factory"
 )
+
+const githubTokenEnvVar = "GITHUB_TOKEN"
 
 // SCMClient defines the ability to create a pull request on a remote repository.
 //go:generate counterfeiter -o fakes/fake_scm.go . SCMClient
@@ -30,7 +33,11 @@ type Client struct {
 // NewClient returns a real client.
 func NewClient(cfg SCMConfig) (*Client, error) {
 	if cfg.Client == nil {
-		c, err := factory.NewClientFromEnvironment()
+		githubToken := os.Getenv(githubTokenEnvVar)
+		if githubToken == "" {
+			return nil, fmt.Errorf("failed to create scm client: %s not set", githubTokenEnvVar)
+		}
+		c, err := factory.NewClient("github", "", githubToken)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create scm client: %w", err)
 		}

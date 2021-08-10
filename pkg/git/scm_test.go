@@ -1,6 +1,8 @@
 package git_test
 
 import (
+	"os"
+
 	"github.com/jenkins-x/go-scm/scm/factory"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -23,6 +25,17 @@ var _ = Describe("scm", func() {
 			err = client.CreatePullRequest()
 			Expect(err).NotTo(HaveOccurred())
 		})
+
+		It("fails if the github token is not set", func() {
+			Expect(os.Setenv("GITHUB_TOKEN", "")).To(Succeed())
+			_, err := git.NewClient(git.SCMConfig{
+				Branch: "",
+				Base:   "",
+				Repo:   "",
+			})
+			Expect(err).To(MatchError("failed to create scm client: GITHUB_TOKEN not set"))
+		})
+
 		It("fails if the scm client can't contact the provider", func() {
 			fakeScm, err := factory.NewClient("github", "https://invalid.url.com.here", "")
 			Expect(err).NotTo(HaveOccurred())

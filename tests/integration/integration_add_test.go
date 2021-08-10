@@ -460,6 +460,7 @@ status: {}
 				"--pr-repo",
 				pctlTestRepositoryOrgName,
 				"nginx-catalog/weaveworks-nginx")
+			cmd.Env = append(os.Environ(), fmt.Sprintf("GITHUB_TOKEN=%s", os.Getenv("GIT_TOKEN")))
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed : %s", string(output)))
 			Expect(string(output)).To(ContainSubstring("PR created with number:"))
@@ -484,14 +485,7 @@ status: {}
 		})
 
 		It("fails if target location is not a git repository", func() {
-			if skipTestsThatRequireCredentials {
-				Skip("Skipping this tests as it requires credentials")
-			}
-			if _, ok := os.LookupEnv("GIT_TOKEN"); !ok {
-				// Set up a dummy token, because the SCM client is created before we check the git repo.
-				err := os.Setenv("GIT_TOKEN", "dummy")
-				Expect(err).ToNot(HaveOccurred())
-			}
+			Expect(os.Setenv("GITHUB_TOKEN", "dummy")).To(Succeed())
 			suffix, err := randString(3)
 			Expect(err).NotTo(HaveOccurred())
 			branch := "prtest_" + suffix
