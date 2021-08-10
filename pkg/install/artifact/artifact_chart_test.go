@@ -86,7 +86,7 @@ var _ = Describe("Helm", func() {
 		Expect(kustomize).To(Equal(kustomizev1.Kustomization{
 			TypeMeta: kustomizeTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
+				Name:      fmt.Sprintf("%s-%s", installationName, artifactName),
 				Namespace: namespace,
 			},
 			Spec: kustomizev1.KustomizationSpec{
@@ -100,7 +100,7 @@ var _ = Describe("Helm", func() {
 					{
 						APIVersion: helmv2.GroupVersion.String(),
 						Kind:       helmv2.HelmReleaseKind,
-						Name:       fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
+						Name:       fmt.Sprintf("%s-%s", installationName, artifactName),
 						Namespace:  namespace,
 					},
 				},
@@ -139,7 +139,7 @@ var _ = Describe("Helm", func() {
 		Expect(helmRes).To(Equal(helmv2.HelmRelease{
 			TypeMeta: helmReleaseTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
+				Name:      fmt.Sprintf("%s-%s", installationName, artifactName),
 				Namespace: namespace,
 			},
 			Spec: helmv2.HelmReleaseSpec{
@@ -224,7 +224,7 @@ var _ = Describe("Helm", func() {
 			Expect(kustomize).To(Equal(kustomizev1.Kustomization{
 				TypeMeta: kustomizeTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
+					Name:      fmt.Sprintf("%s-%s", installationName, artifactName),
 					Namespace: namespace,
 				},
 				Spec: kustomizev1.KustomizationSpec{
@@ -238,7 +238,7 @@ var _ = Describe("Helm", func() {
 						{
 							APIVersion: helmv2.GroupVersion.String(),
 							Kind:       helmv2.HelmReleaseKind,
-							Name:       fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
+							Name:       fmt.Sprintf("%s-%s", installationName, artifactName),
 							Namespace:  namespace,
 						},
 					},
@@ -254,7 +254,7 @@ var _ = Describe("Helm", func() {
 			Expect(helmRes).To(Equal(helmv2.HelmRelease{
 				TypeMeta: helmReleaseTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
+					Name:      fmt.Sprintf("%s-%s", installationName, artifactName),
 					Namespace: namespace,
 				},
 				Spec: helmv2.HelmReleaseSpec{
@@ -264,7 +264,7 @@ var _ = Describe("Helm", func() {
 							Version: chartVersion,
 							SourceRef: helmv2.CrossNamespaceObjectReference{
 								Kind:      "HelmRepository",
-								Name:      fmt.Sprintf("%s-profiles-examples-%s", installationName, chartName),
+								Name:      fmt.Sprintf("%s-%s", installationName, artifactName),
 								Namespace: namespace,
 							},
 						},
@@ -277,7 +277,7 @@ var _ = Describe("Helm", func() {
 			Expect(helmRepo).To(Equal(sourcev1.HelmRepository{
 				TypeMeta: helmRepoTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-profiles-examples-%s", installationName, chartName),
+					Name:      fmt.Sprintf("%s-%s", installationName, artifactName),
 					Namespace: namespace,
 				},
 				Spec: sourcev1.HelmRepositorySpec{

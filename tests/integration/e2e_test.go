@@ -24,7 +24,7 @@ import (
 var _ = Describe("end to end flow", func() {
 	var (
 		gitRepoName             = "pctl-repo"
-		profileInstallationName = "pctl-profile"
+		profileInstallationName = "e2e"
 	)
 
 	BeforeEach(func() {
@@ -40,7 +40,7 @@ var _ = Describe("end to end flow", func() {
 		}
 		Expect(kClient.Create(context.Background(), &nsp)).To(Succeed())
 
-		configMapName = "pctl-profile-values"
+		configMapName = fmt.Sprintf("%s-values", profileInstallationName)
 		configMap := v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      configMapName,
@@ -101,6 +101,7 @@ var _ = Describe("end to end flow", func() {
 		By("installing the desired profile", func() {
 			pctlAddOutput := pctl(
 				"add",
+				"--name", profileInstallationName,
 				"--namespace", namespace,
 				"--config-map", configMapName,
 				"nginx-catalog/weaveworks-nginx/v0.1.0",
@@ -182,8 +183,8 @@ status: {}
 
 			Eventually(getCmd).Should(ContainElements(
 				"INSTALLED PACKAGES",
-				"NAMESPACE                            NAME         SOURCE                                AVAILABLE UPDATES",
-				fmt.Sprintf("%s %s nginx-catalog/weaveworks-nginx/v0.1.0 v0.1.1", namespace, profileInstallationName),
+				"NAMESPACE                            NAME SOURCE                                AVAILABLE UPDATES",
+				fmt.Sprintf("%s %s  nginx-catalog/weaveworks-nginx/v0.1.0 v0.1.1", namespace, profileInstallationName),
 			))
 		})
 
@@ -207,7 +208,7 @@ status: {}
 			cmd.Dir = temp
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed: %s", string(output)))
-			Expect(string(output)).To(ContainSubstring(`upgrading profile "pctl-profile" from version "v0.1.0" to "v0.1.1"`))
+			Expect(string(output)).To(ContainSubstring(fmt.Sprintf(`upgrading profile "%s" from version "v0.1.0" to "v0.1.1"`, profileInstallationName)))
 			Expect(string(output)).To(ContainSubstring("upgrade completed successfully"))
 
 			var files []string
@@ -239,7 +240,7 @@ status: {}
 kind: ProfileInstallation
 metadata:
   creationTimestamp: null
-  name: pctl-profile
+  name: %s
   namespace: %s
 spec:
   catalog:
@@ -255,7 +256,7 @@ spec:
     tag: weaveworks-nginx/v0.1.1
     url: https://github.com/weaveworks/profiles-examples
 status: {}
-`, namespace, configMapName, gitRepoName, namespace)))
+`, profileInstallationName, namespace, configMapName, gitRepoName, namespace)))
 
 			By("user changes and upstream changes being applied")
 			deploymentFile := filepath.Join(profileDir, "artifacts/nginx-deployment/nginx/deployment/deployment.yaml")
@@ -284,8 +285,8 @@ status: {}
 			}
 			Eventually(getCmd).Should(ContainElements(
 				"INSTALLED PACKAGES",
-				"NAMESPACE                            NAME         SOURCE                                AVAILABLE UPDATES",
-				fmt.Sprintf("%s %s nginx-catalog/weaveworks-nginx/v0.1.1 -", namespace, profileInstallationName),
+				"NAMESPACE                            NAME SOURCE                                AVAILABLE UPDATES",
+				fmt.Sprintf("%s %s  nginx-catalog/weaveworks-nginx/v0.1.1 -", namespace, profileInstallationName),
 			))
 
 			//replicas=3 in v0.1.1
@@ -296,7 +297,7 @@ status: {}
 
 func ensureArtifactDeployedSuccessfully(profileInstallationName string, replicas int) {
 	By("successfully deploying the kustomize resource")
-	kustomizeName := fmt.Sprintf("%s-%s-%s", profileInstallationName, "weaveworks-nginx", "nginx-deployment")
+	kustomizeName := fmt.Sprintf("%s-%s", profileInstallationName, "nginx-deployment")
 	var kustomize *kustomizev1.Kustomization
 	Eventually(func() bool {
 		kustomize = &kustomizev1.Kustomization{}
@@ -338,7 +339,7 @@ func ensureArtifactDeployedSuccessfully(profileInstallationName string, replicas
 	}, 2*time.Minute, 5*time.Second).Should(Equal(replicas))
 
 	By("successfully deploying the helmrelease resource")
-	helmReleaseName := fmt.Sprintf("%s-%s-%s", profileInstallationName, "weaveworks-nginx", "nginx-chart")
+	helmReleaseName := fmt.Sprintf("%s-%s", profileInstallationName, "nginx-chart")
 	var helmRelease *helmv2.HelmRelease
 	Eventually(func() bool {
 		helmRelease = &helmv2.HelmRelease{}
@@ -369,7 +370,7 @@ func ensureArtifactDeployedSuccessfully(profileInstallationName string, replicas
 	))
 
 	By("successfully deploying the nested helmrelease resource")
-	helmReleaseName = fmt.Sprintf("%s-%s-%s", profileInstallationName, "bitnami-nginx", "nginx-server")
+	helmReleaseName = fmt.Sprintf("%s-%s", profileInstallationName, "nginx-server")
 	Eventually(func() bool {
 		helmRelease = &helmv2.HelmRelease{}
 		err := kClient.Get(context.Background(), client.ObjectKey{Name: helmReleaseName, Namespace: namespace}, helmRelease)

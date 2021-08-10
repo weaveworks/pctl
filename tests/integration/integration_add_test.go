@@ -150,7 +150,7 @@ status: {}
 		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create kustomization failed : %s", string(output)))
 
 		By("successfully deploying the kustomize resource")
-		kustomizeName := fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "nginx-deployment")
+		kustomizeName := fmt.Sprintf("%s-%s", subName, "nginx-deployment")
 		var kustomize *kustomizev1.Kustomization
 		Eventually(func() bool {
 			kustomize = &kustomizev1.Kustomization{}
@@ -184,7 +184,7 @@ status: {}
 		Expect(podList.Items[0].Spec.Containers[0].Image).To(Equal("nginx:1.14.2"))
 
 		By("successfully deploying the helmrelease resource")
-		helmReleaseName := fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "nginx-chart")
+		helmReleaseName := fmt.Sprintf("%s-%s", subName, "nginx-chart")
 		var helmRelease *helmv2.HelmRelease
 		Eventually(func() bool {
 			helmRelease = &helmv2.HelmRelease{}
@@ -215,7 +215,7 @@ status: {}
 		))
 
 		By("successfully deploying the nested helmrelease resource")
-		helmReleaseName = fmt.Sprintf("%s-%s-%s", subName, "bitnami-nginx", "nginx-server")
+		helmReleaseName = fmt.Sprintf("%s-%s", subName, "nginx-server")
 		Eventually(func() bool {
 			helmRelease = &helmv2.HelmRelease{}
 			err := kClient.Get(context.Background(), client.ObjectKey{Name: helmReleaseName, Namespace: namespace}, helmRelease)
@@ -238,7 +238,7 @@ status: {}
 		}))
 
 		By("successfully deploying the redis resource with dependsOn")
-		kustomizeName = fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "dependon-chart")
+		kustomizeName = fmt.Sprintf("%s-%s", subName, "dependon-chart")
 		Eventually(func() bool {
 			kustomize = &kustomizev1.Kustomization{}
 			err := kClient.Get(context.Background(), client.ObjectKey{Name: kustomizeName, Namespace: namespace}, kustomize)
@@ -255,20 +255,20 @@ status: {}
 
 		Expect(kustomize.Spec.DependsOn).To(ConsistOf(
 			dependency.CrossNamespaceDependencyReference{
-				Name:      fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "nginx-deployment"),
+				Name:      fmt.Sprintf("%s-%s", subName, "nginx-deployment"),
 				Namespace: namespace,
 			},
 			dependency.CrossNamespaceDependencyReference{
-				Name:      fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "nginx-chart"),
+				Name:      fmt.Sprintf("%s-%s", subName, "nginx-chart"),
 				Namespace: namespace,
 			},
 			dependency.CrossNamespaceDependencyReference{
-				Name:      fmt.Sprintf("%s-%s-%s", subName, "bitnami-nginx", "nginx-server"),
+				Name:      fmt.Sprintf("%s-%s", subName, "nginx-server"),
 				Namespace: namespace,
 			},
 		))
 
-		helmReleaseName = fmt.Sprintf("%s-%s-%s", subName, "weaveworks-nginx", "dependon-chart")
+		helmReleaseName = fmt.Sprintf("%s-%s", subName, "dependon-chart")
 		Eventually(func() bool {
 			helmRelease = &helmv2.HelmRelease{}
 			err := kClient.Get(context.Background(), client.ObjectKey{Name: helmReleaseName, Namespace: namespace}, helmRelease)
@@ -602,7 +602,7 @@ status: {}
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create kustomization failed : %s", string(output)))
 
 			By("successfully deploying the kustomize resource")
-			helmReleaseName := fmt.Sprintf("%s-%s-%s", subName, "nginx", "bitnami-nginx")
+			helmReleaseName := fmt.Sprintf("%s-%s", subName, "bitnami-nginx")
 			var helmRelease *helmv2.HelmRelease
 			Eventually(func() bool {
 				helmRelease = &helmv2.HelmRelease{}
