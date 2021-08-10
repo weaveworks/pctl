@@ -46,15 +46,17 @@ func globalFlags() []cli.Flag {
 	var kubeconfigFlag *cli.StringFlag
 	if home := homedir.HomeDir(); home != "" {
 		kubeconfigFlag = &cli.StringFlag{
-			Name:  "kubeconfig",
-			Value: filepath.Join(home, ".kube", "config"),
-			Usage: "Absolute path to the kubeconfig file (optional)",
+			Name:    "kubeconfig",
+			Value:   filepath.Join(home, ".kube", "config"),
+			Usage:   "Absolute path to the kubeconfig file (optional)",
+			EnvVars: []string{"KUBECONFIG"},
 		}
 	} else {
 		kubeconfigFlag = &cli.StringFlag{
 			Name:     "kubeconfig",
 			Usage:    "Absolute path to the kubeconfig file",
 			Required: true,
+			EnvVars:  []string{"KUBECONFIG"},
 		}
 	}
 
