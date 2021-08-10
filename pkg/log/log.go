@@ -13,10 +13,6 @@ func (l StderrLogger) Actionf(format string, a ...interface{}) {
 	fmt.Fprintln(l.Stderr, `►`, fmt.Sprintf(format, a...))
 }
 
-func (l StderrLogger) Generatef(format string, a ...interface{}) {
-	fmt.Fprintln(l.Stderr, `✚`, fmt.Sprintf(format, a...))
-}
-
 func (l StderrLogger) Waitingf(format string, a ...interface{}) {
 	fmt.Fprintln(l.Stderr, `◎`, fmt.Sprintf(format, a...))
 }

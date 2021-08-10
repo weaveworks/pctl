@@ -7,25 +7,26 @@ and run: mdtoc -inplace README.md
 -->
 
  <!-- toc -->
-- [Usage](#usage)
-  - [Get](#get)
-  - [Add](#add)
-    - [Add via Catalog](#add-via-catalog)
-    - [Add via URL](#add-via-url)
-    - [Configuring a profile](#configuring-a-profile)
-    - [Cloning repository resources](#cloning-repository-resources)
-    - [Architecture](#architecture)
-  - [Prepare](#prepare)
-    - [Pre-Flight check](#pre-flight-check)
-  - [Catalog service options](#catalog-service-options)
-- [Development](#development)
-  - [Working with profiles](#working-with-profiles)
-    - [Using local pin](#using-local-pin)
-    - [Using dev tag pin](#using-dev-tag-pin)
-    - [Using doki and the Makefile targets](#using-doki-and-the-makefile-targets)
-- [Release process](#release-process)
-  - [Tests](#tests)
-    - [Configuring Integration Tests](#configuring-integration-tests)
+- [pctl](#pctl)
+  - [Usage](#usage)
+    - [Get](#get)
+    - [Add](#add)
+      - [Add via Catalog](#add-via-catalog)
+      - [Add via URL](#add-via-url)
+      - [Configuring a profile](#configuring-a-profile)
+      - [Cloning repository resources](#cloning-repository-resources)
+      - [Architecture](#architecture)
+    - [Prepare](#prepare)
+      - [Pre-Flight check](#pre-flight-check)
+    - [Catalog service options](#catalog-service-options)
+  - [Development](#development)
+    - [Working with profiles](#working-with-profiles)
+      - [Using local pin](#using-local-pin)
+      - [Using dev tag pin](#using-dev-tag-pin)
+      - [Using doki and the Makefile targets](#using-doki-and-the-makefile-targets)
+  - [Release process](#release-process)
+    - [Tests](#tests)
+      - [Configuring Integration Tests](#configuring-integration-tests)
 <!-- /toc -->
 
 ## Usage
@@ -133,8 +134,8 @@ This results in a profile installation folder being created (defaults to the nam
 
 ```
 $ pctl add --git-repository flux-system/flux-system nginx-catalog/weaveworks-nginx/v0.1.0
-generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0
-installation completed successfully
+► generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0
+✔ installation completed successfully
 
 $ tree weaveworks-nginx
 └── weaveworks-nginx

@@ -146,7 +146,7 @@ var _ = Describe("pctl get", func() {
 		When("kubeconfig is incorrectly set", func() {
 			It("returns a useful error", func() {
 				Expect(pctlWithError("--kubeconfig=/non-existing/path/kubeconfig", "get", "nginx")).To(ContainElement(
-					"failed to create config from kubeconfig path \"/non-existing/path/kubeconfig\": stat /non-existing/path/kubeconfig: no such file or directory",
+					"✗ failed to create config from kubeconfig path \"/non-existing/path/kubeconfig\": stat /non-existing/path/kubeconfig: no such file or directory",
 				))
 			})
 		})
@@ -394,7 +394,7 @@ var _ = Describe("pctl get", func() {
 		When("a name argument is not provided correctly", func() {
 			It("returns a useful error", func() {
 				Expect(pctlWithError("get", "--profile-version", "v0.1.0", "test-profile")).To(ContainElement(
-					"both catalog name and profile name must be provided example: pctl get catalog/weaveworks-nginx --version v0.1.0",
+					"✗ both catalog name and profile name must be provided example: pctl get catalog/weaveworks-nginx --version v0.1.0",
 				))
 			})
 		})

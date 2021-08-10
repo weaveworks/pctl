@@ -175,7 +175,7 @@ func addProfile(c *cli.Context) error {
 		source = fmt.Sprintf("catalog entry %s/%s/%s", catalogName, profileName, version)
 	}
 
-	logger.Generatef("generating profile installation from source: %s\n", source)
+	logger.Actionf("generating profile installation from source: %s\n", source)
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{
 		Message: message,
