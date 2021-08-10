@@ -7,6 +7,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 	"github.com/weaveworks/pctl/pkg/client"
+	"github.com/weaveworks/pctl/pkg/log"
 	"github.com/weaveworks/pctl/pkg/version"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -18,6 +19,8 @@ import (
 const (
 	releaseUrl = "https://github.com/weaveworks/profiles/releases"
 )
+
+var logger = log.StderrLogger{Stderr: os.Stderr}
 
 func main() {
 	app := &cli.App{
@@ -37,7 +40,7 @@ func main() {
 	err := app.Run(os.Args)
 	if err != nil {
 		// to prevent the timestamp in the output from log.Fatal.
-		fmt.Println(err)
+		logger.Failuref("%v", err)
 		os.Exit(1)
 	}
 }
