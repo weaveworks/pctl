@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/dave/jennifer v1.4.1
 	github.com/fluxcd/helm-controller/api v0.11.1
-	github.com/fluxcd/kustomize-controller/api v0.13.2
+	github.com/fluxcd/kustomize-controller/api v0.13.3
 	github.com/fluxcd/pkg/apis/meta v0.10.1
 	github.com/fluxcd/pkg/runtime v0.12.1
 	github.com/fluxcd/pkg/version v0.1.0
