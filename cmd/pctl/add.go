@@ -175,7 +175,7 @@ func addProfile(c *cli.Context) error {
 		source = fmt.Sprintf("catalog entry %s/%s/%s", catalogName, profileName, version)
 	}
 
-	fmt.Printf("generating profile installation from source: %s\n", source)
+	logger.Generatef("generating profile installation from source: %s\n", source)
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{
 		Message: message,
@@ -234,7 +234,7 @@ func addProfile(c *cli.Context) error {
 	manager := &catalog.Manager{}
 	err = manager.Install(cfg)
 	if err == nil {
-		fmt.Println("installation completed successfully")
+		logger.Successf("installation completed successfully")
 	}
 	return err
 }
@@ -253,7 +253,7 @@ func createPullRequest(c *cli.Context) error {
 	if branch == "" {
 		branch = c.String("name") + "-" + uuid.NewString()[:6]
 	}
-	fmt.Printf("Creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
+	logger.Actionf("creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{
 		Directory: directory,

@@ -41,7 +41,7 @@ func bootstrapCmd() *cli.Command {
 			if err := bootstrap.CreateConfig(gitRepoNamespace, gitRepoName, directory); err != nil {
 				return fmt.Errorf("failed to bootstrap: %w", err)
 			}
-			fmt.Println("bootstrap completed")
+			logger.Successf("bootstrap completed")
 			return nil
 		},
 	}

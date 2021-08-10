@@ -66,11 +66,11 @@ func (w *KubeWaiter) Wait(components ...string) error {
 	for _, rs := range coll.ResourceStatuses {
 		switch rs.Status {
 		case status.CurrentStatus:
-			fmt.Printf("%s: %s ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
+			logger.Successf("%s: %s ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
 		case status.NotFoundStatus:
-			fmt.Printf("%s: %s not found", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
+			logger.Failuref("%s: %s not found", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
 		default:
-			fmt.Printf("%s: %s not ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
+			logger.Failuref("%s: %s not ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
 		}
 	}
 

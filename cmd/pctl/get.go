@@ -227,7 +227,7 @@ func formatOutput(profiles []profilesv1.ProfileCatalogEntry, outFormat string) e
 
 func formatInstalledProfilesOutput(data []catalog.ProfileData, outFormat string) error {
 	if len(data) == 0 {
-		fmt.Println("No profiles installed")
+		logger.Failuref("no profiles installed")
 		return nil
 	}
 
@@ -255,7 +255,7 @@ func formatInstalledProfilesOutput(data []catalog.ProfileData, outFormat string)
 
 func formatCatlogProfilesOutput(profile profilesv1.ProfileCatalogEntry, outFormat string) error {
 	if profile.Name == "" {
-		fmt.Println("No profile found")
+		logger.Failuref("no profile found")
 		return nil
 	}
 

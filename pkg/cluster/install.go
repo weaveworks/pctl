@@ -16,6 +16,7 @@ import (
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 
+	"github.com/weaveworks/pctl/pkg/log"
 	"github.com/weaveworks/pctl/pkg/runner"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -37,6 +38,8 @@ var FluxCRDs = []string{
 	strings.ToLower(sourcev1.HelmChartKind),
 	strings.ToLower(sourcev1.HelmRepositoryKind),
 }
+
+var logger = log.StderrLogger{Stderr: os.Stderr}
 
 // Fetcher will download a manifest tar file from a remote repository.
 type Fetcher struct {
@@ -122,22 +125,22 @@ func (i *Installer) Install() error {
 
 // PreFlightCheck checks whether install can run or not.
 func (i *Installer) PreFlightCheck() error {
-	fmt.Print("Checking if flux namespace exists...")
+	logger.Actionf("checking that flux namespace exists")
 	args := []string{"get", "namespace", i.FluxNamespace, "--output", "name"}
 	if output, err := i.Runner.Run(kubectlCmd, args...); err != nil {
-		fmt.Println("\nOutput from kubectl command: ", string(output))
+		logger.Waitingf("output from kubectl command: %v", string(output))
 		if i.IgnorePreflightErrors {
-			fmt.Println("WARNING: failed to get flux namespace. Flux is required for profiles to work.")
+			logger.Warningf("WARNING: failed to get flux namespace. Flux is required for profiles to work.")
 		} else {
-			return fmt.Errorf("failed to get flux namespace: %w\nTo ignore this error, please see the  --ignore-preflight-checks flag.", err)
+			return fmt.Errorf("failed to get flux namespace: %w\nTo ignore this error, please see the  --ignore-preflight-checks flag", err)
 		}
 	}
-	fmt.Println("done.")
-	fmt.Print("Checking for flux CRDs...")
+	logger.Successf("found flux namespace '%v'", i.FluxNamespace)
+	logger.Actionf("checking for flux CRDs")
 	output, err := i.Runner.Run(kubectlCmd, "get", "crds", "--output", "jsonpath='{.items[*].spec.names.singular}'")
 	if err != nil {
 		if i.IgnorePreflightErrors {
-			fmt.Println("WARNING: failed to list all installed crds. Flux is required for profiles to work.")
+			logger.Warningf("WARNING: failed to list all installed crds. Flux is required for profiles to work.")
 		} else {
 			return fmt.Errorf("failed to list all installed crds: %w", err)
 		}
@@ -152,14 +155,14 @@ func (i *Installer) PreFlightCheck() error {
 	for _, crd := range FluxCRDs {
 		if _, ok := crds[crd]; !ok {
 			if i.IgnorePreflightErrors {
-				fmt.Println("WARNING: failed to find flux crd resource. Flux is required for profiles to work.")
+				logger.Warningf("WARNING: failed to find flux crd resource. Flux is required for profiles to work.")
 			} else {
-				return fmt.Errorf("failed to get crd %s\nTo ignore this error, please see the  --ignore-preflight-checks flag.", crd)
+				return fmt.Errorf("failed to get crd %s\nTo ignore this error, please see the  --ignore-preflight-checks flag", crd)
 			}
 		}
 	}
 
-	fmt.Println("done.")
+	logger.Successf("found flux CRDs")
 	return nil
 }
 
@@ -216,17 +219,17 @@ func (a *Applier) Apply(folder string, kubeContext string, kubeConfig string, dr
 	}
 	output, err := a.Runner.Run(kubectlCmd, kubectlArgs...)
 	if err != nil {
-		fmt.Println("Log from kubectl: ", string(output))
+		logger.Waitingf("log from kubectl: %v", string(output))
 		return fmt.Errorf("install failed: %w", err)
 	}
 	if dryRun {
 		fmt.Print(string(output))
 		return nil
 	}
-	fmt.Print("Waiting for resources to be ready...")
+	logger.Waitingf("waiting for resources to be ready")
 	if err := a.Waiter.Wait("profiles-controller-manager"); err != nil {
 		return fmt.Errorf("failed to wait for resources to be ready: %w", err)
 	}
-	fmt.Println("done.")
+	logger.Successf("resources ready")
 	return nil
 }
