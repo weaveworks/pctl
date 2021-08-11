@@ -143,6 +143,7 @@ var _ = Describe("Helm", func() {
 				Namespace: namespace,
 			},
 			Spec: helmv2.HelmReleaseSpec{
+				ReleaseName: artifactName,
 				Chart: helmv2.HelmChartTemplate{
 					Spec: helmv2.HelmChartTemplateSpec{
 						Chart: filepath.Join(rootDir, "artifacts/1/helm-chart/files/"),
@@ -258,6 +259,7 @@ var _ = Describe("Helm", func() {
 					Namespace: namespace,
 				},
 				Spec: helmv2.HelmReleaseSpec{
+					ReleaseName: artifactName,
 					Chart: helmv2.HelmChartTemplate{
 						Spec: helmv2.HelmChartTemplateSpec{
 							Chart:   chartName,

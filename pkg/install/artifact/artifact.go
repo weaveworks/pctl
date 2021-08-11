@@ -258,6 +258,7 @@ func (c *Writer) makeHelmReleaseObjects(artifact profilesv1.Artifact, installati
 			APIVersion: helmv2.GroupVersion.String(),
 		},
 		Spec: helmv2.HelmReleaseSpec{
+			ReleaseName: artifact.Name,
 			Chart: helmv2.HelmChartTemplate{
 				Spec: helmChartSpec,
 			},
