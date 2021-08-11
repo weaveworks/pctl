@@ -20,7 +20,7 @@ const (
 	releaseUrl = "https://github.com/weaveworks/profiles/releases"
 )
 
-var logger = log.StderrLogger{Stderr: os.Stderr}
+var logger = log.PrintLogger{}
 
 func main() {
 	app := &cli.App{

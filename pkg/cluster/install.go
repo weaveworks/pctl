@@ -39,7 +39,7 @@ var FluxCRDs = []string{
 	strings.ToLower(sourcev1.HelmRepositoryKind),
 }
 
-var logger = log.StderrLogger{Stderr: os.Stderr}
+var logger = log.PrintLogger{}
 
 // Fetcher will download a manifest tar file from a remote repository.
 type Fetcher struct {

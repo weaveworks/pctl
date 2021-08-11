@@ -35,7 +35,7 @@ var (
 		return copypkg.Copy(src, dest)
 	}
 
-	logger = log.StderrLogger{Stderr: os.Stderr}
+	logger = log.PrintLogger{}
 )
 
 // Upgrade the profiel installation to a new version
