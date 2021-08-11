@@ -5,12 +5,12 @@ go 1.16
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/dave/jennifer v1.4.1
-	github.com/fluxcd/helm-controller/api v0.11.1
-	github.com/fluxcd/kustomize-controller/api v0.13.2
+	github.com/fluxcd/helm-controller/api v0.11.2
+	github.com/fluxcd/kustomize-controller/api v0.13.3
 	github.com/fluxcd/pkg/apis/meta v0.10.1
 	github.com/fluxcd/pkg/runtime v0.12.1
 	github.com/fluxcd/pkg/version v0.1.0
-	github.com/fluxcd/source-controller/api v0.15.3
+	github.com/fluxcd/source-controller/api v0.15.4
 	github.com/google/uuid v1.3.0
 	github.com/jenkins-x/go-scm v1.10.9
 	github.com/mattn/go-runewidth v0.0.13 // indirect
@@ -21,9 +21,9 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/weaveworks/profiles v0.1.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.21.3
-	k8s.io/apimachinery v0.21.3
-	k8s.io/client-go v0.21.3
+	k8s.io/api v0.22.0
+	k8s.io/apimachinery v0.22.0
+	k8s.io/client-go v0.22.0
 	knative.dev/pkg v0.0.0-20210412173742-b51994e3b312
 	sigs.k8s.io/cli-utils v0.25.1-0.20210608181808-f3974341173a
 	sigs.k8s.io/controller-runtime v0.9.5
