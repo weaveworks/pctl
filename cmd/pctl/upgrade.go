@@ -24,7 +24,8 @@ func upgradeCmd() *cli.Command {
 				return err
 			}
 			if c.Bool("create-pr") {
-				if err := createPullRequest(c); err != nil {
+				profilePath := c.Args().Slice()[0]
+				if err := createPullRequest(c, profilePath); err != nil {
 					return err
 				}
 			}

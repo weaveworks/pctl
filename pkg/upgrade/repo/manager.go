@@ -42,7 +42,7 @@ func (m *Manager) CreateRepoWithContent(writeContent func() error) error {
 		return fmt.Errorf("failed to write content to repo: %w", err)
 	}
 
-	if err := m.gitClient.Add(); err != nil {
+	if err := m.gitClient.Add("."); err != nil {
 		return fmt.Errorf("failed to add: %w", err)
 	}
 
@@ -71,7 +71,7 @@ func (m *Manager) CreateBranchWithContentFromMain(branch string, writeContent fu
 		return fmt.Errorf("failed to write content to repo: %w", err)
 	}
 
-	if err := m.gitClient.Add(); err != nil {
+	if err := m.gitClient.Add("."); err != nil {
 		return fmt.Errorf("failed to add: %w", err)
 	}
 

@@ -8,9 +8,10 @@ import (
 )
 
 type FakeGit struct {
-	AddStub        func() error
+	AddStub        func(string) error
 	addMutex       sync.RWMutex
 	addArgsForCall []struct {
+		arg1 string
 	}
 	addReturns struct {
 		result1 error
@@ -142,17 +143,18 @@ type FakeGit struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGit) Add() error {
+func (fake *FakeGit) Add(arg1 string) error {
 	fake.addMutex.Lock()
 	ret, specificReturn := fake.addReturnsOnCall[len(fake.addArgsForCall)]
 	fake.addArgsForCall = append(fake.addArgsForCall, struct {
-	}{})
+		arg1 string
+	}{arg1})
 	stub := fake.AddStub
 	fakeReturns := fake.addReturns
-	fake.recordInvocation("Add", []interface{}{})
+	fake.recordInvocation("Add", []interface{}{arg1})
 	fake.addMutex.Unlock()
 	if stub != nil {
-		return stub()
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
@@ -166,10 +168,17 @@ func (fake *FakeGit) AddCallCount() int {
 	return len(fake.addArgsForCall)
 }
 
-func (fake *FakeGit) AddCalls(stub func() error) {
+func (fake *FakeGit) AddCalls(stub func(string) error) {
 	fake.addMutex.Lock()
 	defer fake.addMutex.Unlock()
 	fake.AddStub = stub
+}
+
+func (fake *FakeGit) AddArgsForCall(i int) string {
+	fake.addMutex.RLock()
+	defer fake.addMutex.RUnlock()
+	argsForCall := fake.addArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeGit) AddReturns(result1 error) {
