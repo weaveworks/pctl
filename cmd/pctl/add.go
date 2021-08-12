@@ -204,7 +204,7 @@ func addProfile(c *cli.Context) (string, error) {
 			gitRepoName = config.GitRepository.Name
 		}
 	}
-	installationDirectory := filepath.Join(dir, profileName)
+	installationDirectory := filepath.Join(dir, subName)
 	installer := install.NewInstaller(install.Config{
 		GitClient:        g,
 		RootDir:          installationDirectory,

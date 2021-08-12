@@ -61,7 +61,7 @@ var _ = Describe("update", func() {
 				"✔ installation completed successfully",
 			))
 
-			profileDir := filepath.Join(temp, "weaveworks-nginx")
+			profileDir := filepath.Join(temp, "pctl-profile")
 			By("creating the artifacts")
 			Expect(filesInDir(profileDir)).To(ContainElements(
 				"profile-installation.yaml",

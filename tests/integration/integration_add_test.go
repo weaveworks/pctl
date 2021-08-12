@@ -95,7 +95,7 @@ var _ = Describe("pctl add", func() {
 			fmt.Sprintf("► generating profile installation from source: repository %s, path: %s and branch %s", profileExamplesURL, "weaveworks-nginx", profileBranch),
 		))
 
-		profilesDir := filepath.Join(temp)
+		profilesDir := filepath.Join(temp, subName)
 		By("creating the artifacts")
 		Expect(filesInDir(profilesDir)).To(ContainElements(
 			"profile-installation.yaml",
@@ -117,7 +117,7 @@ var _ = Describe("pctl add", func() {
 			"artifacts/nested-profile/nginx-server/kustomize-flux.yaml",
 		))
 
-		Expect(catFile(filepath.Join(temp, "profile-installation.yaml"))).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
+		Expect(catFile(filepath.Join(profilesDir, "profile-installation.yaml"))).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
 kind: ProfileInstallation
 metadata:
   creationTimestamp: null
@@ -323,10 +323,10 @@ status: {}
 			Expect(pctl(args...)).To(ContainElement("✔ installation completed successfully"))
 			By("creating the artifacts")
 			Expect(filesInDir(temp)).To(ContainElements(
-				"profile-installation.yaml",
-				filepath.Join("artifacts", "nginx-server", "helm-chart", "HelmRelease.yaml"),
-				filepath.Join("artifacts", "nginx-server", "helm-chart", "kustomization.yaml"),
-				filepath.Join("artifacts", "nginx-server", "helm-chart", "nginx", "chart", "Chart.yaml"),
+				"pctl-profile/profile-installation.yaml",
+				filepath.Join("pctl-profile", "artifacts", "nginx-server", "helm-chart", "HelmRelease.yaml"),
+				filepath.Join("pctl-profile", "artifacts", "nginx-server", "helm-chart", "kustomization.yaml"),
+				filepath.Join("pctl-profile", "artifacts", "nginx-server", "helm-chart", "nginx", "chart", "Chart.yaml"),
 			))
 			filename := filepath.Join(temp, "profile-installation.yaml")
 			content, err := ioutil.ReadFile(filename)
@@ -370,8 +370,8 @@ status: {}
 
 			By("creating the artifacts")
 			Expect(filesInDir(temp)).To(ContainElements(
-				"profile-installation.yaml",
-				filepath.Join("artifacts", "nginx-server", "helm-chart", "nginx", "chart", "Chart.yaml"),
+				"pctl-profile/profile-installation.yaml",
+				filepath.Join("pctl-profile", "artifacts", "nginx-server", "helm-chart", "nginx", "chart", "Chart.yaml"),
 			))
 			filename := filepath.Join(temp, "profile-installation.yaml")
 			content, err := ioutil.ReadFile(filename)
@@ -550,6 +550,7 @@ status: {}
 			By("adding the profile")
 			args := []string{
 				"add",
+				"--name", subName,
 				"--namespace", namespace,
 				"--git-repository", fmt.Sprintf("%s/%s", namespace, gitRepoName),
 				"nginx-catalog/nginx/v2.0.1",
@@ -557,7 +558,7 @@ status: {}
 			Expect(pctl(args...)).To(ContainElement("► generating profile installation from source: catalog entry nginx-catalog/nginx/v2.0.1"))
 
 			By("creating the artifacts")
-			profilesDir := filepath.Join(temp, "nginx")
+			profilesDir := filepath.Join(temp, subName)
 			Expect(filesInDir(profilesDir)).To(ContainElements(
 				"artifacts/bitnami-nginx/helm-chart/ConfigMap.yaml",
 				"artifacts/bitnami-nginx/helm-chart/HelmRelease.yaml",

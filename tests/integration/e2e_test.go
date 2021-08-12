@@ -111,7 +111,7 @@ var _ = Describe("end to end flow", func() {
 			))
 
 			By("creating the artifacts")
-			profileDir := filepath.Join(temp, "weaveworks-nginx")
+			profileDir := filepath.Join(temp, profileInstallationName)
 			Expect(filesInDir(profileDir)).To(ContainElements(
 				"profile-installation.yaml",
 				"artifacts/nginx-deployment/kustomization.yaml",
@@ -198,7 +198,7 @@ status: {}
 				"Prerequisites Kubernetes 1.18+",
 			))
 
-			profileDir := filepath.Join(temp, "weaveworks-nginx")
+			profileDir := filepath.Join(temp, profileInstallationName)
 			cmd := exec.Command(
 				binaryPath,
 				"upgrade",
