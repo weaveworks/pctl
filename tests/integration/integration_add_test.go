@@ -328,7 +328,7 @@ status: {}
 				filepath.Join("pctl-profile", "artifacts", "nginx-server", "helm-chart", "kustomization.yaml"),
 				filepath.Join("pctl-profile", "artifacts", "nginx-server", "helm-chart", "nginx", "chart", "Chart.yaml"),
 			))
-			filename := filepath.Join(temp, "profile-installation.yaml")
+			filename := filepath.Join(temp, "pctl-profile", "profile-installation.yaml")
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
@@ -373,7 +373,7 @@ status: {}
 				"pctl-profile/profile-installation.yaml",
 				filepath.Join("pctl-profile", "artifacts", "nginx-server", "helm-chart", "nginx", "chart", "Chart.yaml"),
 			))
-			filename := filepath.Join(temp, "profile-installation.yaml")
+			filename := filepath.Join(temp, "pctl-profile", "profile-installation.yaml")
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
