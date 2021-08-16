@@ -6,22 +6,26 @@ import (
 
 type PrintLogger struct{}
 
-func (l PrintLogger) Actionf(format string, a ...interface{}) {
-	fmt.Println(`►`, fmt.Sprintf(format, a...))
+func (l PrintLogger) Actionf(m string, a ...interface{}) {
+	format(`►`, m, a...)
 }
 
-func (l PrintLogger) Waitingf(format string, a ...interface{}) {
-	fmt.Println(`◎`, fmt.Sprintf(format, a...))
+func (l PrintLogger) Waitingf(m string, a ...interface{}) {
+	format(`◎`, m, a...)
 }
 
-func (l PrintLogger) Successf(format string, a ...interface{}) {
-	fmt.Println(`✔`, fmt.Sprintf(format, a...))
+func (l PrintLogger) Successf(m string, a ...interface{}) {
+	format(`✔`, m, a...)
 }
 
-func (l PrintLogger) Warningf(format string, a ...interface{}) {
-	fmt.Println(`⚠️`, fmt.Sprintf(format, a...))
+func (l PrintLogger) Warningf(m string, a ...interface{}) {
+	format(`⚠️`, m, a...)
 }
 
-func (l PrintLogger) Failuref(format string, a ...interface{}) {
-	fmt.Println(`✗`, fmt.Sprintf(format, a...))
+func (l PrintLogger) Failuref(m string, a ...interface{}) {
+	format(`✗`, m, a...)
+}
+
+func format(tickmark, m string, a ...interface{}) {
+	fmt.Println(tickmark, fmt.Sprintf(m, a...))
 }
