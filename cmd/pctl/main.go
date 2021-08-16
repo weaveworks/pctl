@@ -20,8 +20,6 @@ const (
 	releaseUrl = "https://github.com/weaveworks/profiles/releases"
 )
 
-var logger = log.PrintLogger{}
-
 func main() {
 	app := &cli.App{
 		Version: version.GetVersion(),
@@ -40,7 +38,7 @@ func main() {
 	err := app.Run(os.Args)
 	if err != nil {
 		// to prevent the timestamp in the output from log.Fatal.
-		logger.Failuref("%v", err)
+		log.Failuref("%v", err)
 		os.Exit(1)
 	}
 }

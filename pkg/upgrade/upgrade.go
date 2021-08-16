@@ -30,13 +30,9 @@ type UpgradeConfig struct {
 	Message        string
 }
 
-var (
-	copy func(src, dest string) error = func(src, dest string) error {
-		return copypkg.Copy(src, dest)
-	}
-
-	logger = log.PrintLogger{}
-)
+var copy func(src, dest string) error = func(src, dest string) error {
+	return copypkg.Copy(src, dest)
+}
 
 // Upgrade the profiel installation to a new version
 func Upgrade(cfg UpgradeConfig) error {
@@ -50,7 +46,7 @@ func Upgrade(cfg UpgradeConfig) error {
 		return fmt.Errorf("failed to parse profile installation: %w", err)
 	}
 
-	logger.Actionf("upgrading profile %q from version %q to %q", profileInstallation.Name, profileInstallation.Spec.Catalog.Version, cfg.Version)
+	log.Actionf("upgrading profile %q from version %q to %q", profileInstallation.Name, profileInstallation.Spec.Catalog.Version, cfg.Version)
 
 	var gitRepoName, gitRepoNamespace string
 	catalogName := profileInstallation.Spec.Catalog.Catalog
@@ -176,6 +172,6 @@ func Upgrade(cfg UpgradeConfig) error {
 		return fmt.Errorf(msg)
 	}
 
-	logger.Successf("upgrade completed successfully")
+	log.Successf("upgrade completed successfully")
 	return nil
 }

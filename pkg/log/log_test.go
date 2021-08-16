@@ -11,10 +11,9 @@ import (
 
 var _ = Describe("PrintLogger", func() {
 	var (
-		logger = log.PrintLogger{}
-		r      *os.File
-		w      *os.File
-		tmp    *os.File
+		r   *os.File
+		w   *os.File
+		tmp *os.File
 	)
 
 	BeforeEach(func() {
@@ -28,10 +27,21 @@ var _ = Describe("PrintLogger", func() {
 			os.Stdout = tmp
 		}()
 
-		logger.Warningf("test-warning")
+		log.Actionf("test action")
+		log.Waitingf("test waiting")
+		log.Successf("test success")
+		log.Warningf("test warning")
+		log.Failuref("test failure")
+
 		_ = w.Close()
 
 		stdout, _ := ioutil.ReadAll(r)
-		Expect(string(stdout)).To(Equal("⚠️ test-warning\n"))
+		Expect(string(stdout)).To(Equal(
+			`► test action
+◎ test waiting
+✔ test success
+⚠️ test warning
+✗ test failure
+`))
 	})
 })

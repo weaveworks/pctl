@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/weaveworks/pctl/pkg/log"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/apply/poller"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling"
@@ -66,11 +67,11 @@ func (w *KubeWaiter) Wait(components ...string) error {
 	for _, rs := range coll.ResourceStatuses {
 		switch rs.Status {
 		case status.CurrentStatus:
-			logger.Successf("%s: %s ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
+			log.Successf("%s: %s ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
 		case status.NotFoundStatus:
-			logger.Failuref("%s: %s not found", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
+			log.Failuref("%s: %s not found", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
 		default:
-			logger.Failuref("%s: %s not ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
+			log.Failuref("%s: %s not ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
 		}
 	}
 

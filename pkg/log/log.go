@@ -4,25 +4,23 @@ import (
 	"fmt"
 )
 
-type PrintLogger struct{}
-
-func (l PrintLogger) Actionf(m string, a ...interface{}) {
+func Actionf(m string, a ...interface{}) {
 	format(`►`, m, a...)
 }
 
-func (l PrintLogger) Waitingf(m string, a ...interface{}) {
+func Waitingf(m string, a ...interface{}) {
 	format(`◎`, m, a...)
 }
 
-func (l PrintLogger) Successf(m string, a ...interface{}) {
+func Successf(m string, a ...interface{}) {
 	format(`✔`, m, a...)
 }
 
-func (l PrintLogger) Warningf(m string, a ...interface{}) {
+func Warningf(m string, a ...interface{}) {
 	format(`⚠️`, m, a...)
 }
 
-func (l PrintLogger) Failuref(m string, a ...interface{}) {
+func Failuref(m string, a ...interface{}) {
 	format(`✗`, m, a...)
 }
 
