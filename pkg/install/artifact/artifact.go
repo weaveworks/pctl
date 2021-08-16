@@ -14,6 +14,7 @@ import (
 	"github.com/fluxcd/pkg/runtime/dependency"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	"github.com/otiai10/copy"
+	"github.com/weaveworks/pctl/pkg/log"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
@@ -184,7 +185,7 @@ func (c *Writer) writeResourceWithName(obj runtime.Object, filename string) erro
 	}
 	defer func(f *os.File) {
 		if err := f.Close(); err != nil {
-			fmt.Printf("Failed to properly close file %s\n", f.Name())
+			log.Failuref("Failed to properly close file %s\n", f.Name())
 		}
 	}(f)
 	if err := e.Encode(obj, f); err != nil {
@@ -203,7 +204,7 @@ func (c *Writer) writeResource(obj runtime.Object, dir string) error {
 	}
 	defer func(f *os.File) {
 		if err := f.Close(); err != nil {
-			fmt.Printf("Failed to properly close file %s\n", f.Name())
+			log.Failuref("Failed to properly close file %s\n", f.Name())
 		}
 	}(f)
 	if err := e.Encode(obj, f); err != nil {

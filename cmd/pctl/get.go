@@ -200,7 +200,7 @@ func profileWithVersionDataFunc(profile profilesv1.ProfileCatalogEntry) func() i
 
 func formatOutput(profiles []profilesv1.ProfileCatalogEntry, outFormat string) error {
 	if len(profiles) == 0 {
-		fmt.Println("No profiles found")
+		log.Failuref("No profiles found")
 		return nil
 	}
 

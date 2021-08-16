@@ -17,7 +17,7 @@ func Successf(m string, a ...interface{}) {
 }
 
 func Warningf(m string, a ...interface{}) {
-	format(`⚠️`, m, a...)
+	format(`⚠️ WARNING:`, m, a...)
 }
 
 func Failuref(m string, a ...interface{}) {

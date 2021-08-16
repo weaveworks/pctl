@@ -40,7 +40,7 @@ var _ = Describe("PrintLogger", func() {
 			`► test action
 ◎ test waiting
 ✔ test success
-⚠️ test warning
+⚠️ WARNING: test warning
 ✗ test failure
 `))
 	})

@@ -7,6 +7,7 @@ import (
 
 	"github.com/jenkins-x/go-scm/scm"
 	"github.com/jenkins-x/go-scm/scm/factory"
+	"github.com/weaveworks/pctl/pkg/log"
 )
 
 const githubTokenEnvVar = "GITHUB_TOKEN"
@@ -50,7 +51,7 @@ func NewClient(cfg SCMConfig) (*Client, error) {
 
 // CreatePullRequest will create a pull request.
 func (r *Client) CreatePullRequest() error {
-	fmt.Println("Creating pull request with : ", r.Repo, r.Base, r.Branch)
+	log.Actionf("Creating pull request with : %v%v%v", r.Repo, r.Base, r.Branch)
 	ctx := context.Background()
 	request, _, err := r.Client.PullRequests.Create(ctx, r.Repo, &scm.PullRequestInput{
 		Title: "PCTL Generated Profile Resource Update",
@@ -60,6 +61,6 @@ func (r *Client) CreatePullRequest() error {
 	if err != nil {
 		return fmt.Errorf("error while creating pr: %w", err)
 	}
-	fmt.Printf("PR created with number: %d and URL: %s\n", request.Number, request.Link)
+	log.Successf("PR created with number: %d and URL: %s\n", request.Number, request.Link)
 	return nil
 }

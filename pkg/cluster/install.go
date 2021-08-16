@@ -109,7 +109,7 @@ func (i *Installer) Install() error {
 			return
 		}
 		if err := os.RemoveAll(i.Location); err != nil {
-			fmt.Printf("failed to remove temporary folder at location: %s. Please clean manually.", i.Location)
+			log.Failuref("failed to remove temporary folder at location: %s. Please clean manually.", i.Location)
 		}
 	}()
 	if err := i.PreFlightCheck(); err != nil {
@@ -128,7 +128,7 @@ func (i *Installer) PreFlightCheck() error {
 	if output, err := i.Runner.Run(kubectlCmd, args...); err != nil {
 		log.Waitingf("output from kubectl command: %v", string(output))
 		if i.IgnorePreflightErrors {
-			log.Warningf("WARNING: failed to get flux namespace. Flux is required for profiles to work.")
+			log.Warningf("failed to get flux namespace. Flux is required for profiles to work.")
 		} else {
 			return fmt.Errorf("failed to get flux namespace: %w\nTo ignore this error, please see the  --ignore-preflight-checks flag", err)
 		}
@@ -138,7 +138,7 @@ func (i *Installer) PreFlightCheck() error {
 	output, err := i.Runner.Run(kubectlCmd, "get", "crds", "--output", "jsonpath='{.items[*].spec.names.singular}'")
 	if err != nil {
 		if i.IgnorePreflightErrors {
-			log.Warningf("WARNING: failed to list all installed crds. Flux is required for profiles to work.")
+			log.Warningf("failed to list all installed crds. Flux is required for profiles to work.")
 		} else {
 			return fmt.Errorf("failed to list all installed crds: %w", err)
 		}
@@ -153,7 +153,7 @@ func (i *Installer) PreFlightCheck() error {
 	for _, crd := range FluxCRDs {
 		if _, ok := crds[crd]; !ok {
 			if i.IgnorePreflightErrors {
-				log.Warningf("WARNING: failed to find flux crd resource. Flux is required for profiles to work.")
+				log.Warningf("failed to find flux crd resource. Flux is required for profiles to work.")
 			} else {
 				return fmt.Errorf("failed to get crd %s\nTo ignore this error, please see the  --ignore-preflight-checks flag", crd)
 			}
@@ -183,7 +183,7 @@ func (f *Fetcher) Fetch(ctx context.Context, url, version, dir string) error {
 	}
 	defer func(body io.ReadCloser) {
 		if err := body.Close(); err != nil {
-			fmt.Println("Failed to close body reader.")
+			log.Failuref("Failed to close body reader.")
 		}
 	}(resp.Body)
 
