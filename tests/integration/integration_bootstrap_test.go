@@ -28,7 +28,7 @@ var _ = Describe("bootstrap", func() {
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
 
-			Expect(pctl("bootstrap", "--git-repository", "foo/bar", temp)).To(ContainElement("bootstrap completed"))
+			Expect(pctl("bootstrap", "--git-repository", "foo/bar", temp)).To(ContainElement("✔ bootstrap completed"))
 			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(data)).To(ContainSubstring(`gitrepository:
@@ -44,7 +44,7 @@ var _ = Describe("bootstrap", func() {
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
 
-			Expect(pctl("bootstrap", "--git-repository", "foo/bar")).To(ContainElement("bootstrap completed"))
+			Expect(pctl("bootstrap", "--git-repository", "foo/bar")).To(ContainElement("✔ bootstrap completed"))
 			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(data)).To(ContainSubstring(`gitrepository:
@@ -60,7 +60,7 @@ var _ = Describe("bootstrap", func() {
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
 
-			Expect(pctl("bootstrap", "--git-repository", "foo/bar", ".")).To(ContainElement("bootstrap completed"))
+			Expect(pctl("bootstrap", "--git-repository", "foo/bar", ".")).To(ContainElement("✔ bootstrap completed"))
 			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(data)).To(ContainSubstring(`gitrepository:

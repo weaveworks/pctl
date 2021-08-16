@@ -57,8 +57,8 @@ var _ = Describe("update", func() {
 			}
 
 			Expect(pctl(args...)).To(ContainElements(
-				"generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0",
-				"installation completed successfully",
+				"► generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0",
+				"✔ installation completed successfully",
 			))
 
 			profileDir := filepath.Join(temp, "weaveworks-nginx")
@@ -122,8 +122,8 @@ status: {}
 				"v0.1.1",
 			}
 			Expect(pctlWithError(args...)).To(ConsistOf(
-				`upgrading profile "pctl-profile" from version "v0.1.0" to "v0.1.1"`,
-				"upgrade succeeded but merge conflicts have occurred, please resolve manually. Files containing conflicts:",
+				`► upgrading profile "pctl-profile" from version "v0.1.0" to "v0.1.1"`,
+				"✗ upgrade succeeded but merge conflicts have occurred, please resolve manually. Files containing conflicts:",
 				fmt.Sprintf("- %s", deploymentFile),
 			))
 

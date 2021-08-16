@@ -12,6 +12,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/install"
+	"github.com/weaveworks/pctl/pkg/log"
 	"github.com/weaveworks/pctl/pkg/runner"
 	"github.com/weaveworks/pctl/pkg/upgrade/repo"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
@@ -45,7 +46,7 @@ func Upgrade(cfg UpgradeConfig) error {
 		return fmt.Errorf("failed to parse profile installation: %w", err)
 	}
 
-	fmt.Printf("upgrading profile %q from version %q to %q\n", profileInstallation.Name, profileInstallation.Spec.Catalog.Version, cfg.Version)
+	log.Actionf("upgrading profile %q from version %q to %q", profileInstallation.Name, profileInstallation.Spec.Catalog.Version, cfg.Version)
 
 	var gitRepoName, gitRepoNamespace string
 	catalogName := profileInstallation.Spec.Catalog.Catalog
@@ -171,6 +172,6 @@ func Upgrade(cfg UpgradeConfig) error {
 		return fmt.Errorf(msg)
 	}
 
-	fmt.Println("upgrade completed successfully")
+	log.Successf("upgrade completed successfully")
 	return nil
 }

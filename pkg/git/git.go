@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/weaveworks/pctl/pkg/log"
 	"github.com/weaveworks/pctl/pkg/runner"
 )
 
@@ -211,7 +212,7 @@ func (g *CLIGit) Add() error {
 func (g *CLIGit) runGitCmd(args ...string) error {
 	out, err := g.Runner.Run(gitCmd, args...)
 	if err != nil {
-		g.printf("failed to run git with output: %s\n", string(out))
+		log.Failuref("failed to run git with output: %s\n", string(out))
 	}
 	return err
 }
@@ -280,6 +281,6 @@ func (g *CLIGit) Checkout(branch string) error {
 
 func (g *CLIGit) printf(format string, a ...interface{}) {
 	if !g.Quiet {
-		fmt.Printf(format, a...)
+		log.Actionf(format, a...)
 	}
 }

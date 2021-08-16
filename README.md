@@ -133,8 +133,8 @@ This results in a profile installation folder being created (defaults to the nam
 
 ```
 $ pctl add --git-repository flux-system/flux-system nginx-catalog/weaveworks-nginx/v0.1.0
-generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0
-installation completed successfully
+► generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0
+✔ installation completed successfully
 
 $ tree weaveworks-nginx
 └── weaveworks-nginx

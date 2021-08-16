@@ -96,7 +96,7 @@ var _ = Describe("end to end flow", func() {
 		})
 
 		By("bootstraping the repo")
-		Expect(pctl("bootstrap", "--git-repository", fmt.Sprintf("%s/%s", namespace, gitRepoName), temp)).To(ContainElement("bootstrap completed"))
+		Expect(pctl("bootstrap", "--git-repository", fmt.Sprintf("%s/%s", namespace, gitRepoName), temp)).To(ContainElement("✔ bootstrap completed"))
 
 		By("installing the desired profile", func() {
 			pctlAddOutput := pctl(
@@ -106,8 +106,8 @@ var _ = Describe("end to end flow", func() {
 				"nginx-catalog/weaveworks-nginx/v0.1.0",
 			)
 			Expect(pctlAddOutput).To(ConsistOf(
-				"generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0",
-				"installation completed successfully",
+				"► generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0",
+				"✔ installation completed successfully",
 			))
 
 			By("creating the artifacts")

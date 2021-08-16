@@ -496,7 +496,7 @@ var _ = Describe("Install", func() {
 				Runner: preflightRunner,
 			}
 			err = p.Install()
-			Expect(err).To(MatchError("failed to get flux namespace: nope\nTo ignore this error, please see the  --ignore-preflight-checks flag."))
+			Expect(err).To(MatchError("failed to get flux namespace: nope\nTo ignore this error, please see the  --ignore-preflight-checks flag"))
 			Expect(applyRunner.RunCallCount()).To(Equal(0))
 		})
 	})
@@ -529,7 +529,7 @@ var _ = Describe("Install", func() {
 				Runner: preflightRunner,
 			}
 			err = p.Install()
-			Expect(err).To(MatchError("failed to get crd helmrelease\nTo ignore this error, please see the  --ignore-preflight-checks flag."))
+			Expect(err).To(MatchError("failed to get crd helmrelease\nTo ignore this error, please see the  --ignore-preflight-checks flag"))
 			Expect(applyRunner.RunCallCount()).To(Equal(0))
 		})
 	})
