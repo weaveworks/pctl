@@ -92,7 +92,7 @@ var _ = Describe("pctl add", func() {
 			"--config-map", configMapName,
 		}
 		Expect(pctl(args...)).To(ContainElement(
-			fmt.Sprintf("generating profile installation from source: repository %s, path: %s and branch %s", profileExamplesURL, "weaveworks-nginx", profileBranch),
+			fmt.Sprintf("► generating profile installation from source: repository %s, path: %s and branch %s", profileExamplesURL, "weaveworks-nginx", profileBranch),
 		))
 
 		profilesDir := filepath.Join(temp)
@@ -320,7 +320,7 @@ status: {}
 				"--profile-path",
 				path,
 			}
-			Expect(pctl(args...)).To(ContainElement("installation completed successfully"))
+			Expect(pctl(args...)).To(ContainElement("✔ installation completed successfully"))
 			By("creating the artifacts")
 			Expect(filesInDir(temp)).To(ContainElements(
 				"profile-installation.yaml",
@@ -554,7 +554,7 @@ status: {}
 				"--git-repository", fmt.Sprintf("%s/%s", namespace, gitRepoName),
 				"nginx-catalog/nginx/v2.0.1",
 			}
-			Expect(pctl(args...)).To(ContainElement("generating profile installation from source: catalog entry nginx-catalog/nginx/v2.0.1"))
+			Expect(pctl(args...)).To(ContainElement("► generating profile installation from source: catalog entry nginx-catalog/nginx/v2.0.1"))
 
 			By("creating the artifacts")
 			profilesDir := filepath.Join(temp, "nginx")

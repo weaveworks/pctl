@@ -15,6 +15,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/client"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/install"
+	"github.com/weaveworks/pctl/pkg/log"
 	"github.com/weaveworks/pctl/pkg/runner"
 )
 
@@ -176,7 +177,7 @@ func addProfile(c *cli.Context) (string, error) {
 		source = fmt.Sprintf("catalog entry %s/%s/%s", catalogName, profileName, version)
 	}
 
-	fmt.Printf("generating profile installation from source: %s\n", source)
+	log.Actionf("generating profile installation from source: %s", source)
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{
 		Message: message,
@@ -236,7 +237,7 @@ func addProfile(c *cli.Context) (string, error) {
 	manager := &catalog.Manager{}
 	err = manager.Install(cfg)
 	if err == nil {
-		fmt.Println("installation completed successfully")
+		log.Successf("installation completed successfully")
 	}
 	return installationDirectory, err
 }
@@ -255,7 +256,7 @@ func createPullRequest(c *cli.Context, installationDirectory string) error {
 	if branch == "" {
 		branch = c.String("name") + "-" + uuid.NewString()[:6]
 	}
-	fmt.Printf("Creating a PR to repo %s with base %s and branch %s\n", repo, base, branch)
+	log.Actionf("creating a PR to repo %s with base %s and branch %s", repo, base, branch)
 	r := &runner.CLIRunner{}
 	g := git.NewCLIGit(git.CLIGitConfig{
 		Directory: directory,

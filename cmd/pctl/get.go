@@ -12,6 +12,7 @@ import (
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
 	"github.com/weaveworks/pctl/pkg/formatter"
+	"github.com/weaveworks/pctl/pkg/log"
 )
 
 func getCmd() *cli.Command {
@@ -199,7 +200,7 @@ func profileWithVersionDataFunc(profile profilesv1.ProfileCatalogEntry) func() i
 
 func formatOutput(profiles []profilesv1.ProfileCatalogEntry, outFormat string) error {
 	if len(profiles) == 0 {
-		fmt.Println("No profiles found")
+		log.Failuref("No profiles found")
 		return nil
 	}
 
@@ -227,7 +228,7 @@ func formatOutput(profiles []profilesv1.ProfileCatalogEntry, outFormat string) e
 
 func formatInstalledProfilesOutput(data []catalog.ProfileData, outFormat string) error {
 	if len(data) == 0 {
-		fmt.Println("No profiles installed")
+		log.Failuref("no profiles installed")
 		return nil
 	}
 
@@ -255,7 +256,7 @@ func formatInstalledProfilesOutput(data []catalog.ProfileData, outFormat string)
 
 func formatCatlogProfilesOutput(profile profilesv1.ProfileCatalogEntry, outFormat string) error {
 	if profile.Name == "" {
-		fmt.Println("No profile found")
+		log.Failuref("no profile found")
 		return nil
 	}
 
