@@ -110,12 +110,13 @@ func addCmd() *cli.Command {
 			}),
 		Action: func(c *cli.Context) error {
 			// Run installation main
-			if err := addProfile(c); err != nil {
+			installationDirectory, err := addProfile(c)
+			if err != nil {
 				return err
 			}
 			// Create a pull request if desired
 			if c.Bool("create-pr") {
-				if err := createPullRequest(c); err != nil {
+				if err := createPullRequest(c, installationDirectory); err != nil {
 					return err
 				}
 			}
@@ -125,7 +126,7 @@ func addCmd() *cli.Command {
 }
 
 // add runs the add part of the `add` command.
-func addProfile(c *cli.Context) error {
+func addProfile(c *cli.Context) (string, error) {
 	var (
 		err           error
 		catalogClient *client.Client
@@ -138,19 +139,19 @@ func addProfile(c *cli.Context) error {
 	// only set up the catalog if a url is not provided
 	url := c.String("profile-repo-url")
 	if url != "" && c.Args().Len() > 0 {
-		return errors.New("it looks like you provided a url with a catalog entry; please choose either format: url/branch/path or <CATALOG>/<PROFILE>[/<VERSION>]")
+		return "", errors.New("it looks like you provided a url with a catalog entry; please choose either format: url/branch/path or <CATALOG>/<PROFILE>[/<VERSION>]")
 	}
 
 	if url == "" {
 		profilePath, catalogClient, err = parseArgs(c)
 		if err != nil {
 			_ = cli.ShowCommandHelp(c, "add")
-			return err
+			return "", err
 		}
 		parts := strings.Split(profilePath, "/")
 		if len(parts) < 2 {
 			_ = cli.ShowCommandHelp(c, "add")
-			return errors.New("both catalog name and profile name must be provided")
+			return "", errors.New("both catalog name and profile name must be provided")
 		}
 		if len(parts) == 3 {
 			version = parts[2]
@@ -188,14 +189,14 @@ func addProfile(c *cli.Context) error {
 	if gitRepository != "" {
 		split := strings.Split(gitRepository, "/")
 		if len(split) != 2 {
-			return fmt.Errorf("git-repository must in format <namespace>/<name>; was: %s", gitRepository)
+			return "", fmt.Errorf("git-repository must in format <namespace>/<name>; was: %s", gitRepository)
 		}
 		gitRepoNamespace = split[0]
 		gitRepoName = split[1]
 	} else {
 		wd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("failed to fetch current working directory: %w", err)
+			return "", fmt.Errorf("failed to fetch current working directory: %w", err)
 		}
 		config, err := bootstrap.GetConfig(wd)
 		if err == nil && config != nil {
@@ -203,9 +204,10 @@ func addProfile(c *cli.Context) error {
 			gitRepoName = config.GitRepository.Name
 		}
 	}
+	installationDirectory := filepath.Join(dir, profileName)
 	installer := install.NewInstaller(install.Config{
 		GitClient:        g,
-		RootDir:          filepath.Join(dir, profileName),
+		RootDir:          installationDirectory,
 		GitRepoNamespace: gitRepoNamespace,
 		GitRepoName:      gitRepoName,
 	})
@@ -237,11 +239,11 @@ func addProfile(c *cli.Context) error {
 	if err == nil {
 		log.Successf("installation completed successfully")
 	}
-	return err
+	return installationDirectory, err
 }
 
 // createPullRequest runs the pull request creation part of the `add` command.
-func createPullRequest(c *cli.Context) error {
+func createPullRequest(c *cli.Context, installationDirectory string) error {
 	branch := c.String("pr-branch")
 	repo := c.String("pr-repo")
 	base := c.String("pr-base")
@@ -271,5 +273,5 @@ func createPullRequest(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create scm client: %w", err)
 	}
-	return catalog.CreatePullRequest(scmClient, g, branch)
+	return catalog.CreatePullRequest(scmClient, g, branch, installationDirectory)
 }
