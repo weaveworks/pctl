@@ -206,10 +206,11 @@ var _ = Describe("Install", func() {
 	Describe("create-pr", func() {
 		When("create-pr is set to true", func() {
 			It("can create a PR if the generated values result in changes", func() {
-				err := catalog.CreatePullRequest(fakeScm, fakeGit, "branch")
+				err := catalog.CreatePullRequest(fakeScm, fakeGit, "branch", "foo/bar")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(fakeGit.CreateBranchCallCount()).To(Equal(1))
 				Expect(fakeGit.AddCallCount()).To(Equal(1))
+				Expect(fakeGit.AddArgsForCall(0)).To(Equal("foo/bar"))
 				Expect(fakeGit.CommitCallCount()).To(Equal(1))
 				Expect(fakeGit.PushCallCount()).To(Equal(1))
 				Expect(fakeScm.CreatePullRequestCallCount()).To(Equal(1))
@@ -218,27 +219,27 @@ var _ = Describe("Install", func() {
 		When("create-pr is set to true but something goes wrong", func() {
 			It("handles create branch errors", func() {
 				fakeGit.CreateBranchReturns(errors.New("nope"))
-				err := catalog.CreatePullRequest(fakeScm, fakeGit, "branch")
+				err := catalog.CreatePullRequest(fakeScm, fakeGit, "branch", "foo/bar")
 				Expect(err).To(MatchError("failed to create branch: nope"))
 			})
 			It("handles add errors", func() {
 				fakeGit.AddReturns(errors.New("nope"))
-				err := catalog.CreatePullRequest(fakeScm, fakeGit, "branch")
+				err := catalog.CreatePullRequest(fakeScm, fakeGit, "branch", "foo/bar")
 				Expect(err).To(MatchError("failed to add changes: nope"))
 			})
 			It("handles commit errors", func() {
 				fakeGit.CommitReturns(errors.New("nope"))
-				err := catalog.CreatePullRequest(fakeScm, fakeGit, "branch")
+				err := catalog.CreatePullRequest(fakeScm, fakeGit, "branch", "foo/bar")
 				Expect(err).To(MatchError("failed to commit changes: nope"))
 			})
 			It("handles push errors", func() {
 				fakeGit.PushReturns(errors.New("nope"))
-				err := catalog.CreatePullRequest(fakeScm, fakeGit, "branch")
+				err := catalog.CreatePullRequest(fakeScm, fakeGit, "branch", "foo/bar")
 				Expect(err).To(MatchError("failed to push changes: nope"))
 			})
 			It("handles create pull request errors", func() {
 				fakeScm.CreatePullRequestReturns(errors.New("nope"))
-				err := catalog.CreatePullRequest(fakeScm, fakeGit, "branch")
+				err := catalog.CreatePullRequest(fakeScm, fakeGit, "branch", "foo/bar")
 				Expect(err).To(MatchError("failed to create pull request: nope"))
 			})
 		})

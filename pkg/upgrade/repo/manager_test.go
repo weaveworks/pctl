@@ -30,6 +30,7 @@ var _ = Describe("Manager", func() {
 			Expect(called).To(BeTrue())
 			Expect(fakeGitClient.InitCallCount()).To(Equal(1))
 			Expect(fakeGitClient.AddCallCount()).To(Equal(1))
+			Expect(fakeGitClient.AddArgsForCall(0)).To(Equal("."))
 			Expect(fakeGitClient.CommitCallCount()).To(Equal(1))
 		})
 
@@ -93,6 +94,7 @@ var _ = Describe("Manager", func() {
 			Expect(fakeGitClient.CreateBranchArgsForCall(0)).To(Equal("my-branch"))
 			Expect(fakeGitClient.RemoveAllCallCount()).To(Equal(1))
 			Expect(fakeGitClient.AddCallCount()).To(Equal(1))
+			Expect(fakeGitClient.AddArgsForCall(0)).To(Equal("."))
 			Expect(fakeGitClient.CommitCallCount()).To(Equal(1))
 		})
 

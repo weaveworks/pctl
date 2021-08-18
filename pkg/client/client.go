@@ -9,6 +9,10 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
+
+	// The below cause a series of init()'s to be invoked that add support for
+	// external cloud provider authentication.
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/tools/clientcmd"
 )
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 	"github.com/weaveworks/pctl/pkg/bootstrap"
+	"github.com/weaveworks/pctl/pkg/log"
 )
 
 func bootstrapCmd() *cli.Command {
@@ -41,7 +42,7 @@ func bootstrapCmd() *cli.Command {
 			if err := bootstrap.CreateConfig(gitRepoNamespace, gitRepoName, directory); err != nil {
 				return fmt.Errorf("failed to bootstrap: %w", err)
 			}
-			fmt.Println("bootstrap completed")
+			log.Successf("bootstrap completed")
 			return nil
 		},
 	}

@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/pctl/pkg/log"
 	"github.com/weaveworks/pctl/pkg/runner"
 	upgr "github.com/weaveworks/pctl/pkg/upgrade"
 	"github.com/weaveworks/pctl/pkg/upgrade/repo"
@@ -24,7 +25,8 @@ func upgradeCmd() *cli.Command {
 				return err
 			}
 			if c.Bool("create-pr") {
-				if err := createPullRequest(c); err != nil {
+				profilePath := c.Args().Slice()[0]
+				if err := createPullRequest(c, profilePath); err != nil {
 					return err
 				}
 			}
@@ -51,7 +53,7 @@ func upgrade(c *cli.Context) error {
 	}
 	defer func() {
 		if err := os.RemoveAll(tmpDir); err != nil {
-			fmt.Printf("warning: failed to cleanup temp directory %q: %v", tmpDir, err)
+			log.Warningf("failed to cleanup temp directory %q: %v", tmpDir, err)
 		}
 	}()
 	message := c.String("pr-message")

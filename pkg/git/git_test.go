@@ -83,12 +83,12 @@ var _ = Describe("git", func() {
 					Branch:    "main",
 					Remote:    "origin",
 				}, runner)
-				err := g.Add()
+				err := g.Add("foo")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(runner.RunCallCount()).To(Equal(1))
 				arg, args := runner.RunArgsForCall(0)
 				Expect(arg).To(Equal("git"))
-				Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "add", "."}))
+				Expect(args).To(Equal([]string{"--git-dir", "location/.git", "--work-tree", "location", "add", "foo"}))
 			})
 		})
 		When("the flow is disrupted with errors", func() {
@@ -99,7 +99,7 @@ var _ = Describe("git", func() {
 					Branch:    "main",
 					Remote:    "origin",
 				}, runner)
-				err := g.Add()
+				err := g.Add(".")
 				Expect(err).To(MatchError(`failed to run add: nope`))
 				Expect(runner.RunCallCount()).To(Equal(1))
 				arg, args := runner.RunArgsForCall(0)

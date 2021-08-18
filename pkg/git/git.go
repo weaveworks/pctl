@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/weaveworks/pctl/pkg/log"
 	"github.com/weaveworks/pctl/pkg/runner"
 )
 
@@ -17,7 +18,7 @@ const (
 //go:generate counterfeiter -o fakes/fake_git.go . Git
 type Git interface {
 	// Add staged changes.
-	Add() error
+	Add(dir string) error
 	// Commit changes.
 	Commit() error
 	// CreateBranch create a branch if it's needed.
@@ -71,7 +72,7 @@ func NewCLIGit(cfg CLIGitConfig, r runner.Runner) *CLIGit {
 var _ Git = &CLIGit{}
 
 func (g *CLIGit) RemoveAll() error {
-	if err := g.Add(); err != nil {
+	if err := g.Add("."); err != nil {
 		return err
 	}
 
@@ -192,13 +193,13 @@ func (g *CLIGit) Push() error {
 }
 
 // Add will add any changes to the generated file.
-func (g *CLIGit) Add() error {
+func (g *CLIGit) Add(dir string) error {
 	g.printf("adding unstaged changes\n")
 	args := []string{
 		"--git-dir", filepath.Join(g.Directory, ".git"),
 		"--work-tree", g.Directory,
 		"add",
-		".",
+		dir,
 	}
 	if err := g.runGitCmd(args...); err != nil {
 		return fmt.Errorf("failed to run add: %w", err)
@@ -211,7 +212,7 @@ func (g *CLIGit) Add() error {
 func (g *CLIGit) runGitCmd(args ...string) error {
 	out, err := g.Runner.Run(gitCmd, args...)
 	if err != nil {
-		g.printf("failed to run git with output: %s\n", string(out))
+		log.Failuref("failed to run git with output: %s\n", string(out))
 	}
 	return err
 }
@@ -280,6 +281,6 @@ func (g *CLIGit) Checkout(branch string) error {
 
 func (g *CLIGit) printf(format string, a ...interface{}) {
 	if !g.Quiet {
-		fmt.Printf(format, a...)
+		log.Actionf(format, a...)
 	}
 }
