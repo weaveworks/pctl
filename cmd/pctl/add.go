@@ -64,10 +64,10 @@ func addCmd() *cli.Command {
 			"To add directly from a profile repository: pctl add --name pctl-profile --namespace default --profile-branch development --profile-repo-url https://github.com/weaveworks/profiles-examples --profile-path bitnami-nginx",
 		Flags: append(createPRFlags,
 			&cli.StringFlag{
-				Name:        "name",
-				DefaultText: "pctl-profile",
-				Value:       "pctl-profile",
-				Usage:       "The name of the installation.",
+				Name:     "name",
+				Value:    "",
+				Usage:    "The name of the installation.",
+				Required: true,
 			},
 			&cli.StringFlag{
 				Name:        "namespace",

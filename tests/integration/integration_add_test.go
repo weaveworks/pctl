@@ -80,6 +80,7 @@ var _ = Describe("pctl add", func() {
 
 		args := []string{
 			"add",
+			"--name", subName,
 			"--git-repository",
 			fmt.Sprintf("%s/%s", namespace, gitRepoName),
 			"--namespace", namespace,
@@ -309,6 +310,7 @@ status: {}
 			path := "bitnami-nginx"
 			args := []string{
 				"add",
+				"--name", "pctl-profile",
 				"--git-repository",
 				namespace + "/git-repo-name",
 				"--namespace",
@@ -358,7 +360,7 @@ status: {}
 			namespace := uuid.New().String()
 			branch := "main"
 			path := "bitnami-nginx"
-			cmd := exec.Command(binaryPath, "add", "--out", temp, "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-repo-url", pctlPrivateProfilesRepositoryName, "--profile-branch", branch, "--profile-path", path)
+			cmd := exec.Command(binaryPath, "add", "--name", "pctl-profile", "--out", temp, "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-repo-url", pctlPrivateProfilesRepositoryName, "--profile-branch", branch, "--profile-path", path)
 			cmd.Dir = temp
 
 			if v := os.Getenv("PRIVATE_EXAMPLES_DEPLOY_KEY"); v != "" {
@@ -398,12 +400,12 @@ status: {}
 	When("url and catalog entry add format are both defined", func() {
 		It("will throw a meaningful error", func() {
 			namespace := uuid.New().String()
-			//subName := "pctl-profile"
 			branch := "branch-and-url"
 			path := "branch-nginx"
 			cmd := exec.Command(
 				binaryPath,
 				"add",
+				"--name", "pctl-profile",
 				"--git-repository",
 				namespace+"/git-repo-name",
 				"--namespace",
@@ -425,7 +427,7 @@ status: {}
 
 	When("a catalog version is provided, but it's an invalid/missing version", func() {
 		It("provide an error saying the profile with these specifics can't be found", func() {
-			cmd := exec.Command(binaryPath, "add", "--git-repository", namespace+"/git-repo-name", "nginx-catalog/weaveworks-nginx/v999.9.9")
+			cmd := exec.Command(binaryPath, "add", "--name", "pctl-profile", "--git-repository", namespace+"/git-repo-name", "nginx-catalog/weaveworks-nginx/v999.9.9")
 			output, err := cmd.CombinedOutput()
 			Expect(err).To(HaveOccurred())
 			Expect(string(output)).To(ContainSubstring(`unable to find profile "weaveworks-nginx" in catalog "nginx-catalog" (with version if provided: v999.9.9)`))
@@ -451,6 +453,7 @@ status: {}
 			branch := "prtest_" + suffix
 			cmd = exec.Command(binaryPath,
 				"add",
+				"--name", "pctl-profile",
 				"--git-repository", namespace+"/git-repo-name",
 				"--create-pr",
 				"--pr-branch",
@@ -473,6 +476,7 @@ status: {}
 			cmd := exec.Command(
 				binaryPath,
 				"add",
+				"--name", "pctl-profile",
 				"--git-repository", namespace+"/git-repo-name",
 				"--create-pr",
 				"--pr-branch",
@@ -492,6 +496,7 @@ status: {}
 			cmd := exec.Command(
 				binaryPath,
 				"add",
+				"--name", "pctl-profile",
 				"--git-repository", namespace+"/git-repo-name",
 				"--create-pr",
 				"--pr-branch",

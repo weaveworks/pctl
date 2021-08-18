@@ -101,6 +101,7 @@ var _ = Describe("end to end flow", func() {
 		By("installing the desired profile", func() {
 			pctlAddOutput := pctl(
 				"add",
+				"--name", profileInstallationName,
 				"--namespace", namespace,
 				"--config-map", configMapName,
 				"nginx-catalog/weaveworks-nginx/v0.1.0",

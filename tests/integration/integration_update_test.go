@@ -47,8 +47,10 @@ var _ = Describe("update", func() {
 		It("informs the user of where the conflicts are", func() {
 			By("installing a profile")
 			gitRepoName := "my-git-repo"
+			subname := "pctl-profile"
 			args := []string{
 				"add",
+				"--name", subname,
 				"--git-repository",
 				fmt.Sprintf("%s/%s", namespace, gitRepoName),
 				"--namespace", namespace,
@@ -61,7 +63,7 @@ var _ = Describe("update", func() {
 				"✔ installation completed successfully",
 			))
 
-			profileDir := filepath.Join(temp, "pctl-profile")
+			profileDir := filepath.Join(temp, subname)
 			By("creating the artifacts")
 			Expect(filesInDir(profileDir)).To(ContainElements(
 				"profile-installation.yaml",
