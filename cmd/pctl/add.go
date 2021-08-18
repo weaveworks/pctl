@@ -65,7 +65,6 @@ func addCmd() *cli.Command {
 		Flags: append(createPRFlags,
 			&cli.StringFlag{
 				Name:     "name",
-				Value:    "",
 				Usage:    "The name of the installation.",
 				Required: true,
 			},
