@@ -101,6 +101,7 @@ var _ = Describe("end to end flow", func() {
 		By("installing the desired profile", func() {
 			pctlAddOutput := pctl(
 				"add",
+				"--name", profileInstallationName,
 				"--namespace", namespace,
 				"--config-map", configMapName,
 				"nginx-catalog/weaveworks-nginx/v0.1.0",
@@ -111,7 +112,7 @@ var _ = Describe("end to end flow", func() {
 			))
 
 			By("creating the artifacts")
-			profileDir := filepath.Join(temp, "weaveworks-nginx")
+			profileDir := filepath.Join(temp, profileInstallationName)
 			Expect(filesInDir(profileDir)).To(ContainElements(
 				"profile-installation.yaml",
 				"artifacts/nginx-deployment/kustomization.yaml",
@@ -165,7 +166,7 @@ status: {}
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux reconcile source git failed : %s", string(output)))
 
-			cmd = exec.Command("flux", "create", "kustomization", "kustomization", "--path", "weaveworks-nginx/", "--source", fmt.Sprintf("GitRepository/%s", gitRepoName), "--namespace", namespace)
+			cmd = exec.Command("flux", "create", "kustomization", "kustomization", "--path", profileInstallationName+"/", "--source", fmt.Sprintf("GitRepository/%s", gitRepoName), "--namespace", namespace)
 			output, err = cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create kustomization failed : %s", string(output)))
 
@@ -198,7 +199,7 @@ status: {}
 				"Prerequisites Kubernetes 1.18+",
 			))
 
-			profileDir := filepath.Join(temp, "weaveworks-nginx")
+			profileDir := filepath.Join(temp, profileInstallationName)
 			cmd := exec.Command(
 				binaryPath,
 				"upgrade",
