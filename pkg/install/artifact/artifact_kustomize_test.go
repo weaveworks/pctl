@@ -70,7 +70,7 @@ var _ = Describe("Kustomize", func() {
 		Expect(kustomize).To(Equal(kustomizev1.Kustomization{
 			TypeMeta: kustomizeTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
+				Name:      fmt.Sprintf("%s-%s", installationName, artifactName),
 				Namespace: namespace,
 			},
 			Spec: kustomizev1.KustomizationSpec{

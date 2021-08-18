@@ -145,7 +145,7 @@ func (c *Writer) writeChartArtifact(installation profilesv1.ProfileInstallation,
 		}
 
 	} else {
-		objs = append(objs, c.makeHelmRepository(a.Chart.URL, a.Chart.Name, installation))
+		objs = append(objs, c.makeHelmRepository(a.Chart.URL, a.Name, installation))
 	}
 
 	for _, obj := range objs {
@@ -226,7 +226,7 @@ func (c *Writer) makeHelmReleaseObjects(artifact profilesv1.Artifact, installati
 	if artifact.Chart.Path != "" {
 		helmChartSpec = c.makeGitChartSpec(path.Join(installation.Spec.Source.Path, artifact.Chart.Path))
 	} else if artifact.Chart != nil {
-		helmChartSpec = c.makeHelmChartSpec(artifact.Chart.Name, artifact.Chart.Version, installation)
+		helmChartSpec = c.makeHelmChartSpec(artifact.Chart.Name, artifact.Chart.Version, artifact.Name, installation)
 	}
 	var (
 		cfgMap *corev1.ConfigMap
@@ -251,7 +251,7 @@ func (c *Writer) makeHelmReleaseObjects(artifact profilesv1.Artifact, installati
 	}
 	helmRelease := &helmv2.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      c.makeArtifactName(installation.Name, definitionName, artifact.Name),
+			Name:      c.makeArtifactName(installation.Name, artifact.Name),
 			Namespace: installation.ObjectMeta.Namespace,
 		},
 		TypeMeta: metav1.TypeMeta{
@@ -259,6 +259,7 @@ func (c *Writer) makeHelmReleaseObjects(artifact profilesv1.Artifact, installati
 			APIVersion: helmv2.GroupVersion.String(),
 		},
 		Spec: helmv2.HelmReleaseSpec{
+			ReleaseName: artifact.Name,
 			Chart: helmv2.HelmChartTemplate{
 				Spec: helmChartSpec,
 			},
@@ -268,10 +269,10 @@ func (c *Writer) makeHelmReleaseObjects(artifact profilesv1.Artifact, installati
 	return helmRelease, cfgMap
 }
 
-func (c *Writer) makeHelmRepository(url string, name string, installation profilesv1.ProfileInstallation) *sourcev1.HelmRepository {
+func (c *Writer) makeHelmRepository(url, artifactName string, installation profilesv1.ProfileInstallation) *sourcev1.HelmRepository {
 	return &sourcev1.HelmRepository{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      c.makeHelmRepoName(name, installation),
+			Name:      c.makeArtifactName(installation.Name, artifactName),
 			Namespace: installation.ObjectMeta.Namespace,
 		},
 		TypeMeta: metav1.TypeMeta{
@@ -282,12 +283,6 @@ func (c *Writer) makeHelmRepository(url string, name string, installation profil
 			URL: url,
 		},
 	}
-}
-
-func (c *Writer) makeHelmRepoName(name string, installation profilesv1.ProfileInstallation) string {
-	repoParts := strings.Split(installation.Spec.Source.URL, "/")
-	repoName := repoParts[len(repoParts)-1]
-	return c.join(installation.Name, repoName, name)
 }
 
 func (c *Writer) makeGitChartSpec(path string) helmv2.HelmChartTemplateSpec {
@@ -301,12 +296,12 @@ func (c *Writer) makeGitChartSpec(path string) helmv2.HelmChartTemplateSpec {
 	}
 }
 
-func (c *Writer) makeHelmChartSpec(chart string, version string, installation profilesv1.ProfileInstallation) helmv2.HelmChartTemplateSpec {
+func (c *Writer) makeHelmChartSpec(chart, version, artifactName string, installation profilesv1.ProfileInstallation) helmv2.HelmChartTemplateSpec {
 	return helmv2.HelmChartTemplateSpec{
 		Chart: chart,
 		SourceRef: helmv2.CrossNamespaceObjectReference{
 			Kind:      sourcev1.HelmRepositoryKind,
-			Name:      c.makeHelmRepoName(chart, installation),
+			Name:      c.makeArtifactName(installation.Name, artifactName),
 			Namespace: installation.ObjectMeta.Namespace,
 		},
 		Version: version,
@@ -335,7 +330,7 @@ func (c *Writer) makeKustomizeHelmReleaseWrapper(artifact ArtifactWrapper, insta
 		{
 			APIVersion: helmv2.GroupVersion.String(),
 			Kind:       helmv2.HelmReleaseKind,
-			Name:       c.makeArtifactName(installation.Name, definitionName, artifact.Name),
+			Name:       c.makeArtifactName(installation.Name, artifact.Name),
 			Namespace:  installation.ObjectMeta.Namespace,
 		},
 	}
@@ -352,13 +347,13 @@ func (c *Writer) makeKustomization(
 	var dependsOn []dependency.CrossNamespaceDependencyReference
 	for _, dep := range dependencies {
 		dependsOn = append(dependsOn, dependency.CrossNamespaceDependencyReference{
-			Name:      c.makeArtifactName(installation.Name, dep.ProfileName, dep.Name),
+			Name:      c.makeArtifactName(installation.Name, dep.Name),
 			Namespace: installation.Namespace,
 		})
 	}
 	return &kustomizev1.Kustomization{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      c.makeArtifactName(installation.Name, definitionName, artifact.Name),
+			Name:      c.makeArtifactName(installation.Name, artifact.Name),
 			Namespace: installation.ObjectMeta.Namespace,
 		},
 		TypeMeta: metav1.TypeMeta{
@@ -393,12 +388,12 @@ func (c *Writer) join(s ...string) string {
 }
 
 // makeArtifactName creates a name for an artifact.
-func (c *Writer) makeArtifactName(installationName, definitionName, artifactName string) string {
+func (c *Writer) makeArtifactName(installationName, artifactName string) string {
 	// if this is a nested artifact, it's name contains a /
 	if strings.Contains(artifactName, "/") {
 		artifactName = filepath.Base(artifactName)
 	}
-	return c.join(installationName, definitionName, artifactName)
+	return c.join(installationName, artifactName)
 }
 func containsArtifact(list []ArtifactWrapper, name string) (ArtifactWrapper, bool) {
 	for _, a := range list {

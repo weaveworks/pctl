@@ -142,7 +142,7 @@ var _ = Describe("NestedArtifact", func() {
 			Expect(kustomize).To(Equal(kustomizev1.Kustomization{
 				TypeMeta: kustomizeTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName),
+					Name:      fmt.Sprintf("%s-%s", installationName, artifactName),
 					Namespace: namespace,
 				},
 				Spec: kustomizev1.KustomizationSpec{
@@ -157,11 +157,11 @@ var _ = Describe("NestedArtifact", func() {
 					TargetNamespace: namespace,
 					DependsOn: []dependency.CrossNamespaceDependencyReference{
 						{
-							Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName, artifactName2),
+							Name:      fmt.Sprintf("%s-%s", installationName, artifactName2),
 							Namespace: namespace,
 						},
 						{
-							Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName2, artifactName3),
+							Name:      fmt.Sprintf("%s-%s", installationName, artifactName3),
 							Namespace: namespace,
 						},
 					},
@@ -173,7 +173,7 @@ var _ = Describe("NestedArtifact", func() {
 			Expect(kustomize).To(Equal(kustomizev1.Kustomization{
 				TypeMeta: kustomizeTypeMeta,
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-%s-%s", installationName, profileName2, artifactName3),
+					Name:      fmt.Sprintf("%s-%s", installationName, artifactName3),
 					Namespace: namespace,
 				},
 				Spec: kustomizev1.KustomizationSpec{
