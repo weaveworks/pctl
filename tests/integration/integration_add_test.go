@@ -425,6 +425,31 @@ status: {}
 		})
 	})
 
+	When("git repository is not provided", func() {
+		It("will throw a meaningful error", func() {
+			namespace := uuid.New().String()
+			branch := "branch-and-url"
+			path := "branch-nginx"
+			cmd := exec.Command(
+				binaryPath,
+				"add",
+				"--name", "pctl-profile",
+				"--namespace",
+				namespace,
+				"--profile-repo-url",
+				profileExamplesURL,
+				"--profile-branch",
+				branch,
+				"--profile-path",
+				path,
+			)
+			cmd.Dir = temp
+			session, err := cmd.CombinedOutput()
+			Expect(err).To(HaveOccurred())
+			Expect(string(session)).To(ContainSubstring("flux git repository not provided, please provide the --git-repository flag or use the pctl bootstrap functionality"))
+		})
+	})
+
 	When("a catalog version is provided, but it's an invalid/missing version", func() {
 		It("provide an error saying the profile with these specifics can't be found", func() {
 			cmd := exec.Command(binaryPath, "add", "--name", "pctl-profile", "--git-repository", namespace+"/git-repo-name", "nginx-catalog/weaveworks-nginx/v999.9.9")

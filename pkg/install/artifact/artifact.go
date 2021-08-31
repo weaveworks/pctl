@@ -103,10 +103,6 @@ func validateArtifact(a profilesv1.Artifact) error {
 }
 
 func (c *Writer) writeKustomizeArtifact(installation profilesv1.ProfileInstallation, a ArtifactWrapper, deps []ArtifactWrapper) error {
-	if c.GitRepositoryNamespace == "" || c.GitRepositoryName == "" {
-		return fmt.Errorf("in case of local resources, the flux gitrepository object's details must be provided")
-	}
-
 	artifactDir := filepath.Join(c.RootDir, "artifacts", a.NestedProfileSubDirectoryName, a.Name)
 	if err := c.copyArtifacts(a, a.Kustomize.Path, filepath.Join(artifactDir, a.Kustomize.Path)); err != nil {
 		return err
