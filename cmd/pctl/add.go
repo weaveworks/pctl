@@ -164,7 +164,6 @@ func addProfile(c *cli.Context) (string, error) {
 	configMap := c.String("config-map")
 	dir := c.String("out")
 	path := c.String("profile-path")
-	gitRepository := c.String("git-repository")
 	message := c.String("pr-message")
 
 	var source string
@@ -181,28 +180,12 @@ func addProfile(c *cli.Context) (string, error) {
 	g := git.NewCLIGit(git.CLIGitConfig{
 		Message: message,
 	}, r)
-	var (
-		gitRepoNamespace string
-		gitRepoName      string
-	)
-	if gitRepository != "" {
-		split := strings.Split(gitRepository, "/")
-		if len(split) != 2 {
-			return "", fmt.Errorf("git-repository must in format <namespace>/<name>; was: %s", gitRepository)
-		}
-		gitRepoNamespace = split[0]
-		gitRepoName = split[1]
-	} else {
-		wd, err := os.Getwd()
-		if err != nil {
-			return "", fmt.Errorf("failed to fetch current working directory: %w", err)
-		}
-		config, err := bootstrap.GetConfig(wd)
-		if err == nil && config != nil {
-			gitRepoNamespace = config.GitRepository.Namespace
-			gitRepoName = config.GitRepository.Name
-		}
+
+	gitRepoNamespace, gitRepoName, err := getGitRepositoryNamespaceAndName(c)
+	if err != nil {
+		return "", err
 	}
+
 	installationDirectory := filepath.Join(dir, subName)
 	installer := install.NewInstaller(install.Config{
 		GitClient:        g,
@@ -239,6 +222,27 @@ func addProfile(c *cli.Context) (string, error) {
 		log.Successf("installation completed successfully")
 	}
 	return installationDirectory, err
+}
+
+func getGitRepositoryNamespaceAndName(c *cli.Context) (string, string, error) {
+	gitRepository := c.String("git-repository")
+	if gitRepository != "" {
+		split := strings.Split(gitRepository, "/")
+		if len(split) != 2 {
+			return "", "", fmt.Errorf("git-repository must in format <namespace>/<name>; was: %s", gitRepository)
+		}
+		return split[0], split[1], nil
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to fetch current working directory: %w", err)
+	}
+	config, err := bootstrap.GetConfig(wd)
+	if err == nil && config != nil {
+		return config.GitRepository.Namespace, config.GitRepository.Name, nil
+	}
+	return "", "", fmt.Errorf("flux git repository not provided, please provide the --git-repository flag or use the pctl bootstrap functionality")
 }
 
 // createPullRequest runs the pull request creation part of the `add` command.

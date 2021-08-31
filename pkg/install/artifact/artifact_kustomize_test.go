@@ -91,14 +91,6 @@ var _ = Describe("Kustomize", func() {
 		Expect(i).To(Equal(installation))
 	})
 
-	When("the gitrepository isn't set", func() {
-		It("returns an error", func() {
-			artifactWriter.GitRepositoryName = ""
-			err := artifactWriter.Write(installation, artifacts)
-			Expect(err).To(MatchError("in case of local resources, the flux gitrepository object's details must be provided"))
-		})
-	})
-
 	When("copying the artifact fails", func() {
 		It("returns an error", func() {
 			artifacts[0].PathToProfileClone = "/tmp/i/dont/exist"
