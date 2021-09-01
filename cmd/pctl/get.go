@@ -200,7 +200,7 @@ func profileWithVersionDataFunc(profile profilesv1.ProfileCatalogEntry) func() i
 
 func formatOutput(profiles []profilesv1.ProfileCatalogEntry, outFormat string) error {
 	if len(profiles) == 0 {
-		log.Failuref("No profiles found")
+		log.Failuref("No available catalog profiles found.")
 		return nil
 	}
 
@@ -228,7 +228,7 @@ func formatOutput(profiles []profilesv1.ProfileCatalogEntry, outFormat string) e
 
 func formatInstalledProfilesOutput(data []catalog.ProfileData, outFormat string) error {
 	if len(data) == 0 {
-		log.Failuref("no profiles installed")
+		log.Failuref("No installed profiles found.")
 		return nil
 	}
 
@@ -256,7 +256,7 @@ func formatInstalledProfilesOutput(data []catalog.ProfileData, outFormat string)
 
 func formatCatlogProfilesOutput(profile profilesv1.ProfileCatalogEntry, outFormat string) error {
 	if profile.Name == "" {
-		log.Failuref("no profile found")
+		log.Failuref("No profile found.")
 		return nil
 	}
 
