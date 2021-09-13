@@ -35,7 +35,7 @@ type ProfileConfig struct {
 	Path          string
 }
 
-// GitConfig contains the configuration of the git repository used to deploy the profile
+// GitRepoConfig contains the configuration of the git repository used to deploy the profile
 type GitRepoConfig struct {
 	Name      string
 	Namespace string
