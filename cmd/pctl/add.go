@@ -147,6 +147,7 @@ func addCmd() *cli.Command {
 			if err != nil {
 				return err
 			}
+			log.Successf("installation completed successfully")
 			// Create a pull request if desired
 			if c.Bool("create-pr") {
 				if err := createPullRequest(c, installationDirectory); err != nil {

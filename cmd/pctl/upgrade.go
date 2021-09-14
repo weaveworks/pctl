@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/urfave/cli/v2"
+
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/log"
@@ -42,7 +43,7 @@ func upgrade(c *cli.Context) error {
 
 	profilePath := c.Args().Slice()[0]
 	profileVersion := c.Args().Slice()[1]
-	catalogClient, err := getCatalogClient(c)
+	catalogClient, err := buildCatalogClient(c)
 	if err != nil {
 		return fmt.Errorf("failed to create catalog client: %w", err)
 	}
