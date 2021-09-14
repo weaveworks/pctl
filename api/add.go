@@ -9,11 +9,9 @@ import (
 
 	"github.com/weaveworks/pctl/pkg/bootstrap"
 	"github.com/weaveworks/pctl/pkg/catalog"
-	"github.com/weaveworks/pctl/pkg/client"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/install"
 	"github.com/weaveworks/pctl/pkg/log"
-	"github.com/weaveworks/pctl/pkg/runner"
 )
 
 // AddProfileOpts defines settings for adding profiles.
@@ -25,10 +23,10 @@ type AddProfileOpts struct {
 	ConfigMap     string
 	Dir           string
 	Path          string
-	Message       string
 	GitRepository string
 	ProfilePath   string
-	CatalogClient *client.Client
+	CatalogClient catalog.CatalogClient
+	GitClient     git.Git
 }
 
 // AddProfile add runs the add part of the `add` command.
@@ -57,11 +55,6 @@ func AddProfile(opts AddProfileOpts) (string, error) {
 	}
 
 	log.Actionf("generating profile installation from source: %s", source)
-	r := &runner.CLIRunner{}
-	g := git.NewCLIGit(git.CLIGitConfig{
-		Message: opts.Message,
-	}, r)
-
 	gitRepoNamespace, gitRepoName, err := getGitRepositoryNamespaceAndName(opts.GitRepository)
 	if err != nil {
 		return "", err
@@ -69,7 +62,7 @@ func AddProfile(opts AddProfileOpts) (string, error) {
 
 	installationDirectory := filepath.Join(opts.Dir, opts.SubName)
 	installer := install.NewInstaller(install.Config{
-		GitClient:        g,
+		GitClient:        opts.GitClient,
 		RootDir:          installationDirectory,
 		GitRepoNamespace: gitRepoNamespace,
 		GitRepoName:      gitRepoName,

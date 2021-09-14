@@ -131,6 +131,10 @@ func addCmd() *cli.Command {
 			path := c.String("profile-path")
 			message := c.String("pr-message")
 			gitRepository := c.String("git-repository")
+			r := &runner.CLIRunner{}
+			g := git.NewCLIGit(git.CLIGitConfig{
+				Message: message,
+			}, r)
 			installationDirectory, err := api.AddProfile(api.AddProfileOpts{
 				URL:           url,
 				Branch:        branch,
@@ -139,10 +143,10 @@ func addCmd() *cli.Command {
 				ConfigMap:     configMap,
 				Dir:           dir,
 				Path:          path,
-				Message:       message,
 				GitRepository: gitRepository,
 				ProfilePath:   profilePath,
 				CatalogClient: catalogClient,
+				GitClient:     g,
 			})
 			if err != nil {
 				return err

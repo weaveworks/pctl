@@ -1,0 +1,19 @@
+apiVersion: weave.works/v1alpha1
+kind: ProfileDefinition
+metadata:
+  name: nginx
+spec:
+  description: Profile for deploying nginx
+  maintainer: weaveworks
+  prerequisites:
+    - "kubernetes 1.19"
+  artifacts:
+    - name: bitnami-nginx
+      chart:
+        url: https://charts.bitnami.com/bitnami
+        name: nginx
+        version: "8.9.1"
+        defaultValues: |
+          replicaCount: 3
+          service:
+            type: ClusterIP
