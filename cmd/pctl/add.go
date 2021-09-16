@@ -255,12 +255,12 @@ func getGitRepositoryNamespaceAndName(c *cli.Context) (string, string, error) {
 // Local configuration, if set.
 // Default out which is `.`.
 func getOutFolder(c *cli.Context) (string, error) {
+	if c.IsSet("out") {
+		return c.String("out"), nil
+	}
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch current working directory: %w", err)
-	}
-	if c.IsSet("out") {
-		return c.String("out"), nil
 	}
 	config, err := bootstrap.GetConfig(wd)
 	if err == nil && config != nil && config.DefaultDir != "" {
