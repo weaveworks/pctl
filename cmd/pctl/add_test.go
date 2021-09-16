@@ -4,6 +4,7 @@ import (
 	"flag"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
@@ -28,7 +29,7 @@ var _ = Describe("add", func() {
 			add := addCmd()
 			f := &flag.FlagSet{}
 			f.String("out", "user-defined", "")
-			f.Set("out", "user-defined")
+			_ = f.Set("out", "user-defined")
 			c := cli.NewContext(&cli.App{
 				Commands: []*cli.Command{add},
 			}, f, nil)
@@ -49,12 +50,15 @@ var _ = Describe("add", func() {
 				Expect(out).To(Equal(defaultOut))
 			})
 		})
-		// NOTE: Doesn't work right now because the working directory is not what it should be.
-		XWhen("the user has something saved in the config file", func() {
+		When("the user has something saved in the config file", func() {
 			BeforeEach(func() {
-				err := os.MkdirAll(".pctl", 0700)
+				err := os.MkdirAll(filepath.Join(tmp, ".pctl"), 0700)
 				Expect(err).ToNot(HaveOccurred())
-				err = ioutil.WriteFile(filepath.Join(".pctl", "config"), []byte("defaultDir: config-dir"), 0655)
+				err = ioutil.WriteFile(filepath.Join(tmp, ".pctl", "config.yaml"), []byte("defaultDir: config-dir"), 0655)
+				Expect(err).ToNot(HaveOccurred())
+				_ = os.Chdir(tmp)
+				cmd := exec.Command("git", "init", tmp)
+				err = cmd.Run()
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("will return the saved values", func() {
