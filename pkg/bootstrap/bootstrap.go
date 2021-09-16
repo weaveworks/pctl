@@ -6,21 +6,24 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/weaveworks/pctl/pkg/runner"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"gopkg.in/yaml.v2"
+
+	"github.com/weaveworks/pctl/pkg/runner"
 )
 
 //Config contains the pctl bootstrap configuration
 type Config struct {
 	// GitRepository is the git repository flux resource the installation uses
-	GitRepository profilesv1.GitRepository `json:"gitRepository,omitempty"`
+	GitRepository profilesv1.GitRepository `yaml:"gitRepository,omitempty"`
+	// DefaultDir defines the location to use with pctl add
+	DefaultDir string `yaml:"defaultDir,omitempty"`
 }
 
 var r runner.Runner = &runner.CLIRunner{}
 
 //CreateConfig creates the bootstrap config
-func CreateConfig(namespace, name, directory string) error {
+func CreateConfig(cfg Config, directory string) error {
 	gitDir, err := getGitRepoPath(directory)
 	if err != nil {
 		return err
@@ -31,12 +34,7 @@ func CreateConfig(namespace, name, directory string) error {
 		return fmt.Errorf("failed to create .pctl dir %q: %w", pctlDir, err)
 	}
 
-	data, err := yaml.Marshal(Config{
-		GitRepository: profilesv1.GitRepository{
-			Name:      name,
-			Namespace: namespace,
-		},
-	})
+	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}

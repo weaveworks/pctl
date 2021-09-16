@@ -11,10 +11,11 @@ import (
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v2"
 
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
 	"github.com/weaveworks/pctl/pkg/bootstrap"
 	"github.com/weaveworks/pctl/pkg/runner"
 	"github.com/weaveworks/pctl/pkg/runner/fakes"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 
 var _ = Describe("Bootstrap", func() {
@@ -39,7 +40,12 @@ var _ = Describe("Bootstrap", func() {
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
 
-			Expect(bootstrap.CreateConfig("foo", "bar", temp)).To(Succeed())
+			Expect(bootstrap.CreateConfig(bootstrap.Config{
+				GitRepository: profilesv1.GitRepository{
+					Name:      "bar",
+					Namespace: "foo",
+				},
+			}, temp)).To(Succeed())
 			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 
@@ -52,10 +58,40 @@ var _ = Describe("Bootstrap", func() {
 				},
 			}))
 		})
+		It("creates the config file with default location", func() {
+			cmd := exec.Command("git", "init", temp)
+			output, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
+
+			Expect(bootstrap.CreateConfig(bootstrap.Config{
+				GitRepository: profilesv1.GitRepository{
+					Name:      "bar",
+					Namespace: "foo",
+				},
+				DefaultDir: "default-dir",
+			}, temp)).To(Succeed())
+			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
+			Expect(err).ToNot(HaveOccurred())
+
+			var config bootstrap.Config
+			Expect(yaml.Unmarshal(data, &config)).To(Succeed())
+			Expect(config).To(Equal(bootstrap.Config{
+				GitRepository: profilesv1.GitRepository{
+					Name:      "bar",
+					Namespace: "foo",
+				},
+				DefaultDir: "default-dir",
+			}))
+		})
 
 		When("the directory is not a git directory", func() {
 			It("returns an error", func() {
-				err := bootstrap.CreateConfig("foo", "bar", temp)
+				err := bootstrap.CreateConfig(bootstrap.Config{
+					GitRepository: profilesv1.GitRepository{
+						Name:      "bar",
+						Namespace: "foo",
+					},
+				}, temp)
 				Expect(err).To(MatchError(fmt.Sprintf("the target directory %q is not a git repository", temp)))
 			})
 		})
@@ -68,7 +104,12 @@ var _ = Describe("Bootstrap", func() {
 			})
 
 			It("returns an error", func() {
-				err := bootstrap.CreateConfig("foo", "bar", temp)
+				err := bootstrap.CreateConfig(bootstrap.Config{
+					GitRepository: profilesv1.GitRepository{
+						Name:      "bar",
+						Namespace: "foo",
+					},
+				}, temp)
 				Expect(err).To(MatchError("failed to get git directory location: foo"))
 			})
 		})
@@ -88,6 +129,7 @@ var _ = Describe("Bootstrap", func() {
 					Name:      "foo",
 					Namespace: "bar",
 				},
+				DefaultDir: "default-dir",
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -100,6 +142,7 @@ var _ = Describe("Bootstrap", func() {
 					Name:      "foo",
 					Namespace: "bar",
 				},
+				DefaultDir: "default-dir",
 			}))
 		})
 

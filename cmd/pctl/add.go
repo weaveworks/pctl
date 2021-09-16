@@ -19,6 +19,8 @@ import (
 	"github.com/weaveworks/pctl/pkg/runner"
 )
 
+const defaultOut = "."
+
 var createPRFlags = []cli.Flag{
 	&cli.BoolFlag{
 		Name:  "create-pr",
@@ -88,7 +90,7 @@ func addCmd() *cli.Command {
 			&cli.StringFlag{
 				Name:        "out",
 				DefaultText: "current",
-				Value:       ".",
+				Value:       defaultOut,
 				Usage:       "Optional location to create the profile installation folder in. This should be relative to the current working directory.",
 			},
 			&cli.StringFlag{
@@ -162,7 +164,10 @@ func addProfile(c *cli.Context) (string, error) {
 	subName := c.String("name")
 	namespace := c.String("namespace")
 	configMap := c.String("config-map")
-	dir := c.String("out")
+	dir, err := getOutFolder(c)
+	if err != nil {
+		return "", err
+	}
 	path := c.String("profile-path")
 	message := c.String("pr-message")
 
@@ -243,6 +248,28 @@ func getGitRepositoryNamespaceAndName(c *cli.Context) (string, string, error) {
 		return config.GitRepository.Namespace, config.GitRepository.Name, nil
 	}
 	return "", "", fmt.Errorf("flux git repository not provided, please provide the --git-repository flag or use the pctl bootstrap functionality")
+}
+
+// getOutFolder returns the output folder with the following precedence:
+// User set --out overrides local configuration.
+// Local configuration, if set.
+// Default out which is `.`.
+func getOutFolder(c *cli.Context) (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch current working directory: %w", err)
+	}
+	config, err := bootstrap.GetConfig(wd)
+	if err != nil {
+		return "", err
+	}
+	if c.IsSet("out") {
+		return c.String("out"), nil
+	}
+	if config != nil && config.DefaultDir != "" {
+		return config.DefaultDir, nil
+	}
+	return defaultOut, nil
 }
 
 // createPullRequest runs the pull request creation part of the `add` command.

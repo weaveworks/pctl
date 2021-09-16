@@ -18,6 +18,7 @@ and run: mdtoc -inplace README.md
   - [Prepare](#prepare)
     - [Pre-Flight check](#pre-flight-check)
   - [Catalog service options](#catalog-service-options)
+  - [Bootstrap](#bootstrap)
 - [Development](#development)
   - [Working with profiles](#working-with-profiles)
     - [Using local pin](#using-local-pin)
@@ -307,6 +308,13 @@ These are as follows:
 ### Catalog service options
 
 The catalog service options can be configured via `--catalog-service-name`, `--catalog-service-port` and `--catalog-service-namespace`
+
+### Bootstrap
+
+It's possible to bootstrap some values for pctl to use on later calls. To do that, call `pctl bootstrap <values>`.
+
+Bootstrap will create a config file under the set folder with the set values. To find out what values can be configured
+with bootstrap consult the `help` page.
 
 ## Development
 
