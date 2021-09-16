@@ -44,20 +44,21 @@ var _ = Describe("AddProfile", func() {
 			Expect(err).ToNot(HaveOccurred())
 			return nil
 		}
-		installationPath, err := api.AddProfile(api.AddProfileOpts{
-			Branch:        "main",
-			SubName:       "sub-name",
-			Namespace:     "namespace",
-			ConfigMap:     "configMap",
-			Dir:           "test-dir",
-			GitRepository: "git-repo-namespace/git-repo-name",
-			ProfilePath:   "profile/weave-nginx",
-			CatalogClient: fakeCatalogClient,
-			GitClient:     fakeGit,
+		err := api.AddProfile(api.AddProfileOpts{
+			Branch:                 "main",
+			SubName:                "sub-name",
+			Namespace:              "namespace",
+			ConfigMap:              "configMap",
+			InstallationDirectory:  "test-dir",
+			GitRepositoryName:      "git-repo-name",
+			GitRepositoryNamespace: "git-repo-namespace",
+			ProfileName:            "weave-nginx",
+			CatalogName:            "catalog",
+			CatalogClient:          fakeCatalogClient,
+			GitClient:              fakeGit,
 		})
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(installationPath).To(Equal(filepath.Join("test-dir", "sub-name")))
 	})
 	When("a URL is provided", func() {
 		It("will use that to install a profile", func() {
@@ -86,33 +87,34 @@ var _ = Describe("AddProfile", func() {
 				Expect(err).ToNot(HaveOccurred())
 				return nil
 			}
-			installationPath, err := api.AddProfile(api.AddProfileOpts{
-				Branch:        "main",
-				SubName:       "sub-name",
-				Namespace:     "namespace",
-				ConfigMap:     "configMap",
-				Dir:           "test-dir",
-				GitRepository: "git-repo-namespace/git-repo-name",
-				URL:           "https://github.com/org/repo",
-				CatalogClient: fakeCatalogClient,
-				GitClient:     fakeGit,
+			err := api.AddProfile(api.AddProfileOpts{
+				Branch:                 "main",
+				SubName:                "sub-name",
+				Namespace:              "namespace",
+				ConfigMap:              "configMap",
+				InstallationDirectory:  "test-dir",
+				GitRepositoryNamespace: "git-repo-namespace",
+				GitRepositoryName:      "git-repo-name",
+				URL:                    "https://github.com/org/repo",
+				CatalogClient:          fakeCatalogClient,
+				GitClient:              fakeGit,
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(installationPath).To(Equal(filepath.Join("test-dir", "sub-name")))
 		})
 		When("invalid profile path is provided", func() {
 			It("returns an error", func() {
-				_, err := api.AddProfile(api.AddProfileOpts{
-					Branch:        "main",
-					SubName:       "sub-name",
-					Namespace:     "namespace",
-					ConfigMap:     "configMap",
-					Dir:           "test-dir",
-					GitRepository: "git-repo-namespace/git-repo-name",
-					ProfilePath:   "invalid",
-					CatalogClient: fakeCatalogClient,
-					GitClient:     fakeGit,
+				err := api.AddProfile(api.AddProfileOpts{
+					Branch:                 "main",
+					SubName:                "sub-name",
+					Namespace:              "namespace",
+					ConfigMap:              "configMap",
+					InstallationDirectory:  "test-dir",
+					GitRepositoryName:      "git-repo-name",
+					GitRepositoryNamespace: "git-repo-namespace",
+					CatalogName:            "catalog",
+					CatalogClient:          fakeCatalogClient,
+					GitClient:              fakeGit,
 				})
 
 				Expect(err).To(MatchError("both catalog name and profile name must be provided"))
@@ -142,21 +144,21 @@ var _ = Describe("AddProfile", func() {
 					Expect(err).ToNot(HaveOccurred())
 					return nil
 				}
-				installationPath, err := api.AddProfile(api.AddProfileOpts{
-					Branch:        "main",
-					SubName:       "sub-name",
-					Namespace:     "namespace",
-					ConfigMap:     "configMap",
-					Dir:           "test-dir",
-					GitRepository: "git-repo-namespace/git-repo-name",
-					URL:           "https://github.com/org/repo",
-					Path:          "path",
-					CatalogClient: fakeCatalogClient,
-					GitClient:     fakeGit,
+				err := api.AddProfile(api.AddProfileOpts{
+					Branch:                 "main",
+					SubName:                "sub-name",
+					Namespace:              "namespace",
+					ConfigMap:              "configMap",
+					InstallationDirectory:  "test-dir",
+					GitRepositoryName:      "git-repo-name",
+					GitRepositoryNamespace: "git-repo-namespace",
+					URL:                    "https://github.com/org/repo",
+					Path:                   "path",
+					CatalogClient:          fakeCatalogClient,
+					GitClient:              fakeGit,
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(installationPath).To(Equal(filepath.Join("test-dir", "sub-name")))
 			})
 		})
 		When("profile path includes a version", func() {
@@ -182,57 +184,61 @@ var _ = Describe("AddProfile", func() {
 					Expect(err).ToNot(HaveOccurred())
 					return nil
 				}
-				installationPath, err := api.AddProfile(api.AddProfileOpts{
-					Branch:        "main",
-					SubName:       "sub-name",
-					Namespace:     "namespace",
-					ConfigMap:     "configMap",
-					Dir:           "test-dir",
-					GitRepository: "git-repo-namespace/git-repo-name",
-					ProfilePath:   "catalog/profile/version",
-					CatalogClient: fakeCatalogClient,
-					GitClient:     fakeGit,
+				err := api.AddProfile(api.AddProfileOpts{
+					Branch:                 "main",
+					SubName:                "sub-name",
+					Namespace:              "namespace",
+					ConfigMap:              "configMap",
+					InstallationDirectory:  "test-dir",
+					GitRepositoryNamespace: "git-repo-namespace",
+					GitRepositoryName:      "git-repo-name",
+					ProfileName:            "profile",
+					CatalogName:            "catalog",
+					Version:                "version",
+					CatalogClient:          fakeCatalogClient,
+					GitClient:              fakeGit,
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(installationPath).To(Equal(filepath.Join("test-dir", "sub-name")))
 				arg, _ := fakeCatalogClient.DoRequestArgsForCall(0)
 				Expect(arg).To(Equal("/profiles/catalog/profile/version"))
 			})
 		})
-
-		When("git repository is invalid", func() {
+		When("profile, catalog and url cannot be used together", func() {
 			It("returns an error", func() {
-				_, err := api.AddProfile(api.AddProfileOpts{
-					Branch:        "main",
-					SubName:       "sub-name",
-					Namespace:     "namespace",
-					ConfigMap:     "configMap",
-					Dir:           "test-dir",
-					GitRepository: "invalid",
-					URL:           "https://github.com/org/repo",
-					Path:          "path",
-					CatalogClient: fakeCatalogClient,
-					GitClient:     fakeGit,
+				err := api.AddProfile(api.AddProfileOpts{
+					Branch:                 "main",
+					SubName:                "sub-name",
+					Namespace:              "namespace",
+					ConfigMap:              "configMap",
+					InstallationDirectory:  "test-dir",
+					GitRepositoryName:      "git-repo-name",
+					GitRepositoryNamespace: "git-repo-namespace",
+					CatalogName:            "catalog",
+					ProfileName:            "profile",
+					URL:                    "url",
+					CatalogClient:          fakeCatalogClient,
+					GitClient:              fakeGit,
 				})
 
-				Expect(err).To(MatchError("git-repository must in format <namespace>/<name>; was: invalid"))
+				Expect(err).To(MatchError("please provide either url or profile name with catalog name"))
 			})
 		})
-		When("git repository is no provided", func() {
-			It("will try and look into a local config file", func() {
-				_, err := api.AddProfile(api.AddProfileOpts{
-					Branch:        "main",
-					SubName:       "sub-name",
-					Namespace:     "namespace",
-					ConfigMap:     "configMap",
-					Dir:           "test-dir",
-					URL:           "https://github.com/org/repo",
-					Path:          "path",
-					CatalogClient: fakeCatalogClient,
-					GitClient:     fakeGit,
+		When("no profile name or catalog name or url is provided", func() {
+			It("return an error", func() {
+				err := api.AddProfile(api.AddProfileOpts{
+					Branch:                 "main",
+					SubName:                "sub-name",
+					Namespace:              "namespace",
+					ConfigMap:              "configMap",
+					InstallationDirectory:  "test-dir",
+					GitRepositoryName:      "git-repo-name",
+					GitRepositoryNamespace: "git-repo-namespace",
+					CatalogClient:          fakeCatalogClient,
+					GitClient:              fakeGit,
 				})
-				Expect(err).To(MatchError("flux git repository not provided, please provide the --git-repository flag or use the pctl bootstrap functionality"))
+
+				Expect(err).To(MatchError("please provide either url or profile name with catalog name"))
 			})
 		})
 	})

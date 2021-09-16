@@ -3,11 +3,15 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/urfave/cli/v2"
 
 	"github.com/weaveworks/pctl/api"
+	"github.com/weaveworks/pctl/pkg/bootstrap"
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
 	"github.com/weaveworks/pctl/pkg/git"
@@ -105,24 +109,42 @@ func addCmd() *cli.Command {
 			}),
 		Action: func(c *cli.Context) error {
 			// Run installation main
+			var (
+				err           error
+				catalogClient *client.Client
+				profilePath   string
+				catalogName   string
+				profileName   string
+				version       = "latest"
+			)
+
 			url := c.String("profile-repo-url")
 			if url != "" && c.Args().Len() > 0 {
 				return errors.New("it looks like you provided a url with a catalog entry; please choose either format: url/branch/path or <CATALOG>/<PROFILE>[/<VERSION>]")
 			}
 
-			var (
-				profilePath   string
-				catalogClient *client.Client
-				err           error
-			)
 			if url == "" {
 				profilePath, catalogClient, err = parseArgs(c)
 				if err != nil {
 					_ = cli.ShowCommandHelp(c, "add")
 					return err
 				}
+				parts := strings.Split(profilePath, "/")
+				if len(parts) < 2 {
+					return errors.New("both catalog name and profile name must be provided")
+				}
+				if len(parts) == 3 {
+					version = parts[2]
+				}
+				catalogName, profileName = parts[0], parts[1]
 			}
 
+			gitRepository := c.String("git-repository")
+			gitRepoNamespace, gitRepoName, err := getGitRepositoryNamespaceAndName(gitRepository)
+			if err != nil {
+				_ = cli.ShowCommandHelp(c, "add")
+				return err
+			}
 			branch := c.String("profile-branch")
 			subName := c.String("name")
 			namespace := c.String("namespace")
@@ -130,29 +152,31 @@ func addCmd() *cli.Command {
 			dir := c.String("out")
 			path := c.String("profile-path")
 			message := c.String("pr-message")
-			gitRepository := c.String("git-repository")
+
 			r := &runner.CLIRunner{}
 			g := git.NewCLIGit(git.CLIGitConfig{
 				Message: message,
 			}, r)
-			installationDirectory, err := api.AddProfile(api.AddProfileOpts{
-				URL:           url,
-				Branch:        branch,
-				SubName:       subName,
-				Namespace:     namespace,
-				ConfigMap:     configMap,
-				Dir:           dir,
-				Path:          path,
-				GitRepository: gitRepository,
-				ProfilePath:   profilePath,
-				CatalogClient: catalogClient,
-				GitClient:     g,
-			})
-			if err != nil {
+			installationDirectory := filepath.Join(dir, subName)
+			if err := api.AddProfile(api.AddProfileOpts{
+				URL:                    url,
+				Branch:                 branch,
+				SubName:                subName,
+				Namespace:              namespace,
+				ConfigMap:              configMap,
+				InstallationDirectory:  installationDirectory,
+				Path:                   path,
+				GitRepositoryName:      gitRepoName,
+				GitRepositoryNamespace: gitRepoNamespace,
+				ProfileName:            profileName,
+				CatalogName:            catalogName,
+				Version:                version,
+				CatalogClient:          catalogClient,
+				GitClient:              g,
+			}); err != nil {
 				return err
 			}
 			log.Successf("installation completed successfully")
-			// Create a pull request if desired
 			if c.Bool("create-pr") {
 				if err := createPullRequest(c, installationDirectory); err != nil {
 					return err
@@ -161,6 +185,26 @@ func addCmd() *cli.Command {
 			return nil
 		},
 	}
+}
+
+func getGitRepositoryNamespaceAndName(gitRepository string) (string, string, error) {
+	if gitRepository != "" {
+		split := strings.Split(gitRepository, "/")
+		if len(split) != 2 {
+			return "", "", fmt.Errorf("git-repository must in format <namespace>/<name>; was: %s", gitRepository)
+		}
+		return split[0], split[1], nil
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to fetch current working directory: %w", err)
+	}
+	config, err := bootstrap.GetConfig(wd)
+	if err == nil && config != nil {
+		return config.GitRepository.Namespace, config.GitRepository.Name, nil
+	}
+	return "", "", fmt.Errorf("flux git repository not provided, please provide the --git-repository flag or use the pctl bootstrap functionality")
 }
 
 // createPullRequest runs the pull request creation part of the `add` command.
