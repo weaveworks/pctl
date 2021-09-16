@@ -259,14 +259,11 @@ func getOutFolder(c *cli.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch current working directory: %w", err)
 	}
-	config, err := bootstrap.GetConfig(wd)
-	if err != nil {
-		return "", err
-	}
 	if c.IsSet("out") {
 		return c.String("out"), nil
 	}
-	if config != nil && config.DefaultDir != "" {
+	config, err := bootstrap.GetConfig(wd)
+	if err == nil && config != nil && config.DefaultDir != "" {
 		return config.DefaultDir, nil
 	}
 	return defaultOut, nil

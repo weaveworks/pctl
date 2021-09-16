@@ -31,7 +31,7 @@ var _ = Describe("bootstrap", func() {
 			Expect(pctl("bootstrap", "--git-repository", "foo/bar", "--default-dir", "default-dir", temp)).To(ContainElement("✔ bootstrap completed"))
 			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
 			Expect(err).ToNot(HaveOccurred())
-			Expect(string(data)).To(ContainSubstring(`gitrepository:
+			Expect(string(data)).To(ContainSubstring(`gitRepository:
   name: bar
   namespace: foo
 defaultDir: default-dir
@@ -48,7 +48,7 @@ defaultDir: default-dir
 			Expect(pctl("bootstrap", "--git-repository", "foo/bar", "--default-dir", "default-dir")).To(ContainElement("✔ bootstrap completed"))
 			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
 			Expect(err).ToNot(HaveOccurred())
-			Expect(string(data)).To(ContainSubstring(`gitrepository:
+			Expect(string(data)).To(ContainSubstring(`gitRepository:
   name: bar
   namespace: foo
 defaultDir: default-dir
@@ -65,7 +65,7 @@ defaultDir: default-dir
 			Expect(pctl("bootstrap", "--git-repository", "foo/bar", "--default-dir", "default-dir", ".")).To(ContainElement("✔ bootstrap completed"))
 			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
 			Expect(err).ToNot(HaveOccurred())
-			Expect(string(data)).To(ContainSubstring(`gitrepository:
+			Expect(string(data)).To(ContainSubstring(`gitRepository:
   name: bar
   namespace: foo
 defaultDir: default-dir
