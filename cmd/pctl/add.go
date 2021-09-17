@@ -10,11 +10,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/urfave/cli/v2"
 
+	"github.com/weaveworks/pctl/api"
 	"github.com/weaveworks/pctl/pkg/bootstrap"
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/client"
 	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/install"
 	"github.com/weaveworks/pctl/pkg/log"
 	"github.com/weaveworks/pctl/pkg/runner"
 )
@@ -109,11 +109,74 @@ func addCmd() *cli.Command {
 			}),
 		Action: func(c *cli.Context) error {
 			// Run installation main
-			installationDirectory, err := addProfile(c)
+			var (
+				err           error
+				catalogClient *client.Client
+				profilePath   string
+				catalogName   string
+				profileName   string
+				version       = "latest"
+			)
+
+			url := c.String("profile-repo-url")
+			if url != "" && c.Args().Len() > 0 {
+				return errors.New("it looks like you provided a url with a catalog entry; please choose either format: url/branch/path or <CATALOG>/<PROFILE>[/<VERSION>]")
+			}
+
+			if url == "" {
+				profilePath, catalogClient, err = parseArgs(c)
+				if err != nil {
+					_ = cli.ShowCommandHelp(c, "add")
+					return err
+				}
+				parts := strings.Split(profilePath, "/")
+				if len(parts) < 2 {
+					return errors.New("both catalog name and profile name must be provided")
+				}
+				if len(parts) == 3 {
+					version = parts[2]
+				}
+				catalogName, profileName = parts[0], parts[1]
+			}
+
+			gitRepository := c.String("git-repository")
+			gitRepoNamespace, gitRepoName, err := getGitRepositoryNamespaceAndName(gitRepository)
 			if err != nil {
+				_ = cli.ShowCommandHelp(c, "add")
 				return err
 			}
-			// Create a pull request if desired
+			branch := c.String("profile-branch")
+			subName := c.String("name")
+			namespace := c.String("namespace")
+			configMap := c.String("config-map")
+			dir := c.String("out")
+			path := c.String("profile-path")
+			message := c.String("pr-message")
+
+			r := &runner.CLIRunner{}
+			g := git.NewCLIGit(git.CLIGitConfig{
+				Message: message,
+			}, r)
+			installationDirectory := filepath.Join(dir, subName)
+			if err := api.AddProfile(api.AddProfileOpts{
+				URL:                    url,
+				Branch:                 branch,
+				SubName:                subName,
+				Namespace:              namespace,
+				ConfigMap:              configMap,
+				InstallationDirectory:  installationDirectory,
+				Path:                   path,
+				GitRepositoryName:      gitRepoName,
+				GitRepositoryNamespace: gitRepoNamespace,
+				ProfileName:            profileName,
+				CatalogName:            catalogName,
+				Version:                version,
+				CatalogClient:          catalogClient,
+				GitClient:              g,
+			}); err != nil {
+				return err
+			}
+			log.Successf("installation completed successfully")
 			if c.Bool("create-pr") {
 				if err := createPullRequest(c, installationDirectory); err != nil {
 					return err
@@ -124,108 +187,7 @@ func addCmd() *cli.Command {
 	}
 }
 
-// add runs the add part of the `add` command.
-func addProfile(c *cli.Context) (string, error) {
-	var (
-		err           error
-		catalogClient *client.Client
-		profilePath   string
-		catalogName   string
-		profileName   string
-		version       = "latest"
-	)
-
-	// only set up the catalog if a url is not provided
-	url := c.String("profile-repo-url")
-	if url != "" && c.Args().Len() > 0 {
-		return "", errors.New("it looks like you provided a url with a catalog entry; please choose either format: url/branch/path or <CATALOG>/<PROFILE>[/<VERSION>]")
-	}
-
-	if url == "" {
-		profilePath, catalogClient, err = parseArgs(c)
-		if err != nil {
-			_ = cli.ShowCommandHelp(c, "add")
-			return "", err
-		}
-		parts := strings.Split(profilePath, "/")
-		if len(parts) < 2 {
-			_ = cli.ShowCommandHelp(c, "add")
-			return "", errors.New("both catalog name and profile name must be provided")
-		}
-		if len(parts) == 3 {
-			version = parts[2]
-		}
-		catalogName, profileName = parts[0], parts[1]
-	}
-
-	branch := c.String("profile-branch")
-	subName := c.String("name")
-	namespace := c.String("namespace")
-	configMap := c.String("config-map")
-	dir := c.String("out")
-	path := c.String("profile-path")
-	message := c.String("pr-message")
-
-	var source string
-	if url != "" && path != "" {
-		source = fmt.Sprintf("repository %s, path: %s and branch %s", url, path, branch)
-	} else if url != "" && path == "" {
-		source = fmt.Sprintf("repository %s and branch %s", url, branch)
-	} else {
-		source = fmt.Sprintf("catalog entry %s/%s/%s", catalogName, profileName, version)
-	}
-
-	log.Actionf("generating profile installation from source: %s", source)
-	r := &runner.CLIRunner{}
-	g := git.NewCLIGit(git.CLIGitConfig{
-		Message: message,
-	}, r)
-
-	gitRepoNamespace, gitRepoName, err := getGitRepositoryNamespaceAndName(c)
-	if err != nil {
-		return "", err
-	}
-
-	installationDirectory := filepath.Join(dir, subName)
-	installer := install.NewInstaller(install.Config{
-		GitClient:        g,
-		RootDir:          installationDirectory,
-		GitRepoNamespace: gitRepoNamespace,
-		GitRepoName:      gitRepoName,
-	})
-	cfg := catalog.InstallConfig{
-		Clients: catalog.Clients{
-			CatalogClient: catalogClient,
-			Installer:     installer,
-		},
-		Profile: catalog.Profile{
-			ProfileConfig: catalog.ProfileConfig{
-				CatalogName:   catalogName,
-				ConfigMap:     configMap,
-				Namespace:     namespace,
-				Path:          path,
-				ProfileBranch: branch,
-				ProfileName:   profileName,
-				SubName:       subName,
-				URL:           url,
-				Version:       version,
-			},
-			GitRepoConfig: catalog.GitRepoConfig{
-				Namespace: gitRepoNamespace,
-				Name:      gitRepoName,
-			},
-		},
-	}
-	manager := &catalog.Manager{}
-	err = manager.Install(cfg)
-	if err == nil {
-		log.Successf("installation completed successfully")
-	}
-	return installationDirectory, err
-}
-
-func getGitRepositoryNamespaceAndName(c *cli.Context) (string, string, error) {
-	gitRepository := c.String("git-repository")
+func getGitRepositoryNamespaceAndName(gitRepository string) (string, string, error) {
 	if gitRepository != "" {
 		split := strings.Split(gitRepository, "/")
 		if len(split) != 2 {

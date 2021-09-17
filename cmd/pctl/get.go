@@ -54,58 +54,36 @@ func getCmd() *cli.Command {
 			if err != nil {
 				return err
 			}
-			catalogClient, err := getCatalogClient(c)
-			if err != nil {
-				_ = cli.ShowCommandHelp(c, "get")
-				return err
-			}
-
-			// get all installed and catalog profiles
+			var (
+				name          string
+				catalogClient *client.Client
+			)
 			if c.Args().Len() < 1 {
-				if c.Bool("installed") {
-					return getInstalledProfiles(cl, catalogClient, "", outFormat)
-				}
-				if c.Bool("catalog") {
-					return getCatalogProfiles(catalogClient, "", outFormat)
-				}
-
-				err := getInstalledProfiles(cl, catalogClient, "", outFormat)
-				if err != nil {
-					return err
-				}
-				return getCatalogProfiles(catalogClient, "", outFormat)
-			} else {
-				name, catalogClient, err := parseArgs(c)
+				catalogClient, err = buildCatalogClient(c)
 				if err != nil {
 					_ = cli.ShowCommandHelp(c, "get")
 					return err
 				}
-
-				// check if other flags are passed along with the name
-				if c.String("profile-version") != "" {
-					return getCatalogProfilesWithVersion(c, catalogClient, name, c.String("profile-version"), outFormat)
-				}
-
-				if c.Bool("catalog") {
-					return getCatalogProfiles(catalogClient, name, outFormat)
-				}
-
-				if c.Bool("installed") {
-					return getInstalledProfiles(cl, catalogClient, name, outFormat)
-				}
-
-				// default return all installed and catalog profiles with name
-				err = getInstalledProfiles(cl, catalogClient, name, outFormat)
+			} else {
+				name, catalogClient, err = parseArgs(c)
 				if err != nil {
-					return err
-				}
-
-				err = getCatalogProfiles(catalogClient, name, outFormat)
-				if err != nil {
+					_ = cli.ShowCommandHelp(c, "get")
 					return err
 				}
 			}
-			return nil
+			if c.String("profile-version") != "" {
+				return getCatalogProfilesWithVersion(c, catalogClient, name, c.String("profile-version"), outFormat)
+			}
+			if c.Bool("installed") {
+				return getInstalledProfiles(cl, catalogClient, name, outFormat)
+			}
+			if c.Bool("catalog") {
+				return getCatalogProfiles(catalogClient, name, outFormat)
+			}
+			if err := getInstalledProfiles(cl, catalogClient, name, outFormat); err != nil {
+				return err
+			}
+			return getCatalogProfiles(catalogClient, name, outFormat)
 		},
 	}
 }

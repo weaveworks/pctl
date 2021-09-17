@@ -14,7 +14,6 @@ import (
 	"github.com/fluxcd/pkg/runtime/dependency"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	"github.com/otiai10/copy"
-	"github.com/weaveworks/pctl/pkg/log"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +22,8 @@ import (
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"knative.dev/pkg/apis"
 	"sigs.k8s.io/kustomize/api/types"
+
+	"github.com/weaveworks/pctl/pkg/log"
 )
 
 const (
