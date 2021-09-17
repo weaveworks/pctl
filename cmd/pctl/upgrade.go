@@ -23,7 +23,7 @@ func upgradeCmd() *cli.Command {
 		Flags: append(createPRFlags, &cli.BoolFlag{
 			Name:        "latest",
 			Usage:       "--latest",
-			DefaultText: "*WARNING*: Upgrade to the latest version.",
+			DefaultText: "*WARNING*: Upgrade to the latest version. Please ensure this is a valid upgrade path before proceeding",
 		}),
 		Action: func(c *cli.Context) error {
 			if err := upgrade(c); err != nil {
