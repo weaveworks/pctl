@@ -311,7 +311,9 @@ The catalog service options can be configured via `--catalog-service-name`, `--c
 
 ### Bootstrap
 
-Some configuration provided during a `pctl add` might be repeated for every command subsequent `pctl add`. To save this information into a config file you can use `pctl bootstrap`. This creates a config file in your git repository, then every  `pctl add` command will check this file and use the values set by default. The user can still specifically provide these values in the comand and they will take president. Currently you can configure:
+Some configuration provided during a `pctl add` might be repeated for every command subsequent `pctl add`. To save this information into a config file you can use `pctl bootstrap`. 
+This creates a config file in your git repository, then every `pctl add` command will check this file and use the values set by default.
+The user can still specifically provide these values in the command. They will take precedence. Currently, you can configure:
 - `--git-repository` value
 - `--out` value
 

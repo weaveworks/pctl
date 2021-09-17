@@ -21,6 +21,7 @@ import (
 var _ = Describe("Bootstrap", func() {
 	var (
 		temp string
+		cfg  bootstrap.Config
 	)
 
 	BeforeEach(func() {
@@ -28,6 +29,13 @@ var _ = Describe("Bootstrap", func() {
 		temp, err = ioutil.TempDir("", "pctl-bootstrap-test")
 		Expect(err).ToNot(HaveOccurred())
 		bootstrap.SetRunner(&runner.CLIRunner{})
+		cfg = bootstrap.Config{
+			GitRepository: profilesv1.GitRepository{
+				Name:      "bar",
+				Namespace: "foo",
+			},
+			DefaultDir: "default-dir",
+		}
 	})
 
 	AfterEach(func() {
@@ -35,63 +43,23 @@ var _ = Describe("Bootstrap", func() {
 	})
 
 	Describe("CreateConfig", func() {
+
 		It("creates the config file with the git repository value set", func() {
 			cmd := exec.Command("git", "init", temp)
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
 
-			Expect(bootstrap.CreateConfig(bootstrap.Config{
-				GitRepository: profilesv1.GitRepository{
-					Name:      "bar",
-					Namespace: "foo",
-				},
-			}, temp)).To(Succeed())
+			Expect(bootstrap.CreateConfig(cfg, temp)).To(Succeed())
 			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 
 			var config bootstrap.Config
 			Expect(yaml.Unmarshal(data, &config)).To(Succeed())
-			Expect(config).To(Equal(bootstrap.Config{
-				GitRepository: profilesv1.GitRepository{
-					Name:      "bar",
-					Namespace: "foo",
-				},
-			}))
+			Expect(config).To(Equal(cfg))
 		})
-		It("creates the config file with default location", func() {
-			cmd := exec.Command("git", "init", temp)
-			output, err := cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
-
-			Expect(bootstrap.CreateConfig(bootstrap.Config{
-				GitRepository: profilesv1.GitRepository{
-					Name:      "bar",
-					Namespace: "foo",
-				},
-				DefaultDir: "default-dir",
-			}, temp)).To(Succeed())
-			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
-			Expect(err).ToNot(HaveOccurred())
-
-			var config bootstrap.Config
-			Expect(yaml.Unmarshal(data, &config)).To(Succeed())
-			Expect(config).To(Equal(bootstrap.Config{
-				GitRepository: profilesv1.GitRepository{
-					Name:      "bar",
-					Namespace: "foo",
-				},
-				DefaultDir: "default-dir",
-			}))
-		})
-
 		When("the directory is not a git directory", func() {
 			It("returns an error", func() {
-				err := bootstrap.CreateConfig(bootstrap.Config{
-					GitRepository: profilesv1.GitRepository{
-						Name:      "bar",
-						Namespace: "foo",
-					},
-				}, temp)
+				err := bootstrap.CreateConfig(cfg, temp)
 				Expect(err).To(MatchError(fmt.Sprintf("the target directory %q is not a git repository", temp)))
 			})
 		})
@@ -104,12 +72,7 @@ var _ = Describe("Bootstrap", func() {
 			})
 
 			It("returns an error", func() {
-				err := bootstrap.CreateConfig(bootstrap.Config{
-					GitRepository: profilesv1.GitRepository{
-						Name:      "bar",
-						Namespace: "foo",
-					},
-				}, temp)
+				err := bootstrap.CreateConfig(cfg, temp)
 				Expect(err).To(MatchError("failed to get git directory location: foo"))
 			})
 		})
@@ -124,32 +87,19 @@ var _ = Describe("Bootstrap", func() {
 			pctlDir := filepath.Join(temp, ".pctl")
 			Expect(os.Mkdir(pctlDir, 0755)).To(Succeed())
 
-			data, err := yaml.Marshal(bootstrap.Config{
-				GitRepository: profilesv1.GitRepository{
-					Name:      "foo",
-					Namespace: "bar",
-				},
-				DefaultDir: "default-dir",
-			})
+			data, err := yaml.Marshal(cfg)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(os.WriteFile(filepath.Join(pctlDir, "config.yaml"), data, 0644)).To(Succeed())
 
-			config, err := bootstrap.GetConfig(temp)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(*config).To(Equal(bootstrap.Config{
-				GitRepository: profilesv1.GitRepository{
-					Name:      "foo",
-					Namespace: "bar",
-				},
-				DefaultDir: "default-dir",
-			}))
+			config := bootstrap.GetConfig(temp)
+			Expect(*config).To(Equal(cfg))
 		})
 
 		When("the directory is not a git directory", func() {
 			It("returns an error", func() {
-				_, err := bootstrap.GetConfig(temp)
-				Expect(err).To(MatchError(fmt.Sprintf("the target directory %q is not a git repository", temp)))
+				config := bootstrap.GetConfig(temp)
+				Expect(config).To(BeNil())
 			})
 		})
 
@@ -158,8 +108,8 @@ var _ = Describe("Bootstrap", func() {
 				cmd := exec.Command("git", "init", temp)
 				output, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
-				_, err = bootstrap.GetConfig(temp)
-				Expect(err).To(MatchError(ContainSubstring("failed to read config file")))
+				config := bootstrap.GetConfig(temp)
+				Expect(config).To(BeNil())
 			})
 		})
 
@@ -171,8 +121,8 @@ var _ = Describe("Bootstrap", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := bootstrap.GetConfig(temp)
-				Expect(err).To(MatchError("failed to get git directory location: foo"))
+				config := bootstrap.GetConfig(temp)
+				Expect(config).To(BeNil())
 			})
 		})
 
@@ -186,8 +136,8 @@ var _ = Describe("Bootstrap", func() {
 				Expect(os.Mkdir(pctlDir, 0755)).To(Succeed())
 				Expect(os.WriteFile(filepath.Join(pctlDir, "config.yaml"), []byte("!.z123"), 0644)).To(Succeed())
 
-				_, err = bootstrap.GetConfig(temp)
-				Expect(err).To(MatchError(ContainSubstring("failed to unmarshal config file")))
+				config := bootstrap.GetConfig(temp)
+				Expect(config).To(BeNil())
 			})
 		})
 	})

@@ -9,6 +9,7 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"gopkg.in/yaml.v2"
 
+	"github.com/weaveworks/pctl/pkg/log"
 	"github.com/weaveworks/pctl/pkg/runner"
 )
 
@@ -43,23 +44,31 @@ func CreateConfig(cfg Config, directory string) error {
 }
 
 //GetConfig gets the bootstrap config
-func GetConfig(directory string) (*Config, error) {
+func GetConfig(directory string) *Config {
 	gitDir, err := getGitRepoPath(directory)
 	if err != nil {
-		return nil, err
+		log.Warningf("failed to get git repo path: %v", err)
+		return nil
 	}
 	configPath := filepath.Join(gitDir, ".pctl", "config.yaml")
 
 	out, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+	if os.IsNotExist(err) {
+		// don't use Warningf in case the file doesn't exist. Warning is a bit intrusive
+		// the config file not existing is a perfectly fine scenario.
+		fmt.Println("config file cannot be found... using default values")
+		return nil
+	} else if err != nil {
+		log.Warningf("failed to read config file: %v", err)
+		return nil
 	}
 
 	config := &Config{}
 	if err = yaml.Unmarshal(out, config); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config file: %w", err)
+		log.Warningf("failed to unmarshal config file: %v", err)
+		return nil
 	}
-	return config, nil
+	return config
 }
 
 func getGitRepoPath(directory string) (string, error) {

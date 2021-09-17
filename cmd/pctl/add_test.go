@@ -33,7 +33,7 @@ var _ = Describe("add", func() {
 			c := cli.NewContext(&cli.App{
 				Commands: []*cli.Command{add},
 			}, f, nil)
-			out, err := getOutFolder(c)
+			out, err := getProfileOutputDirectory(c)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(out).To(Equal("user-defined"))
 		})
@@ -45,7 +45,7 @@ var _ = Describe("add", func() {
 				c := cli.NewContext(&cli.App{
 					Commands: []*cli.Command{add},
 				}, f, nil)
-				out, err := getOutFolder(c)
+				out, err := getProfileOutputDirectory(c)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(out).To(Equal(defaultOut))
 			})
@@ -68,9 +68,33 @@ var _ = Describe("add", func() {
 				c := cli.NewContext(&cli.App{
 					Commands: []*cli.Command{add},
 				}, f, nil)
-				out, err := getOutFolder(c)
+				out, err := getProfileOutputDirectory(c)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(out).To(Equal("config-dir"))
+			})
+		})
+		When("the user has a config file and overrides it with explicit setting", func() {
+			BeforeEach(func() {
+				err := os.MkdirAll(filepath.Join(tmp, ".pctl"), 0700)
+				Expect(err).ToNot(HaveOccurred())
+				err = ioutil.WriteFile(filepath.Join(tmp, ".pctl", "config.yaml"), []byte("defaultDir: config-dir"), 0655)
+				Expect(err).ToNot(HaveOccurred())
+				_ = os.Chdir(tmp)
+				cmd := exec.Command("git", "init", tmp)
+				err = cmd.Run()
+				Expect(err).ToNot(HaveOccurred())
+			})
+			It("will return the saved values", func() {
+				add := addCmd()
+				f := &flag.FlagSet{}
+				f.String("out", "user-defined", "")
+				_ = f.Set("out", "overwrite")
+				c := cli.NewContext(&cli.App{
+					Commands: []*cli.Command{add},
+				}, f, nil)
+				out, err := getProfileOutputDirectory(c)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(out).To(Equal("overwrite"))
 			})
 		})
 	})

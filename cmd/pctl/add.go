@@ -164,7 +164,7 @@ func addProfile(c *cli.Context) (string, error) {
 	subName := c.String("name")
 	namespace := c.String("namespace")
 	configMap := c.String("config-map")
-	dir, err := getOutFolder(c)
+	dir, err := getProfileOutputDirectory(c)
 	if err != nil {
 		return "", err
 	}
@@ -243,8 +243,8 @@ func getGitRepositoryNamespaceAndName(c *cli.Context) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("failed to fetch current working directory: %w", err)
 	}
-	config, err := bootstrap.GetConfig(wd)
-	if err == nil && config != nil {
+	config := bootstrap.GetConfig(wd)
+	if config != nil {
 		return config.GitRepository.Namespace, config.GitRepository.Name, nil
 	}
 	return "", "", fmt.Errorf("flux git repository not provided, please provide the --git-repository flag or use the pctl bootstrap functionality")
@@ -262,8 +262,8 @@ func getProfileOutputDirectory(c *cli.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch current working directory: %w", err)
 	}
-	config, err := bootstrap.GetConfig(wd)
-	if err == nil && config != nil && config.DefaultDir != "" {
+	config := bootstrap.GetConfig(wd)
+	if config != nil && config.DefaultDir != "" {
 		return config.DefaultDir, nil
 	}
 	return defaultOut, nil
