@@ -19,11 +19,11 @@ func upgradeCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "upgrade",
 		Usage:     "upgrade profile installation",
-		UsageText: "To upgrade an installation: pctl upgrade pctl-profile-installation-path/ v0.1.1 ",
+		UsageText: "To upgrade an installation: pctl upgrade pctl-profile-installation-path/ v0.1.1",
 		Flags: append(createPRFlags, &cli.BoolFlag{
 			Name:        "latest",
 			Usage:       "--latest",
-			DefaultText: "*WARNING*: Upgrade to the latest version; whatever that is.",
+			DefaultText: "*WARNING*: Upgrade to the latest version.",
 		}),
 		Action: func(c *cli.Context) error {
 			if err := upgrade(c); err != nil {
