@@ -2,29 +2,16 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/urfave/cli/v2"
+
+	"github.com/weaveworks/pctl/pkg/bootstrap"
 )
 
 var _ = Describe("add", func() {
 	Context("getOutFolder", func() {
-		var (
-			tmp string
-			err error
-		)
-		BeforeEach(func() {
-			tmp, err = ioutil.TempDir("", "get-out-folder")
-			Expect(err).ToNot(HaveOccurred())
-		})
-		AfterEach(func() {
-			_ = os.RemoveAll(tmp)
-		})
 		It("returns what the user has set", func() {
 			add := addCmd()
 			f := &flag.FlagSet{}
@@ -33,7 +20,7 @@ var _ = Describe("add", func() {
 			c := cli.NewContext(&cli.App{
 				Commands: []*cli.Command{add},
 			}, f, nil)
-			out, err := getProfileOutputDirectory(c)
+			out, err := getProfileOutputDirectory(c, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(out).To(Equal("user-defined"))
 		})
@@ -45,22 +32,12 @@ var _ = Describe("add", func() {
 				c := cli.NewContext(&cli.App{
 					Commands: []*cli.Command{add},
 				}, f, nil)
-				out, err := getProfileOutputDirectory(c)
+				out, err := getProfileOutputDirectory(c, nil)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(out).To(Equal(defaultOut))
 			})
 		})
 		When("the user has something saved in the config file", func() {
-			BeforeEach(func() {
-				err := os.MkdirAll(filepath.Join(tmp, ".pctl"), 0700)
-				Expect(err).ToNot(HaveOccurred())
-				err = ioutil.WriteFile(filepath.Join(tmp, ".pctl", "config.yaml"), []byte("defaultDir: config-dir"), 0655)
-				Expect(err).ToNot(HaveOccurred())
-				_ = os.Chdir(tmp)
-				cmd := exec.Command("git", "init", tmp)
-				err = cmd.Run()
-				Expect(err).ToNot(HaveOccurred())
-			})
 			It("will return the saved values", func() {
 				add := addCmd()
 				f := &flag.FlagSet{}
@@ -68,22 +45,14 @@ var _ = Describe("add", func() {
 				c := cli.NewContext(&cli.App{
 					Commands: []*cli.Command{add},
 				}, f, nil)
-				out, err := getProfileOutputDirectory(c)
+				out, err := getProfileOutputDirectory(c, &bootstrap.Config{
+					DefaultDir: "config-dir",
+				})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(out).To(Equal("config-dir"))
 			})
 		})
 		When("the user has a config file and overrides it with explicit setting", func() {
-			BeforeEach(func() {
-				err := os.MkdirAll(filepath.Join(tmp, ".pctl"), 0700)
-				Expect(err).ToNot(HaveOccurred())
-				err = ioutil.WriteFile(filepath.Join(tmp, ".pctl", "config.yaml"), []byte("defaultDir: config-dir"), 0655)
-				Expect(err).ToNot(HaveOccurred())
-				_ = os.Chdir(tmp)
-				cmd := exec.Command("git", "init", tmp)
-				err = cmd.Run()
-				Expect(err).ToNot(HaveOccurred())
-			})
 			It("will return the saved values", func() {
 				add := addCmd()
 				f := &flag.FlagSet{}
@@ -92,7 +61,9 @@ var _ = Describe("add", func() {
 				c := cli.NewContext(&cli.App{
 					Commands: []*cli.Command{add},
 				}, f, nil)
-				out, err := getProfileOutputDirectory(c)
+				out, err := getProfileOutputDirectory(c, &bootstrap.Config{
+					DefaultDir: "user-defined",
+				})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(out).To(Equal("overwrite"))
 			})

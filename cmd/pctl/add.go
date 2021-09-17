@@ -137,6 +137,12 @@ func addProfile(c *cli.Context) (string, error) {
 		version       = "latest"
 	)
 
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch current working directory: %w", err)
+	}
+	config := bootstrap.GetConfig(wd)
+
 	// only set up the catalog if a url is not provided
 	url := c.String("profile-repo-url")
 	if url != "" && c.Args().Len() > 0 {
@@ -164,7 +170,7 @@ func addProfile(c *cli.Context) (string, error) {
 	subName := c.String("name")
 	namespace := c.String("namespace")
 	configMap := c.String("config-map")
-	dir, err := getProfileOutputDirectory(c)
+	dir, err := getProfileOutputDirectory(c, config)
 	if err != nil {
 		return "", err
 	}
@@ -186,7 +192,7 @@ func addProfile(c *cli.Context) (string, error) {
 		Message: message,
 	}, r)
 
-	gitRepoNamespace, gitRepoName, err := getGitRepositoryNamespaceAndName(c)
+	gitRepoNamespace, gitRepoName, err := getGitRepositoryNamespaceAndName(c, config)
 	if err != nil {
 		return "", err
 	}
@@ -229,7 +235,7 @@ func addProfile(c *cli.Context) (string, error) {
 	return installationDirectory, err
 }
 
-func getGitRepositoryNamespaceAndName(c *cli.Context) (string, string, error) {
+func getGitRepositoryNamespaceAndName(c *cli.Context, config *bootstrap.Config) (string, string, error) {
 	gitRepository := c.String("git-repository")
 	if gitRepository != "" {
 		split := strings.Split(gitRepository, "/")
@@ -239,11 +245,6 @@ func getGitRepositoryNamespaceAndName(c *cli.Context) (string, string, error) {
 		return split[0], split[1], nil
 	}
 
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", "", fmt.Errorf("failed to fetch current working directory: %w", err)
-	}
-	config := bootstrap.GetConfig(wd)
 	if config != nil {
 		return config.GitRepository.Namespace, config.GitRepository.Name, nil
 	}
@@ -254,15 +255,10 @@ func getGitRepositoryNamespaceAndName(c *cli.Context) (string, string, error) {
 // User set --out overrides local configuration.
 // Local configuration, if set.
 // Default out which is `.`.
-func getProfileOutputDirectory(c *cli.Context) (string, error) {
+func getProfileOutputDirectory(c *cli.Context, config *bootstrap.Config) (string, error) {
 	if c.IsSet("out") {
 		return c.String("out"), nil
 	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch current working directory: %w", err)
-	}
-	config := bootstrap.GetConfig(wd)
 	if config != nil && config.DefaultDir != "" {
 		return config.DefaultDir, nil
 	}
