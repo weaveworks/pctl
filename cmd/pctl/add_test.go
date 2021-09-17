@@ -37,7 +37,7 @@ var _ = Describe("add", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(out).To(Equal("user-defined"))
 		})
-		When("the user didn't set anything", func() {
+		When("the user didn't provide a value or use a config file", func() {
 			It("returns the default", func() {
 				add := addCmd()
 				f := &flag.FlagSet{}

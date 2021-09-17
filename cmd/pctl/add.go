@@ -254,7 +254,7 @@ func getGitRepositoryNamespaceAndName(c *cli.Context) (string, string, error) {
 // User set --out overrides local configuration.
 // Local configuration, if set.
 // Default out which is `.`.
-func getOutFolder(c *cli.Context) (string, error) {
+func getProfileOutputDirectory(c *cli.Context) (string, error) {
 	if c.IsSet("out") {
 		return c.String("out"), nil
 	}

@@ -26,7 +26,7 @@ func bootstrapCmd() *cli.Command {
 			&cli.StringFlag{
 				Name:  "default-dir",
 				Value: "",
-				Usage: "Directory to always use with pctl add.",
+				Usage: "Default directory to place profile installations in",
 			},
 		},
 		Action: func(c *cli.Context) error {
