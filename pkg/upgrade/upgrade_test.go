@@ -161,6 +161,26 @@ var _ = Describe("Upgrade", func() {
 
 	When("latest version is set", func() {
 		It("will choose a later version", func() {
+			httpBody := []byte(`{"items":
+[
+    {
+      	"name": "my-profile",
+      	"description": "nginx 1",
+	  	"tag": "v0.2.0"
+    },
+    {
+      	"name": "my-profile",
+      	"description": "nginx 1",
+	  	"tag": "v0.1.1"
+    },
+    {
+      	"name": "my-profile",
+      	"description": "nginx 1",
+     	"tag": "v0.1.0"
+    }
+]}
+		  `)
+			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 			cfg.Latest = true
 			cfg.Version = ""
 			err := upgrade.Upgrade(cfg)
@@ -168,17 +188,14 @@ var _ = Describe("Upgrade", func() {
 			_, catalogName, profileName, desiredVersion := fakeCatalogManager.ShowArgsForCall(0)
 			Expect(catalogName).To(Equal("my-catalog"))
 			Expect(profileName).To(Equal("my-profile"))
-			Expect(desiredVersion).To(Equal("latest"))
+			Expect(desiredVersion).To(Equal("v0.2.0"))
 		})
 	})
 
 	When("latest version is set but there isn't anything greater available", func() {
 		It("will return an upgrade error", func() {
-			fakeCatalogManager.ShowReturnsOnCall(0, profilesv1.ProfileCatalogEntry{
-				Tag:           "v0.1.0",
-				CatalogSource: "my-catalog",
-				Name:          "my-profile2",
-			}, nil)
+			httpBody := []byte(`{"items":[]}`)
+			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
 			cfg.Latest = true
 			cfg.Version = ""
 			err := upgrade.Upgrade(cfg)

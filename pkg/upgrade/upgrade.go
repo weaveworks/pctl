@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	copypkg "github.com/otiai10/copy"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"sigs.k8s.io/yaml"
@@ -60,23 +59,14 @@ func Upgrade(cfg Config) error {
 
 	// Find the latest version and set it to cfg.Version... From there it should all just work.
 	if cfg.Latest {
-		latest, err := cfg.CatalogManager.Show(cfg.CatalogClient, catalogName, profileName, "latest")
+		availableUpdates, err := catalog.GetAvailableUpdates(cfg.CatalogClient, catalogName, profileName, currentVersion)
 		if err != nil {
-			return fmt.Errorf("failed to get latest version for profile: %w", err)
+			return fmt.Errorf("failed to get available updates for profile: %w", err)
 		}
-		version := profilesv1.GetVersionFromTag(latest.Tag)
-		v, err := semver.NewVersion(version)
-		if err != nil {
-			return fmt.Errorf("failed to parse tag %s: %w", latest.Tag, err)
-		}
-		cv, err := semver.NewVersion(currentVersion)
-		if err != nil {
-			return fmt.Errorf("failed to parse tag %s: %w", currentVersion, err)
-		}
-		if v.Equal(cv) || v.LessThan(cv) {
+		if len(availableUpdates) == 0 {
 			return fmt.Errorf("no new versions available")
 		}
-		cfg.Version = version
+		cfg.Version = profilesv1.GetVersionFromTag(availableUpdates[0].Tag)
 	}
 
 	log.Actionf("upgrading profile %q from version %q to %q", profileInstallation.Name, profileInstallation.Spec.Catalog.Version, cfg.Version)
