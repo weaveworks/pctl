@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/urfave/cli/v2"
+
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/log"
@@ -18,8 +19,12 @@ func upgradeCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "upgrade",
 		Usage:     "upgrade profile installation",
-		UsageText: "To upgrade an installation: pctl upgrade pctl-profile-installation-path/ v0.1.1 ",
-		Flags:     createPRFlags,
+		UsageText: "To upgrade an installation: pctl upgrade pctl-profile-installation-path/ v0.1.1",
+		Flags: append(createPRFlags, &cli.BoolFlag{
+			Name:        "latest",
+			Usage:       "--latest",
+			DefaultText: "*WARNING*: Upgrade to the latest version. Please ensure this is a valid upgrade path before proceeding",
+		}),
 		Action: func(c *cli.Context) error {
 			if err := upgrade(c); err != nil {
 				return err
@@ -36,12 +41,24 @@ func upgradeCmd() *cli.Command {
 }
 
 func upgrade(c *cli.Context) error {
-	if c.Args().Len() != 2 {
-		return fmt.Errorf("please provid the path to the profile and version to upgrade to, e.g. pctl upgrade my-profile/ v0.1.1")
+	var (
+		profilePath, profileVersion string
+	)
+
+	latest := c.Bool("latest")
+	if latest {
+		if c.Args().Len() != 1 {
+			return fmt.Errorf("please provid the path to the profile to upgrade to, e.g. pctl upgrade my-profile/")
+		}
+		profilePath = c.Args().Slice()[0]
+	} else {
+		if c.Args().Len() != 2 {
+			return fmt.Errorf("please provid the path to the profile and version to upgrade to, e.g. pctl upgrade my-profile/ v0.1.1")
+		}
+		profilePath = c.Args().Slice()[0]
+		profileVersion = c.Args().Slice()[1]
 	}
 
-	profilePath := c.Args().Slice()[0]
-	profileVersion := c.Args().Slice()[1]
 	catalogClient, err := getCatalogClient(c)
 	if err != nil {
 		return fmt.Errorf("failed to create catalog client: %w", err)
@@ -57,7 +74,7 @@ func upgrade(c *cli.Context) error {
 		}
 	}()
 	message := c.String("pr-message")
-	cfg := upgr.UpgradeConfig{
+	cfg := upgr.Config{
 		ProfileDir:     profilePath,
 		Version:        profileVersion,
 		CatalogClient:  catalogClient,
@@ -69,6 +86,7 @@ func upgrade(c *cli.Context) error {
 		}, &runner.CLIRunner{})),
 		WorkingDir: tmpDir,
 		Message:    message,
+		Latest:     latest,
 	}
 	return upgr.Upgrade(cfg)
 }

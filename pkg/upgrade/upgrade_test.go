@@ -10,12 +10,13 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+	"sigs.k8s.io/yaml"
+
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/catalog/fakes"
 	"github.com/weaveworks/pctl/pkg/upgrade"
 	repofakes "github.com/weaveworks/pctl/pkg/upgrade/repo/fakes"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
-	"sigs.k8s.io/yaml"
 )
 
 var _ = Describe("Upgrade", func() {
@@ -23,7 +24,7 @@ var _ = Describe("Upgrade", func() {
 		fakeCatalogClient  *fakes.FakeCatalogClient
 		fakeCatalogManager *fakes.FakeCatalogManager
 		fakeRepoManager    *repofakes.FakeRepoManager
-		cfg                upgrade.UpgradeConfig
+		cfg                upgrade.Config
 		version            string
 		profileDir         string
 		workingDir         string
@@ -69,7 +70,7 @@ var _ = Describe("Upgrade", func() {
 			Name:          "my-profile2",
 		}, nil)
 
-		cfg = upgrade.UpgradeConfig{
+		cfg = upgrade.Config{
 			ProfileDir:     profileDir,
 			Version:        version,
 			CatalogClient:  fakeCatalogClient,
@@ -156,6 +157,50 @@ var _ = Describe("Upgrade", func() {
 		Expect(branch1).To(Equal("update-changes"))
 		Expect(branch2).To(Equal("user-changes"))
 		Expect(copierArgs[0]).To(ConsistOf(workingDir, profileDir))
+	})
+
+	When("latest version is set", func() {
+		It("will choose a later version", func() {
+			httpBody := []byte(`{"items":
+[
+    {
+      	"name": "my-profile",
+      	"description": "nginx 1",
+	  	"tag": "v0.2.0"
+    },
+    {
+      	"name": "my-profile",
+      	"description": "nginx 1",
+	  	"tag": "v0.1.1"
+    },
+    {
+      	"name": "my-profile",
+      	"description": "nginx 1",
+     	"tag": "v0.1.0"
+    }
+]}
+		  `)
+			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
+			cfg.Latest = true
+			cfg.Version = ""
+			err := upgrade.Upgrade(cfg)
+			Expect(err).NotTo(HaveOccurred())
+			_, catalogName, profileName, desiredVersion := fakeCatalogManager.ShowArgsForCall(0)
+			Expect(catalogName).To(Equal("my-catalog"))
+			Expect(profileName).To(Equal("my-profile"))
+			Expect(desiredVersion).To(Equal("v0.2.0"))
+		})
+	})
+
+	When("latest version is set but there isn't anything greater available", func() {
+		It("will return an upgrade error", func() {
+			httpBody := []byte(`{"items":[]}`)
+			fakeCatalogClient.DoRequestReturns(httpBody, 200, nil)
+			cfg.Latest = true
+			cfg.Version = ""
+			err := upgrade.Upgrade(cfg)
+			Expect(err).To(MatchError("no new versions available"))
+		})
 	})
 
 	When("merge conflicts occur", func() {
