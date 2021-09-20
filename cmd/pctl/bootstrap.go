@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+
 	"github.com/weaveworks/pctl/pkg/bootstrap"
 	"github.com/weaveworks/pctl/pkg/log"
 )
@@ -13,13 +15,18 @@ import (
 func bootstrapCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "bootstrap",
-		Usage:     "bootstrap local git repository",
+		Usage:     "bootstrap default settings for pctl",
 		UsageText: "pctl bootstrap",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "git-repository",
 				Value: "",
 				Usage: "The namespace and name of the GitRepository object governing the flux repo.",
+			},
+			&cli.StringFlag{
+				Name:  "default-dir",
+				Value: "",
+				Usage: "Default directory to place profile installations in",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -39,7 +46,14 @@ func bootstrapCmd() *cli.Command {
 			gitRepoNamespace := split[0]
 			gitRepoName := split[1]
 
-			if err := bootstrap.CreateConfig(gitRepoNamespace, gitRepoName, directory); err != nil {
+			defaultDir := c.String("default-dir")
+			if err := bootstrap.CreateConfig(bootstrap.Config{
+				GitRepository: profilesv1.GitRepository{
+					Name:      gitRepoName,
+					Namespace: gitRepoNamespace,
+				},
+				DefaultDir: defaultDir,
+			}, directory); err != nil {
 				return fmt.Errorf("failed to bootstrap: %w", err)
 			}
 			log.Successf("bootstrap completed")

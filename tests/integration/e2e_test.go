@@ -95,8 +95,8 @@ var _ = Describe("end to end flow", func() {
 			))
 		})
 
-		By("bootstraping the repo")
-		Expect(pctl("bootstrap", "--git-repository", fmt.Sprintf("%s/%s", namespace, gitRepoName), temp)).To(ContainElement("✔ bootstrap completed"))
+		By("bootstrapping the repo")
+		Expect(pctl("bootstrap", "--git-repository", fmt.Sprintf("%s/%s", namespace, gitRepoName), "--default-dir", "out", temp)).To(ContainElement("✔ bootstrap completed"))
 
 		By("installing the desired profile", func() {
 			pctlAddOutput := pctl(
@@ -112,7 +112,7 @@ var _ = Describe("end to end flow", func() {
 			))
 
 			By("creating the artifacts")
-			profileDir := filepath.Join(temp, profileInstallationName)
+			profileDir := filepath.Join(temp, "out", profileInstallationName)
 			Expect(filesInDir(profileDir)).To(ContainElements(
 				"profile-installation.yaml",
 				"artifacts/nginx-deployment/kustomization.yaml",
@@ -166,7 +166,7 @@ status: {}
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux reconcile source git failed : %s", string(output)))
 
-			cmd = exec.Command("flux", "create", "kustomization", "kustomization", "--path", profileInstallationName+"/", "--source", fmt.Sprintf("GitRepository/%s", gitRepoName), "--namespace", namespace)
+			cmd = exec.Command("flux", "create", "kustomization", "kustomization", "--path", "out/"+profileInstallationName+"/", "--source", fmt.Sprintf("GitRepository/%s", gitRepoName), "--namespace", namespace)
 			output, err = cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create kustomization failed : %s", string(output)))
 
@@ -199,7 +199,7 @@ status: {}
 				"Prerequisites Kubernetes 1.18+",
 			))
 
-			profileDir := filepath.Join(temp, profileInstallationName)
+			profileDir := filepath.Join(temp, "out", profileInstallationName)
 			cmd := exec.Command(
 				binaryPath,
 				"upgrade",

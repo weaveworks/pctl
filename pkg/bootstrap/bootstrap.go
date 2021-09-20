@@ -6,21 +6,25 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/weaveworks/pctl/pkg/runner"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"gopkg.in/yaml.v2"
+
+	"github.com/weaveworks/pctl/pkg/log"
+	"github.com/weaveworks/pctl/pkg/runner"
 )
 
 //Config contains the pctl bootstrap configuration
 type Config struct {
 	// GitRepository is the git repository flux resource the installation uses
-	GitRepository profilesv1.GitRepository `json:"gitRepository,omitempty"`
+	GitRepository profilesv1.GitRepository `yaml:"gitRepository,omitempty"`
+	// DefaultDir defines the location to use with pctl add
+	DefaultDir string `yaml:"defaultDir,omitempty"`
 }
 
 var r runner.Runner = &runner.CLIRunner{}
 
 //CreateConfig creates the bootstrap config
-func CreateConfig(namespace, name, directory string) error {
+func CreateConfig(cfg Config, directory string) error {
 	gitDir, err := getGitRepoPath(directory)
 	if err != nil {
 		return err
@@ -31,12 +35,7 @@ func CreateConfig(namespace, name, directory string) error {
 		return fmt.Errorf("failed to create .pctl dir %q: %w", pctlDir, err)
 	}
 
-	data, err := yaml.Marshal(Config{
-		GitRepository: profilesv1.GitRepository{
-			Name:      name,
-			Namespace: namespace,
-		},
-	})
+	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
@@ -45,23 +44,31 @@ func CreateConfig(namespace, name, directory string) error {
 }
 
 //GetConfig gets the bootstrap config
-func GetConfig(directory string) (*Config, error) {
+func GetConfig(directory string) *Config {
 	gitDir, err := getGitRepoPath(directory)
 	if err != nil {
-		return nil, err
+		log.Warningf("failed to get git repo path: %v", err)
+		return nil
 	}
 	configPath := filepath.Join(gitDir, ".pctl", "config.yaml")
 
 	out, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+	if os.IsNotExist(err) {
+		// don't use Warningf in case the file doesn't exist. Warning is a bit intrusive
+		// the config file not existing is a perfectly fine scenario.
+		fmt.Println("config file cannot be found... using default values")
+		return nil
+	} else if err != nil {
+		log.Warningf("failed to read config file: %v", err)
+		return nil
 	}
 
 	config := &Config{}
 	if err = yaml.Unmarshal(out, config); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config file: %w", err)
+		log.Warningf("failed to unmarshal config file: %v", err)
+		return nil
 	}
-	return config, nil
+	return config
 }
 
 func getGitRepoPath(directory string) (string, error) {
