@@ -226,6 +226,33 @@ var _ = Describe("Upgrade", func() {
 		})
 	})
 
+	When("the profile installation doesn't contain a catalog reference", func() {
+		BeforeEach(func() {
+			Expect(os.Remove(filepath.Join(profileDir, "profile-installation.yaml"))).To(Succeed())
+			installation := profilesv1.ProfileInstallation{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pctl-installation",
+					Namespace: "default",
+				},
+				Spec: profilesv1.ProfileInstallationSpec{
+					ConfigMap: "my-config-map",
+					GitRepository: &profilesv1.GitRepository{
+						Name:      "foo",
+						Namespace: "bar",
+					},
+				},
+			}
+			bytes, err := yaml.Marshal(installation)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ioutil.WriteFile(filepath.Join(profileDir, "profile-installation.yaml"), bytes, 0755)).To(Succeed())
+		})
+
+		It("returns an error", func() {
+			err := upgrade.Upgrade(cfg)
+			Expect(err).To(MatchError(ContainSubstring("unable to upgrade an installation that was not created from a catalog")))
+		})
+	})
+
 	When("the profile installation file isn't valid", func() {
 		BeforeEach(func() {
 			Expect(os.Remove(filepath.Join(profileDir, "profile-installation.yaml"))).To(Succeed())
