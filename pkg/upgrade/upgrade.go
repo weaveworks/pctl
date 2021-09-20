@@ -9,18 +9,19 @@ import (
 	"strings"
 
 	copypkg "github.com/otiai10/copy"
+	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
+	"sigs.k8s.io/yaml"
+
 	"github.com/weaveworks/pctl/pkg/catalog"
 	"github.com/weaveworks/pctl/pkg/git"
 	"github.com/weaveworks/pctl/pkg/install"
 	"github.com/weaveworks/pctl/pkg/log"
 	"github.com/weaveworks/pctl/pkg/runner"
 	"github.com/weaveworks/pctl/pkg/upgrade/repo"
-	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
-	"sigs.k8s.io/yaml"
 )
 
-// UpgradeCfg holds the fields used during upgrades a installation
-type UpgradeConfig struct {
+// Config holds the fields used during upgrades of an installation
+type Config struct {
 	ProfileDir     string
 	Version        string
 	CatalogClient  catalog.CatalogClient
@@ -28,14 +29,15 @@ type UpgradeConfig struct {
 	RepoManager    repo.RepoManager
 	WorkingDir     string
 	Message        string
+	Latest         bool
 }
 
 var copy func(src, dest string) error = func(src, dest string) error {
 	return copypkg.Copy(src, dest)
 }
 
-// Upgrade the profiel installation to a new version
-func Upgrade(cfg UpgradeConfig) error {
+// Upgrade the profile installation to a new version
+func Upgrade(cfg Config) error {
 	out, err := ioutil.ReadFile(path.Join(cfg.ProfileDir, "profile-installation.yaml"))
 	if err != nil {
 		return fmt.Errorf("failed to read profile installation: %w", err)
@@ -46,8 +48,6 @@ func Upgrade(cfg UpgradeConfig) error {
 		return fmt.Errorf("failed to parse profile installation: %w", err)
 	}
 
-	log.Actionf("upgrading profile %q from version %q to %q", profileInstallation.Name, profileInstallation.Spec.Catalog.Version, cfg.Version)
-
 	var gitRepoName, gitRepoNamespace string
 	catalogName := profileInstallation.Spec.Catalog.Catalog
 	profileName := profileInstallation.Spec.Catalog.Profile
@@ -57,6 +57,19 @@ func Upgrade(cfg UpgradeConfig) error {
 		gitRepoNamespace = profileInstallation.Spec.GitRepository.Namespace
 	}
 
+	// Find the latest version and set it to cfg.Version... From there it should all just work.
+	if cfg.Latest {
+		availableUpdates, err := catalog.GetAvailableUpdates(cfg.CatalogClient, catalogName, profileName, currentVersion)
+		if err != nil {
+			return fmt.Errorf("failed to get available updates for profile: %w", err)
+		}
+		if len(availableUpdates) == 0 {
+			return fmt.Errorf("no new versions available")
+		}
+		cfg.Version = profilesv1.GetVersionFromTag(availableUpdates[0].Tag)
+	}
+
+	log.Actionf("upgrading profile %q from version %q to %q", profileInstallation.Name, profileInstallation.Spec.Catalog.Version, cfg.Version)
 	//check new version exists
 	_, err = cfg.CatalogManager.Show(cfg.CatalogClient, catalogName, profileName, cfg.Version)
 	if err != nil {
