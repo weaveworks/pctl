@@ -48,6 +48,10 @@ func Upgrade(cfg Config) error {
 		return fmt.Errorf("failed to parse profile installation: %w", err)
 	}
 
+	if profileInstallation.Spec.Catalog == nil {
+		return fmt.Errorf("unable to upgrade an installation that was not created from a catalog")
+	}
+
 	var gitRepoName, gitRepoNamespace string
 	catalogName := profileInstallation.Spec.Catalog.Catalog
 	profileName := profileInstallation.Spec.Catalog.Profile
