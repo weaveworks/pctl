@@ -15,8 +15,8 @@ import (
 
 	"github.com/weaveworks/kivo-cli/pkg/catalog"
 	"github.com/weaveworks/kivo-cli/pkg/catalog/fakes"
-	"github.com/weaveworks/kivo-cli/pkg/upgrade"
 	repofakes "github.com/weaveworks/kivo-cli/pkg/upgrade/repo/fakes"
+	"github.com/weaveworks/pctl/pkg/upgrade"
 )
 
 var _ = Describe("Upgrade", func() {
