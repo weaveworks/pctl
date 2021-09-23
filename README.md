@@ -8,11 +8,9 @@ and run: mdtoc -inplace README.md
 
  <!-- toc -->
 - [Usage](#usage)
-- [Development](#development)
+- [Contributing](#contributing)
   - [Working with profiles](#working-with-profiles)
     - [Using local pin](#using-local-pin)
-    - [Using dev tag pin](#using-dev-tag-pin)
-    - [Using doki and the Makefile targets](#using-doki-and-the-makefile-targets)
 - [Release process](#release-process)
   - [Tests](#tests)
     - [Configuring Integration Tests](#configuring-integration-tests)
