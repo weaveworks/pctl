@@ -26,7 +26,7 @@ var _ = Describe("Bootstrap", func() {
 
 	BeforeEach(func() {
 		var err error
-		temp, err = ioutil.TempDir("", "pctl-bootstrap-test")
+		temp, err = ioutil.TempDir("", "kivo-bootstrap-test")
 		Expect(err).ToNot(HaveOccurred())
 		bootstrap.SetRunner(&runner.CLIRunner{})
 		cfg = bootstrap.Config{
@@ -50,7 +50,7 @@ var _ = Describe("Bootstrap", func() {
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
 
 			Expect(bootstrap.CreateConfig(cfg, temp)).To(Succeed())
-			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
+			data, err := ioutil.ReadFile(filepath.Join(temp, ".kivo", "config.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 
 			var config bootstrap.Config
@@ -84,13 +84,13 @@ var _ = Describe("Bootstrap", func() {
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
 
-			pctlDir := filepath.Join(temp, ".pctl")
-			Expect(os.Mkdir(pctlDir, 0755)).To(Succeed())
+			kivoDir := filepath.Join(temp, ".kivo")
+			Expect(os.Mkdir(kivoDir, 0755)).To(Succeed())
 
 			data, err := yaml.Marshal(cfg)
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(os.WriteFile(filepath.Join(pctlDir, "config.yaml"), data, 0644)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(kivoDir, "config.yaml"), data, 0644)).To(Succeed())
 
 			config := bootstrap.GetConfig(temp)
 			Expect(*config).To(Equal(cfg))
@@ -132,9 +132,9 @@ var _ = Describe("Bootstrap", func() {
 				output, err := cmd.CombinedOutput()
 				Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
 
-				pctlDir := filepath.Join(temp, ".pctl")
-				Expect(os.Mkdir(pctlDir, 0755)).To(Succeed())
-				Expect(os.WriteFile(filepath.Join(pctlDir, "config.yaml"), []byte("!.z123"), 0644)).To(Succeed())
+				kivoDir := filepath.Join(temp, ".kivo")
+				Expect(os.Mkdir(kivoDir, 0755)).To(Succeed())
+				Expect(os.WriteFile(filepath.Join(kivoDir, "config.yaml"), []byte("!.z123"), 0644)).To(Succeed())
 
 				config := bootstrap.GetConfig(temp)
 				Expect(config).To(BeNil())

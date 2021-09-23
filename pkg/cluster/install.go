@@ -77,7 +77,7 @@ type InstallConfig struct {
 // NewInstaller creates an installer with set dependencies ready to be used.
 func NewInstaller(cfg InstallConfig) (*Installer, error) {
 	if cfg.Location == "" {
-		tmp, err := ioutil.TempDir("", "pctl-manifests")
+		tmp, err := ioutil.TempDir("", "kivo-manifests")
 		if err != nil {
 			return nil, fmt.Errorf("failed to create temp folder for manifest files: %w", err)
 		}

@@ -13,11 +13,11 @@ import (
 	"github.com/weaveworks/kivo-cli/pkg/runner"
 )
 
-//Config contains the pctl bootstrap configuration
+//Config contains the kivo bootstrap configuration
 type Config struct {
 	// GitRepository is the git repository flux resource the installation uses
 	GitRepository profilesv1.GitRepository `yaml:"gitRepository,omitempty"`
-	// DefaultDir defines the location to use with pctl add
+	// DefaultDir defines the location to use with kivo add
 	DefaultDir string `yaml:"defaultDir,omitempty"`
 }
 
@@ -30,9 +30,9 @@ func CreateConfig(cfg Config, directory string) error {
 		return err
 	}
 
-	pctlDir := filepath.Join(gitDir, ".pctl")
-	if err := os.Mkdir(pctlDir, 0755); err != nil {
-		return fmt.Errorf("failed to create .pctl dir %q: %w", pctlDir, err)
+	kivoDir := filepath.Join(gitDir, ".kivo")
+	if err := os.Mkdir(kivoDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .kivo dir %q: %w", kivoDir, err)
 	}
 
 	data, err := yaml.Marshal(cfg)
@@ -40,7 +40,7 @@ func CreateConfig(cfg Config, directory string) error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	return os.WriteFile(filepath.Join(pctlDir, "config.yaml"), data, 0644)
+	return os.WriteFile(filepath.Join(kivoDir, "config.yaml"), data, 0644)
 }
 
 //GetConfig gets the bootstrap config
@@ -50,7 +50,7 @@ func GetConfig(directory string) *Config {
 		log.Warningf("failed to get git repo path: %v", err)
 		return nil
 	}
-	configPath := filepath.Join(gitDir, ".pctl", "config.yaml")
+	configPath := filepath.Join(gitDir, ".kivo", "config.yaml")
 
 	out, err := os.ReadFile(configPath)
 	if os.IsNotExist(err) {

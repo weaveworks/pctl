@@ -45,7 +45,7 @@ var _ = Describe("Upgrade", func() {
 		Expect(os.Mkdir(filepath.Join(workingDir, ".git/"), 0755)).To(Succeed())
 		installation := profilesv1.ProfileInstallation{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "pctl-installation",
+				Name:      "kivo-installation",
 				Namespace: "default",
 			},
 			Spec: profilesv1.ProfileInstallationSpec{
@@ -231,7 +231,7 @@ var _ = Describe("Upgrade", func() {
 			Expect(os.Remove(filepath.Join(profileDir, "profile-installation.yaml"))).To(Succeed())
 			installation := profilesv1.ProfileInstallation{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pctl-installation",
+					Name:      "kivo-installation",
 					Namespace: "default",
 				},
 				Spec: profilesv1.ProfileInstallationSpec{
