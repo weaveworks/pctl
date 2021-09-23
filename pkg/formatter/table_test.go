@@ -3,7 +3,7 @@ package formatter_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/formatter"
+	"github.com/weaveworks/kivo-cli/pkg/formatter"
 )
 
 var _ = Describe("Table", func() {

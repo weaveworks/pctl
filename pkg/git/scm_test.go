@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/kivo-cli/pkg/git"
 )
 
 var _ = Describe("scm", func() {
@@ -56,7 +56,7 @@ var _ = Describe("scm", func() {
 			client, err := git.NewClient(git.SCMConfig{
 				Branch: "test01",
 				Base:   "main",
-				Repo:   "weaveworks/pctl-test-repo",
+				Repo:   "weaveworks/kivo-test-repo",
 				Client: fakeScm,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -70,7 +70,7 @@ var _ = Describe("scm", func() {
 			client, err := git.NewClient(git.SCMConfig{
 				Branch: "test01",
 				Base:   "main",
-				Repo:   "weaveworks/pctl-test-repo",
+				Repo:   "weaveworks/kivo-test-repo",
 				Client: fakeScm,
 			})
 			Expect(err).NotTo(HaveOccurred())

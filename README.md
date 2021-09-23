@@ -1,5 +1,5 @@
-# pctl
-pctl is a cli tool for interacting with [Profiles](https://github.com/weaveworks/profiles)
+# kivo
+kivo is a cli tool for interacting with [Profiles](https://github.com/weaveworks/profiles)
 
 <!--
 To update the TOC, install https://github.com/kubernetes-sigs/mdtoc
@@ -25,12 +25,12 @@ For operational documentation please visit the [Profiles Documentation](https://
 In order to run CLI commands you need a profiles catalog controller up and running along with its API in a cluster.
 To get a local setup clone the [Profiles repo](https://github.com/weaveworks/profiles) and run `make local-env`.
 This will deploy a local kind cluster with the catalog controller and API running. Once the environment is setup
-run the following to use pctl against it:
+run the following to use kivo against it:
 
 1. Create your catalog, for example there is a `examples/profile-catalog-source.yaml` file in the profiles repo
 `kubectl apply -f profiles/examples/profile-catalog-source.yaml`
 1. Ensure the current context in kubeconfig is set to the `profiles` cluster (`kubectl config current-context` should return `kind-profiles`)
-1. Create a `pctl` binary with `make build`.
+1. Create a `kivo` binary with `make build`.
 
 ### Working with profiles
 
@@ -40,7 +40,7 @@ process must be in place:
 #### Using local pin
 
 - Open a new branch in profiles and create new code
-- In `pctl` do a `replace` to a local location like this: `go mod edit -replace github.com/weaveworks/profiles=<profiles location>`
+- In `kivo` do a `replace` to a local location like this: `go mod edit -replace github.com/weaveworks/profiles=<profiles location>`
 - Work on the changes and once ready, open a PR with this local mod in place
 
 This has the benefit of being really simple, but the counter is that the PR checks will fail because this can't build on CI.
@@ -84,7 +84,7 @@ _Note_ that `<version>` must be in the following format: `v0.0.1`.
 
 There are two configurable values in the integration tests as the time of this writing.
 
-1. `PCTL_TEST_REPOSITORY_URL` -- configures the remote test repository for the `create-pr` test. This needs to be a
+1. `KIVO_TEST_REPOSITORY_URL` -- configures the remote test repository for the `create-pr` test. This needs to be a
 repository the user has push access to and access to create a pull request in GitHub.
 1. `GIT_TOKEN` -- it is used by `create-pr` test to creating a pull request on GitHub. Without this token the test
 doesn't run.

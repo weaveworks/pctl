@@ -13,9 +13,9 @@ import (
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
-	"github.com/weaveworks/pctl/pkg/catalog"
-	"github.com/weaveworks/pctl/pkg/catalog/fakes"
-	"github.com/weaveworks/pctl/pkg/installation"
+	"github.com/weaveworks/kivo-cli/pkg/catalog"
+	"github.com/weaveworks/kivo-cli/pkg/catalog/fakes"
+	"github.com/weaveworks/kivo-cli/pkg/installation"
 )
 
 var _ = Describe("List", func() {

@@ -12,7 +12,7 @@ func docgenCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "docgen",
 		Usage:     "generate the cli doc pages",
-		UsageText: "pctl docgen --out <relative-path-of-dir-to-write-docs>",
+		UsageText: "kivo docgen --out <relative-path-of-dir-to-write-docs>",
 		Hidden:    true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -36,7 +36,7 @@ func docgenCmd() *cli.Command {
 					continue
 				}
 
-				fileName := fmt.Sprintf("pctl-%s-cmd.md", name)
+				fileName := fmt.Sprintf("kivo-%s-cmd.md", name)
 				if err := writeCommandFile(c, name, outPath, fileName); err != nil {
 					return err
 				}

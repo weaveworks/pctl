@@ -13,10 +13,10 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/weaveworks/pctl/pkg/catalog"
-	"github.com/weaveworks/pctl/pkg/catalog/fakes"
+	"github.com/weaveworks/kivo-cli/pkg/catalog"
+	"github.com/weaveworks/kivo-cli/pkg/catalog/fakes"
+	repofakes "github.com/weaveworks/kivo-cli/pkg/upgrade/repo/fakes"
 	"github.com/weaveworks/pctl/pkg/upgrade"
-	repofakes "github.com/weaveworks/pctl/pkg/upgrade/repo/fakes"
 )
 
 var _ = Describe("Upgrade", func() {
@@ -45,7 +45,7 @@ var _ = Describe("Upgrade", func() {
 		Expect(os.Mkdir(filepath.Join(workingDir, ".git/"), 0755)).To(Succeed())
 		installation := profilesv1.ProfileInstallation{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "pctl-installation",
+				Name:      "kivo-installation",
 				Namespace: "default",
 			},
 			Spec: profilesv1.ProfileInstallationSpec{
@@ -231,7 +231,7 @@ var _ = Describe("Upgrade", func() {
 			Expect(os.Remove(filepath.Join(profileDir, "profile-installation.yaml"))).To(Succeed())
 			installation := profilesv1.ProfileInstallation{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pctl-installation",
+					Name:      "kivo-installation",
 					Namespace: "default",
 				},
 				Spec: profilesv1.ProfileInstallationSpec{

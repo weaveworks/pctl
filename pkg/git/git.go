@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/weaveworks/pctl/pkg/log"
-	"github.com/weaveworks/pctl/pkg/runner"
+	"github.com/weaveworks/kivo-cli/pkg/log"
+	"github.com/weaveworks/kivo-cli/pkg/runner"
 )
 
 const (

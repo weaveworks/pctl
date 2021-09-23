@@ -23,10 +23,10 @@ import (
 
 const (
 	profileExamplesURL                = "https://github.com/weaveworks/profiles-examples"
-	pctlPrivateProfilesRepositoryName = "git@github.com:weaveworks/profiles-examples-private.git"
+	kivoPrivateProfilesRepositoryName = "git@github.com:weaveworks/profiles-examples-private.git"
 )
 
-var _ = Describe("pctl add", func() {
+var _ = Describe("kivo add", func() {
 	BeforeEach(func() {
 		namespace = uuid.New().String()
 		createNamespace(namespace)
@@ -51,12 +51,12 @@ var _ = Describe("pctl add", func() {
 
 		profileBranch := "main"
 		subName := "pprof"
-		gitRepoName := "pctl-repo"
+		gitRepoName := "kivo-repo"
 
 		cloneAndCheckoutBranch(temp, branch)
 
 		// setup the gitrepository resources. Requires the branch to exist first
-		cmd := exec.Command("flux", "create", "source", "git", gitRepoName, "--url", pctlTestRepositoryHTTP, "--branch", branch, "--namespace", namespace)
+		cmd := exec.Command("flux", "create", "source", "git", gitRepoName, "--url", kivoTestRepositoryHTTP, "--branch", branch, "--namespace", namespace)
 		output, err := cmd.CombinedOutput()
 		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create source git failed: %s", string(output)))
 
@@ -92,7 +92,7 @@ var _ = Describe("pctl add", func() {
 			"--profile-path", "weaveworks-nginx",
 			"--config-map", configMapName,
 		}
-		Expect(pctl(args...)).To(ContainElement(
+		Expect(kivo(args...)).To(ContainElement(
 			fmt.Sprintf("► generating profile installation from source: repository %s, path: %s and branch %s", profileExamplesURL, "weaveworks-nginx", profileBranch),
 		))
 
@@ -310,7 +310,7 @@ status: {}
 			path := "bitnami-nginx"
 			args := []string{
 				"add",
-				"--name", "pctl-profile",
+				"--name", "kivo-profile",
 				"--git-repository",
 				namespace + "/git-repo-name",
 				"--namespace",
@@ -322,22 +322,22 @@ status: {}
 				"--profile-path",
 				path,
 			}
-			Expect(pctl(args...)).To(ContainElement("✔ installation completed successfully"))
+			Expect(kivo(args...)).To(ContainElement("✔ installation completed successfully"))
 			By("creating the artifacts")
 			Expect(filesInDir(temp)).To(ContainElements(
-				"pctl-profile/profile-installation.yaml",
-				filepath.Join("pctl-profile", "artifacts", "nginx-server", "helm-chart", "HelmRelease.yaml"),
-				filepath.Join("pctl-profile", "artifacts", "nginx-server", "helm-chart", "kustomization.yaml"),
-				filepath.Join("pctl-profile", "artifacts", "nginx-server", "helm-chart", "nginx", "chart", "Chart.yaml"),
+				"kivo-profile/profile-installation.yaml",
+				filepath.Join("kivo-profile", "artifacts", "nginx-server", "helm-chart", "HelmRelease.yaml"),
+				filepath.Join("kivo-profile", "artifacts", "nginx-server", "helm-chart", "kustomization.yaml"),
+				filepath.Join("kivo-profile", "artifacts", "nginx-server", "helm-chart", "nginx", "chart", "Chart.yaml"),
 			))
-			filename := filepath.Join(temp, "pctl-profile", "profile-installation.yaml")
+			filename := filepath.Join(temp, "kivo-profile", "profile-installation.yaml")
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
 kind: ProfileInstallation
 metadata:
   creationTimestamp: null
-  name: pctl-profile
+  name: kivo-profile
   namespace: %s
 spec:
   gitRepository:
@@ -360,7 +360,7 @@ status: {}
 			namespace := uuid.New().String()
 			branch := "main"
 			path := "bitnami-nginx"
-			cmd := exec.Command(binaryPath, "add", "--name", "pctl-profile", "--out", temp, "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-repo-url", pctlPrivateProfilesRepositoryName, "--profile-branch", branch, "--profile-path", path)
+			cmd := exec.Command(binaryPath, "add", "--name", "kivo-profile", "--out", temp, "--git-repository", namespace+"/git-repo-name", "--namespace", namespace, "--profile-repo-url", kivoPrivateProfilesRepositoryName, "--profile-branch", branch, "--profile-path", path)
 			cmd.Dir = temp
 
 			if v := os.Getenv("PRIVATE_EXAMPLES_DEPLOY_KEY"); v != "" {
@@ -368,21 +368,21 @@ status: {}
 				cmd.Env = append(cmd.Env, fmt.Sprintf(`GIT_SSH_COMMAND="ssh -i %s"`, v))
 			}
 			output, err := cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed : %s", string(output)))
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("kivo add failed : %s", string(output)))
 
 			By("creating the artifacts")
 			Expect(filesInDir(temp)).To(ContainElements(
-				"pctl-profile/profile-installation.yaml",
-				filepath.Join("pctl-profile", "artifacts", "nginx-server", "helm-chart", "nginx", "chart", "Chart.yaml"),
+				"kivo-profile/profile-installation.yaml",
+				filepath.Join("kivo-profile", "artifacts", "nginx-server", "helm-chart", "nginx", "chart", "Chart.yaml"),
 			))
-			filename := filepath.Join(temp, "pctl-profile", "profile-installation.yaml")
+			filename := filepath.Join(temp, "kivo-profile", "profile-installation.yaml")
 			content, err := ioutil.ReadFile(filename)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(content)).To(Equal(fmt.Sprintf(`apiVersion: weave.works/v1alpha1
 kind: ProfileInstallation
 metadata:
   creationTimestamp: null
-  name: pctl-profile
+  name: kivo-profile
   namespace: %s
 spec:
   gitRepository:
@@ -405,7 +405,7 @@ status: {}
 			cmd := exec.Command(
 				binaryPath,
 				"add",
-				"--name", "pctl-profile",
+				"--name", "kivo-profile",
 				"--git-repository",
 				namespace+"/git-repo-name",
 				"--namespace",
@@ -433,7 +433,7 @@ status: {}
 			cmd := exec.Command(
 				binaryPath,
 				"add",
-				"--name", "pctl-profile",
+				"--name", "kivo-profile",
 				"--namespace",
 				namespace,
 				"--profile-repo-url",
@@ -446,13 +446,13 @@ status: {}
 			cmd.Dir = temp
 			session, err := cmd.CombinedOutput()
 			Expect(err).To(HaveOccurred())
-			Expect(string(session)).To(ContainSubstring("flux git repository not provided, please provide the --git-repository flag or use the pctl bootstrap functionality"))
+			Expect(string(session)).To(ContainSubstring("flux git repository not provided, please provide the --git-repository flag or use the kivo bootstrap functionality"))
 		})
 	})
 
 	When("a catalog version is provided, but it's an invalid/missing version", func() {
 		It("provide an error saying the profile with these specifics can't be found", func() {
-			cmd := exec.Command(binaryPath, "add", "--name", "pctl-profile", "--git-repository", namespace+"/git-repo-name", "nginx-catalog/weaveworks-nginx/v999.9.9")
+			cmd := exec.Command(binaryPath, "add", "--name", "kivo-profile", "--git-repository", namespace+"/git-repo-name", "nginx-catalog/weaveworks-nginx/v999.9.9")
 			output, err := cmd.CombinedOutput()
 			Expect(err).To(HaveOccurred())
 			Expect(string(output)).To(ContainSubstring(`unable to find profile "weaveworks-nginx" in catalog "nginx-catalog" (with version if provided: v999.9.9)`))
@@ -470,7 +470,7 @@ status: {}
 			}
 			repoLocation := filepath.Join(temp, "repo")
 			// clone
-			cmd := exec.Command("git", "clone", pctlTestRepositoryName, repoLocation)
+			cmd := exec.Command("git", "clone", kivoTestRepositoryName, repoLocation)
 			err := cmd.Run()
 			Expect(err).ToNot(HaveOccurred())
 			suffix, err := randString(3)
@@ -478,7 +478,7 @@ status: {}
 			branch := "prtest_" + suffix
 			cmd = exec.Command(binaryPath,
 				"add",
-				"--name", "pctl-profile",
+				"--name", "kivo-profile",
 				"--git-repository", namespace+"/git-repo-name",
 				"--create-pr",
 				"--pr-branch",
@@ -486,11 +486,11 @@ status: {}
 				"--out",
 				repoLocation,
 				"--pr-repo",
-				pctlTestRepositoryOrgName,
+				kivoTestRepositoryOrgName,
 				"nginx-catalog/weaveworks-nginx")
 			cmd.Env = append(os.Environ(), fmt.Sprintf("GITHUB_TOKEN=%s", os.Getenv("GIT_TOKEN")))
 			output, err := cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed : %s", string(output)))
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("kivo add failed : %s", string(output)))
 			Expect(string(output)).To(ContainSubstring("PR created with number:"))
 		})
 
@@ -501,7 +501,7 @@ status: {}
 			cmd := exec.Command(
 				binaryPath,
 				"add",
-				"--name", "pctl-profile",
+				"--name", "kivo-profile",
 				"--git-repository", namespace+"/git-repo-name",
 				"--create-pr",
 				"--pr-branch",
@@ -521,7 +521,7 @@ status: {}
 			cmd := exec.Command(
 				binaryPath,
 				"add",
-				"--name", "pctl-profile",
+				"--name", "kivo-profile",
 				"--git-repository", namespace+"/git-repo-name",
 				"--create-pr",
 				"--pr-branch",
@@ -543,7 +543,7 @@ status: {}
 		)
 
 		BeforeEach(func() {
-			subName = "pctl-profile"
+			subName = "kivo-profile"
 			configMapName = subName + "-values"
 			configMap := v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -567,12 +567,12 @@ status: {}
 				Skip("Skipping this tests as it requires credentials")
 			}
 			By("creating the flux repository")
-			gitRepoName := "pctl-repo"
+			gitRepoName := "kivo-repo"
 			branch := "flux_repo_test_" + uuid.NewString()[:6]
 
 			cloneAndCheckoutBranch(temp, branch)
 			// setup the gitrepository resources. Requires the branch to exist first
-			cmd := exec.Command("flux", "create", "source", "git", gitRepoName, "--url", pctlTestRepositoryHTTP, "--branch", branch, "--namespace", namespace)
+			cmd := exec.Command("flux", "create", "source", "git", gitRepoName, "--url", kivoTestRepositoryHTTP, "--branch", branch, "--namespace", namespace)
 			cmd.Dir = temp
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create source git failed: %s", string(output)))
@@ -585,7 +585,7 @@ status: {}
 				"--git-repository", fmt.Sprintf("%s/%s", namespace, gitRepoName),
 				"nginx-catalog/nginx/v2.0.1",
 			}
-			Expect(pctl(args...)).To(ContainElement("► generating profile installation from source: catalog entry nginx-catalog/nginx/v2.0.1"))
+			Expect(kivo(args...)).To(ContainElement("► generating profile installation from source: catalog entry nginx-catalog/nginx/v2.0.1"))
 
 			By("creating the artifacts")
 			profilesDir := filepath.Join(temp, subName)
@@ -602,7 +602,7 @@ status: {}
 kind: ProfileInstallation
 metadata:
   creationTimestamp: null
-  name: pctl-profile
+  name: kivo-profile
   namespace: %s
 spec:
   catalog:

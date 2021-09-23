@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 
 	"github.com/urfave/cli/v2"
-	"github.com/weaveworks/pctl/pkg/client"
-	"github.com/weaveworks/pctl/pkg/log"
-	"github.com/weaveworks/pctl/pkg/version"
+	"github.com/weaveworks/kivo-cli/pkg/client"
+	"github.com/weaveworks/kivo-cli/pkg/log"
+	"github.com/weaveworks/kivo-cli/pkg/version"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/clientcmd"

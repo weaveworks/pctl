@@ -17,7 +17,7 @@ func TestProfile(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	var err error
-	binaryPath, err = gexec.Build("github.com/weaveworks/pctl/pkg/version/generate", "-tags", "release")
+	binaryPath, err = gexec.Build("github.com/weaveworks/kivo-cli/pkg/version/generate", "-tags", "release")
 	Expect(err).NotTo(HaveOccurred())
 })
 

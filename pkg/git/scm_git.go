@@ -7,7 +7,7 @@ import (
 
 	"github.com/jenkins-x/go-scm/scm"
 	"github.com/jenkins-x/go-scm/scm/factory"
-	"github.com/weaveworks/pctl/pkg/log"
+	"github.com/weaveworks/kivo-cli/pkg/log"
 )
 
 const githubTokenEnvVar = "GITHUB_TOKEN"
@@ -54,7 +54,7 @@ func (r *Client) CreatePullRequest() error {
 	log.Actionf("Creating pull request with : %v%v%v", r.Repo, r.Base, r.Branch)
 	ctx := context.Background()
 	request, _, err := r.Client.PullRequests.Create(ctx, r.Repo, &scm.PullRequestInput{
-		Title: "PCTL Generated Profile Resource Update",
+		Title: "KIVO Generated Profile Resource Update",
 		Head:  r.Branch,
 		Base:  r.Base,
 	})

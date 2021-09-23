@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/weaveworks/pctl/pkg/runner"
+	"github.com/weaveworks/kivo-cli/pkg/runner"
 )
 
 type FakeRunner struct {

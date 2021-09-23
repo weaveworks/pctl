@@ -7,19 +7,19 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/weaveworks/pctl/pkg/catalog"
-	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/log"
-	"github.com/weaveworks/pctl/pkg/runner"
-	upgr "github.com/weaveworks/pctl/pkg/upgrade"
-	"github.com/weaveworks/pctl/pkg/upgrade/repo"
+	"github.com/weaveworks/kivo-cli/pkg/catalog"
+	"github.com/weaveworks/kivo-cli/pkg/git"
+	"github.com/weaveworks/kivo-cli/pkg/log"
+	"github.com/weaveworks/kivo-cli/pkg/runner"
+	upgr "github.com/weaveworks/kivo-cli/pkg/upgrade"
+	"github.com/weaveworks/kivo-cli/pkg/upgrade/repo"
 )
 
 func upgradeCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "upgrade",
 		Usage:     "upgrade profile installation",
-		UsageText: "To upgrade an installation: pctl upgrade pctl-profile-installation-path/ v0.1.1",
+		UsageText: "To upgrade an installation: kivo upgrade kivo-profile-installation-path/ v0.1.1",
 		Flags: append(createPRFlags, &cli.BoolFlag{
 			Name:        "latest",
 			Usage:       "--latest",
@@ -48,12 +48,12 @@ func upgrade(c *cli.Context) error {
 	latest := c.Bool("latest")
 	if latest {
 		if c.Args().Len() != 1 {
-			return fmt.Errorf("please provid the path to the profile to upgrade to, e.g. pctl upgrade my-profile/")
+			return fmt.Errorf("please provid the path to the profile to upgrade to, e.g. kivo upgrade my-profile/")
 		}
 		profilePath = c.Args().Slice()[0]
 	} else {
 		if c.Args().Len() != 2 {
-			return fmt.Errorf("please provid the path to the profile and version to upgrade to, e.g. pctl upgrade my-profile/ v0.1.1")
+			return fmt.Errorf("please provid the path to the profile and version to upgrade to, e.g. kivo upgrade my-profile/ v0.1.1")
 		}
 		profilePath = c.Args().Slice()[0]
 		profileVersion = c.Args().Slice()[1]

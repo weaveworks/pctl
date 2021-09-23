@@ -6,7 +6,7 @@ import (
 
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/weaveworks/pctl/pkg/installation"
+	"github.com/weaveworks/kivo-cli/pkg/installation"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 )
 

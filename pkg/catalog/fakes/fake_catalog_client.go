@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/weaveworks/pctl/pkg/catalog"
+	"github.com/weaveworks/kivo-cli/pkg/catalog"
 )
 
 type FakeCatalogClient struct {

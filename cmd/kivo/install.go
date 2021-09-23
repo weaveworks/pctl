@@ -5,7 +5,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/weaveworks/pctl/pkg/cluster"
+	"github.com/weaveworks/kivo-cli/pkg/cluster"
 )
 
 const (
@@ -16,7 +16,7 @@ func installCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "install",
 		Usage:     "install the profile controllers and custom resource definitions",
-		UsageText: "pctl install",
+		UsageText: "kivo install",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:  "dry-run",

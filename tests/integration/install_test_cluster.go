@@ -39,8 +39,8 @@ var (
 	}
 )
 
-// installTestCluster will create a test cluster using pctl `install` command.
-// @binary -- location of the built pctl binary.
+// installTestCluster will create a test cluster using kivo `install` command.
+// @binary -- location of the built kivo binary.
 func InstallClusterComponents(binaryPath string) error {
 	tmp, err := ioutil.TempDir("", "install_integration_test_01")
 	if err != nil {

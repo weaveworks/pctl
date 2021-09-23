@@ -14,7 +14,7 @@ import (
 var _ = Describe("bootstrap", func() {
 	BeforeEach(func() {
 		var err error
-		temp, err = ioutil.TempDir("", "pctl-bootstrap-test")
+		temp, err = ioutil.TempDir("", "kivo-bootstrap-test")
 		Expect(err).ToNot(HaveOccurred())
 	})
 
@@ -23,13 +23,13 @@ var _ = Describe("bootstrap", func() {
 	})
 
 	When("passing the directory in as an argument", func() {
-		It("creates the pctl configuration file", func() {
+		It("creates the kivo configuration file", func() {
 			cmd := exec.Command("git", "init", temp)
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
 
-			Expect(pctl("bootstrap", "--git-repository", "foo/bar", "--default-dir", "default-dir", temp)).To(ContainElement("✔ bootstrap completed"))
-			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
+			Expect(kivo("bootstrap", "--git-repository", "foo/bar", "--default-dir", "default-dir", temp)).To(ContainElement("✔ bootstrap completed"))
+			data, err := ioutil.ReadFile(filepath.Join(temp, ".kivo", "config.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(data)).To(ContainSubstring(`gitRepository:
   name: bar
@@ -40,13 +40,13 @@ defaultDir: default-dir
 	})
 
 	When("not providing the directory", func() {
-		It("creates the pctl configuration file in your working directory", func() {
+		It("creates the kivo configuration file in your working directory", func() {
 			cmd := exec.Command("git", "init", temp)
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
 
-			Expect(pctl("bootstrap", "--git-repository", "foo/bar", "--default-dir", "default-dir")).To(ContainElement("✔ bootstrap completed"))
-			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
+			Expect(kivo("bootstrap", "--git-repository", "foo/bar", "--default-dir", "default-dir")).To(ContainElement("✔ bootstrap completed"))
+			data, err := ioutil.ReadFile(filepath.Join(temp, ".kivo", "config.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(data)).To(ContainSubstring(`gitRepository:
   name: bar
@@ -57,13 +57,13 @@ defaultDir: default-dir
 	})
 
 	When("passing a relative path", func() {
-		It("creates the pctl configuration file in correct directory", func() {
+		It("creates the kivo configuration file in correct directory", func() {
 			cmd := exec.Command("git", "init", temp)
 			output, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("init failed: %s", string(output)))
 
-			Expect(pctl("bootstrap", "--git-repository", "foo/bar", "--default-dir", "default-dir", ".")).To(ContainElement("✔ bootstrap completed"))
-			data, err := ioutil.ReadFile(filepath.Join(temp, ".pctl", "config.yaml"))
+			Expect(kivo("bootstrap", "--git-repository", "foo/bar", "--default-dir", "default-dir", ".")).To(ContainElement("✔ bootstrap completed"))
+			data, err := ioutil.ReadFile(filepath.Join(temp, ".kivo", "config.yaml"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(data)).To(ContainSubstring(`gitRepository:
   name: bar

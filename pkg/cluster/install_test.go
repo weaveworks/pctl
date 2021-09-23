@@ -13,9 +13,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/weaveworks/pctl/pkg/cluster"
-	"github.com/weaveworks/pctl/pkg/cluster/fakes"
-	runnerfake "github.com/weaveworks/pctl/pkg/runner/fakes"
+	"github.com/weaveworks/kivo-cli/pkg/cluster"
+	"github.com/weaveworks/kivo-cli/pkg/cluster/fakes"
+	runnerfake "github.com/weaveworks/kivo-cli/pkg/runner/fakes"
 )
 
 type mockTransport struct {

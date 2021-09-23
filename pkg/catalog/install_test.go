@@ -11,10 +11,10 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/weaveworks/pctl/pkg/catalog"
-	"github.com/weaveworks/pctl/pkg/catalog/fakes"
-	gitfakes "github.com/weaveworks/pctl/pkg/git/fakes"
-	installerfake "github.com/weaveworks/pctl/pkg/install/fakes"
+	"github.com/weaveworks/kivo-cli/pkg/catalog"
+	"github.com/weaveworks/kivo-cli/pkg/catalog/fakes"
+	gitfakes "github.com/weaveworks/kivo-cli/pkg/git/fakes"
+	installerfake "github.com/weaveworks/kivo-cli/pkg/install/fakes"
 )
 
 var _ = Describe("Install", func() {

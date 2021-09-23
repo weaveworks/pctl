@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/weaveworks/pctl/pkg/upgrade/repo"
+	"github.com/weaveworks/kivo-cli/pkg/upgrade/repo"
 )
 
 type FakeRepoManager struct {

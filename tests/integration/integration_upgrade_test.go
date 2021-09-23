@@ -24,7 +24,7 @@ var _ = Describe("upgrade", func() {
 		}
 		Expect(kClient.Create(context.Background(), &nsp)).To(Succeed())
 
-		configMapName = "pctl-profile-values"
+		configMapName = "kivo-profile-values"
 		configMap := v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      configMapName,
@@ -46,7 +46,7 @@ var _ = Describe("upgrade", func() {
 	When("using the latest flag with available updates", func() {
 		It("upgrades to the latest available version", func() {
 			gitRepoName := "my-git-repo"
-			subname := "pctl-profile"
+			subname := "kivo-profile"
 			profileDir := filepath.Join(temp, subname)
 			args := []string{
 				"add",
@@ -58,7 +58,7 @@ var _ = Describe("upgrade", func() {
 				"nginx-catalog/weaveworks-nginx/v0.1.0",
 			}
 
-			Expect(pctl(args...)).To(ContainElements(
+			Expect(kivo(args...)).To(ContainElements(
 				"► generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0",
 				"✔ installation completed successfully",
 			))
@@ -68,8 +68,8 @@ var _ = Describe("upgrade", func() {
 				"--latest",
 				profileDir,
 			}
-			Expect(pctl(args...)).To(ContainElements(
-				`► upgrading profile "pctl-profile" from version "v0.1.0" to "v0.1.1"`,
+			Expect(kivo(args...)).To(ContainElements(
+				`► upgrading profile "kivo-profile" from version "v0.1.0" to "v0.1.1"`,
 				"✔ upgrade completed successfully",
 			))
 		})
@@ -78,7 +78,7 @@ var _ = Describe("upgrade", func() {
 	When("using the latest flag with no updates", func() {
 		It("returns an error", func() {
 			gitRepoName := "my-git-repo"
-			subname := "pctl-profile"
+			subname := "kivo-profile"
 			profileDir := filepath.Join(temp, subname)
 			args := []string{
 				"add",
@@ -90,7 +90,7 @@ var _ = Describe("upgrade", func() {
 				"nginx-catalog/weaveworks-nginx/v0.1.1",
 			}
 
-			Expect(pctl(args...)).To(ContainElements(
+			Expect(kivo(args...)).To(ContainElements(
 				"► generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.1",
 				"✔ installation completed successfully",
 			))
@@ -100,7 +100,7 @@ var _ = Describe("upgrade", func() {
 				"--latest",
 				profileDir,
 			}
-			Expect(pctlWithError(args...)).To(ConsistOf(
+			Expect(kivoWithError(args...)).To(ConsistOf(
 				`✗ no new versions available`,
 			))
 		})
@@ -110,7 +110,7 @@ var _ = Describe("upgrade", func() {
 		It("informs the user of where the conflicts are", func() {
 			By("installing a profile")
 			gitRepoName := "my-git-repo"
-			subname := "pctl-profile"
+			subname := "kivo-profile"
 			args := []string{
 				"add",
 				"--name", subname,
@@ -121,7 +121,7 @@ var _ = Describe("upgrade", func() {
 				"nginx-catalog/weaveworks-nginx/v0.1.0",
 			}
 
-			Expect(pctl(args...)).To(ContainElements(
+			Expect(kivo(args...)).To(ContainElements(
 				"► generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0",
 				"✔ installation completed successfully",
 			))
@@ -149,7 +149,7 @@ var _ = Describe("upgrade", func() {
 kind: ProfileInstallation
 metadata:
   creationTimestamp: null
-  name: pctl-profile
+  name: kivo-profile
   namespace: %s
 spec:
   catalog:
@@ -186,8 +186,8 @@ status: {}
 				profileDir,
 				"v0.1.1",
 			}
-			Expect(pctlWithError(args...)).To(ConsistOf(
-				`► upgrading profile "pctl-profile" from version "v0.1.0" to "v0.1.1"`,
+			Expect(kivoWithError(args...)).To(ConsistOf(
+				`► upgrading profile "kivo-profile" from version "v0.1.0" to "v0.1.1"`,
 				"✗ upgrade succeeded but merge conflicts have occurred, please resolve manually. Files containing conflicts:",
 				fmt.Sprintf("- %s", deploymentFile),
 			))
@@ -213,7 +213,7 @@ status: {}
 kind: ProfileInstallation
 metadata:
   creationTimestamp: null
-  name: pctl-profile
+  name: kivo-profile
   namespace: %s
 spec:
   catalog:

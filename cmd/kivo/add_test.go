@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/urfave/cli/v2"
 
-	"github.com/weaveworks/pctl/pkg/bootstrap"
+	"github.com/weaveworks/kivo-cli/pkg/bootstrap"
 )
 
 var _ = Describe("add", func() {
