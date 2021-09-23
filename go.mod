@@ -19,6 +19,7 @@ require (
 	github.com/onsi/gomega v1.16.0
 	github.com/otiai10/copy v1.6.0
 	github.com/urfave/cli/v2 v2.3.0
+	github.com/weaveworks/kivo v0.0.0-00010101000000-000000000000
 	github.com/weaveworks/profiles v0.2.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.22.1
@@ -33,6 +34,8 @@ require (
 
 // pin kustomize to v4.1.3
 replace (
+	//TODO delete this line once the repo is renamed
+	github.com/weaveworks/kivo => ../pctl/
 	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.8.10
 	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.10.21
 )
