@@ -29,6 +29,7 @@ const (
 	defaultValuesKey           = "default-values.yaml"
 	helmChartLocation          = "helm-chart"
 	kustomizeWrapperObjectName = "kustomize-flux.yaml"
+	defaultInterval            = time.Minute * 5
 )
 
 // ArtifactWriter can build an artifacts from an installation and a profile artifact.
@@ -255,6 +256,7 @@ func (c *Writer) makeHelmReleaseObjects(artifact profilesv1.Artifact, installati
 			APIVersion: helmv2.GroupVersion.String(),
 		},
 		Spec: helmv2.HelmReleaseSpec{
+			Interval:    metav1.Duration{Duration: defaultInterval},
 			ReleaseName: artifact.Name,
 			Chart: helmv2.HelmChartTemplate{
 				Spec: helmChartSpec,
