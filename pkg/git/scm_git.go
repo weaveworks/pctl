@@ -54,7 +54,7 @@ func (r *Client) CreatePullRequest() error {
 	log.Actionf("Creating pull request with : %v%v%v", r.Repo, r.Base, r.Branch)
 	ctx := context.Background()
 	request, _, err := r.Client.PullRequests.Create(ctx, r.Repo, &scm.PullRequestInput{
-		Title: "PCTL Generated Profile Resource Update",
+		Title: "KIVO Generated Profile Resource Update",
 		Head:  r.Branch,
 		Base:  r.Base,
 	})
