@@ -21,8 +21,8 @@ test-env: submodule ## Create an environment for tests
 lint: ## Run the linter
 	golangci-lint run --exclude-use-default=false --timeout=5m0s
 
-build: ## Build the pctl binary to ./pctl
-	CGO_ENABLED=0 go build -ldflags "-X $(version_pkg).GitCommit=$(git_commit) -X $(version_pkg).BuildDate=$(build_date)" -o pctl ./cmd/pctl
+build: ## Build the kivo binary to ./kivo
+	CGO_ENABLED=0 go build -ldflags "-X $(version_pkg).GitCommit=$(git_commit) -X $(version_pkg).BuildDate=$(build_date)" -o kivo ./cmd/kivo
 
 local-env: submodule ## Create local environment
 	cd dependencies/profiles && make local-env
@@ -50,7 +50,7 @@ else
 		@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 endif
 
-update-modules: ## Update specific dependencies to pctl with regards to profiles especially
+update-modules: ## Update specific dependencies to kivo with regards to profiles especially
 	go get \
 		$(shell doki mod latest \
 			github.com/weaveworks/profiles \
