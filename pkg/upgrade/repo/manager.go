@@ -3,7 +3,7 @@ package repo
 import (
 	"fmt"
 
-	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/kivo-cli/pkg/git"
 )
 
 const main = "main"

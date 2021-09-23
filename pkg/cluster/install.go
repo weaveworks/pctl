@@ -16,8 +16,8 @@ import (
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 
-	"github.com/weaveworks/pctl/pkg/log"
-	"github.com/weaveworks/pctl/pkg/runner"
+	"github.com/weaveworks/kivo-cli/pkg/log"
+	"github.com/weaveworks/kivo-cli/pkg/runner"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/weaveworks/pctl/pkg/log"
+	"github.com/weaveworks/kivo-cli/pkg/log"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/apply/poller"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling"

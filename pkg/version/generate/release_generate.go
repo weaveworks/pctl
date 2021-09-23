@@ -10,7 +10,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/dave/jennifer/jen"
 
-	"github.com/weaveworks/pctl/pkg/version"
+	"github.com/weaveworks/kivo-cli/pkg/version"
 )
 
 const versionFilename = "pkg/version/release.go"

@@ -10,13 +10,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/urfave/cli/v2"
 
-	"github.com/weaveworks/pctl/pkg/bootstrap"
-	"github.com/weaveworks/pctl/pkg/catalog"
-	"github.com/weaveworks/pctl/pkg/client"
-	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/install"
-	"github.com/weaveworks/pctl/pkg/log"
-	"github.com/weaveworks/pctl/pkg/runner"
+	"github.com/weaveworks/kivo-cli/pkg/bootstrap"
+	"github.com/weaveworks/kivo-cli/pkg/catalog"
+	"github.com/weaveworks/kivo-cli/pkg/client"
+	"github.com/weaveworks/kivo-cli/pkg/git"
+	"github.com/weaveworks/kivo-cli/pkg/install"
+	"github.com/weaveworks/kivo-cli/pkg/log"
+	"github.com/weaveworks/kivo-cli/pkg/runner"
 )
 
 const defaultOut = "."

@@ -5,7 +5,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/weaveworks/pctl/pkg/cluster"
+	"github.com/weaveworks/kivo-cli/pkg/cluster"
 )
 
 const (

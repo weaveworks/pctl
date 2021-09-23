@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/weaveworks/pctl/pkg/install"
+	"github.com/weaveworks/kivo-cli/pkg/install"
 	"github.com/weaveworks/profiles/api/v1alpha1"
 )
 

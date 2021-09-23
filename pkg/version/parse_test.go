@@ -2,7 +2,7 @@ package version_test
 
 import (
 	"github.com/Masterminds/semver/v3"
-	"github.com/weaveworks/pctl/pkg/version"
+	"github.com/weaveworks/kivo-cli/pkg/version"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

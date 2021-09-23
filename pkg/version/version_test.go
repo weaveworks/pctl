@@ -4,7 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/weaveworks/pctl/pkg/version"
+	"github.com/weaveworks/kivo-cli/pkg/version"
 )
 
 var _ = Describe("release tests", func() {

@@ -7,12 +7,12 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/weaveworks/pctl/pkg/catalog"
-	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/log"
-	"github.com/weaveworks/pctl/pkg/runner"
-	upgr "github.com/weaveworks/pctl/pkg/upgrade"
-	"github.com/weaveworks/pctl/pkg/upgrade/repo"
+	"github.com/weaveworks/kivo-cli/pkg/catalog"
+	"github.com/weaveworks/kivo-cli/pkg/git"
+	"github.com/weaveworks/kivo-cli/pkg/log"
+	"github.com/weaveworks/kivo-cli/pkg/runner"
+	upgr "github.com/weaveworks/kivo-cli/pkg/upgrade"
+	"github.com/weaveworks/kivo-cli/pkg/upgrade/repo"
 )
 
 func upgradeCmd() *cli.Command {

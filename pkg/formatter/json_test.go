@@ -6,7 +6,7 @@ import (
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
-	"github.com/weaveworks/pctl/pkg/formatter"
+	"github.com/weaveworks/kivo-cli/pkg/formatter"
 )
 
 var _ = Describe("JsonFormater", func() {

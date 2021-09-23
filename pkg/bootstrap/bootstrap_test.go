@@ -13,9 +13,9 @@ import (
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
-	"github.com/weaveworks/pctl/pkg/bootstrap"
-	"github.com/weaveworks/pctl/pkg/runner"
-	"github.com/weaveworks/pctl/pkg/runner/fakes"
+	"github.com/weaveworks/kivo-cli/pkg/bootstrap"
+	"github.com/weaveworks/kivo-cli/pkg/runner"
+	"github.com/weaveworks/kivo-cli/pkg/runner/fakes"
 )
 
 var _ = Describe("Bootstrap", func() {

@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/install/artifact"
+	"github.com/weaveworks/kivo-cli/pkg/git"
+	"github.com/weaveworks/kivo-cli/pkg/install/artifact"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )

@@ -7,7 +7,7 @@ import (
 
 	"github.com/jenkins-x/go-scm/scm"
 	"github.com/jenkins-x/go-scm/scm/factory"
-	"github.com/weaveworks/pctl/pkg/log"
+	"github.com/weaveworks/kivo-cli/pkg/log"
 )
 
 const githubTokenEnvVar = "GITHUB_TOKEN"

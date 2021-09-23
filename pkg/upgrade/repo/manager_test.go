@@ -5,8 +5,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/git/fakes"
-	"github.com/weaveworks/pctl/pkg/upgrade/repo"
+	"github.com/weaveworks/kivo-cli/pkg/git/fakes"
+	"github.com/weaveworks/kivo-cli/pkg/upgrade/repo"
 )
 
 var _ = Describe("Manager", func() {

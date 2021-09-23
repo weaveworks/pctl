@@ -9,10 +9,10 @@ import (
 
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
-	"github.com/weaveworks/pctl/pkg/catalog"
-	"github.com/weaveworks/pctl/pkg/client"
-	"github.com/weaveworks/pctl/pkg/formatter"
-	"github.com/weaveworks/pctl/pkg/log"
+	"github.com/weaveworks/kivo-cli/pkg/catalog"
+	"github.com/weaveworks/kivo-cli/pkg/client"
+	"github.com/weaveworks/kivo-cli/pkg/formatter"
+	"github.com/weaveworks/kivo-cli/pkg/log"
 )
 
 func getCmd() *cli.Command {

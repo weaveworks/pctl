@@ -13,10 +13,10 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/weaveworks/pctl/pkg/catalog"
-	"github.com/weaveworks/pctl/pkg/catalog/fakes"
-	"github.com/weaveworks/pctl/pkg/upgrade"
-	repofakes "github.com/weaveworks/pctl/pkg/upgrade/repo/fakes"
+	"github.com/weaveworks/kivo-cli/pkg/catalog"
+	"github.com/weaveworks/kivo-cli/pkg/catalog/fakes"
+	"github.com/weaveworks/kivo-cli/pkg/upgrade"
+	repofakes "github.com/weaveworks/kivo-cli/pkg/upgrade/repo/fakes"
 )
 
 var _ = Describe("Upgrade", func() {

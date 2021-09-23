@@ -8,8 +8,8 @@ import (
 	"github.com/urfave/cli/v2"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
-	"github.com/weaveworks/pctl/pkg/bootstrap"
-	"github.com/weaveworks/pctl/pkg/log"
+	"github.com/weaveworks/kivo-cli/pkg/bootstrap"
+	"github.com/weaveworks/kivo-cli/pkg/log"
 )
 
 func bootstrapCmd() *cli.Command {

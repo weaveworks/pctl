@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/weaveworks/pctl/pkg/git"
-	"github.com/weaveworks/pctl/pkg/runner/fakes"
+	"github.com/weaveworks/kivo-cli/pkg/git"
+	"github.com/weaveworks/kivo-cli/pkg/runner/fakes"
 )
 
 var _ = Describe("git", func() {

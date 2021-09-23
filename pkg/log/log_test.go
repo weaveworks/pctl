@@ -6,7 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/log"
+	"github.com/weaveworks/kivo-cli/pkg/log"
 )
 
 var _ = Describe("PrintLogger", func() {

@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/kivo-cli/pkg/git"
 )
 
 type FakeSCMClient struct {

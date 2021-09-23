@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/weaveworks/pctl/pkg/git"
+	"github.com/weaveworks/kivo-cli/pkg/git"
 )
 
 var _ = Describe("scm", func() {

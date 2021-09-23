@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/weaveworks/pctl/pkg/cluster"
+	"github.com/weaveworks/kivo-cli/pkg/cluster"
 )
 
 type FakeWaiter struct {

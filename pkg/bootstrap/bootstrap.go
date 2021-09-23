@@ -9,8 +9,8 @@ import (
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	"gopkg.in/yaml.v2"
 
-	"github.com/weaveworks/pctl/pkg/log"
-	"github.com/weaveworks/pctl/pkg/runner"
+	"github.com/weaveworks/kivo-cli/pkg/log"
+	"github.com/weaveworks/kivo-cli/pkg/runner"
 )
 
 //Config contains the pctl bootstrap configuration

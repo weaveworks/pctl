@@ -3,7 +3,7 @@ package client_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/weaveworks/pctl/pkg/client"
+	"github.com/weaveworks/kivo-cli/pkg/client"
 )
 
 var _ = Describe("Client", func() {
