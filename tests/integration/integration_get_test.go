@@ -11,10 +11,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("pctl get", func() {
+var _ = Describe("kivo get", func() {
 	Context("get catalog profiles", func() {
 		It("returns the matching profiles", func() {
-			Expect(pctl("get", "--catalog", "nginx")).To(ConsistOf(
+			Expect(kivo("get", "--catalog", "nginx")).To(ConsistOf(
 				"PACKAGE CATALOG",
 				"CATALOG/PROFILE                VERSION DESCRIPTION",
 				"nginx-catalog/weaveworks-nginx v0.1.0  This installs nginx.",
@@ -26,7 +26,7 @@ var _ = Describe("pctl get", func() {
 		})
 
 		It("returns all the catalog profiles", func() {
-			Expect(pctl("get", "--catalog")).To(ConsistOf(
+			Expect(kivo("get", "--catalog")).To(ConsistOf(
 				"PACKAGE CATALOG",
 				"CATALOG/PROFILE                VERSION DESCRIPTION",
 				"nginx-catalog/weaveworks-nginx v0.1.0  This installs nginx.",
@@ -39,7 +39,7 @@ var _ = Describe("pctl get", func() {
 
 		When("-o is set to json", func() {
 			It("returns the matching profiles in json", func() {
-				Expect(pctlWithRawOutput("get", "-o", "json", "--catalog", "nginx")).To(ContainSubstring(`{
+				Expect(kivoWithRawOutput("get", "-o", "json", "--catalog", "nginx")).To(ContainSubstring(`{
     "tag": "weaveworks-nginx/v0.1.0",
     "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
@@ -91,7 +91,7 @@ var _ = Describe("pctl get", func() {
 			})
 
 			It("returns all catalog profiles in json", func() {
-				Expect(pctlWithRawOutput("get", "-o", "json", "--catalog")).To(ContainSubstring(`{
+				Expect(kivoWithRawOutput("get", "-o", "json", "--catalog")).To(ContainSubstring(`{
     "tag": "weaveworks-nginx/v0.1.0",
     "catalogSource": "nginx-catalog",
     "url": "https://github.com/weaveworks/profiles-examples",
@@ -145,7 +145,7 @@ var _ = Describe("pctl get", func() {
 
 		When("kubeconfig is incorrectly set", func() {
 			It("returns a useful error", func() {
-				Expect(pctlWithError("--kubeconfig=/non-existing/path/kubeconfig", "get", "nginx")).To(ContainElement(
+				Expect(kivoWithError("--kubeconfig=/non-existing/path/kubeconfig", "get", "nginx")).To(ContainElement(
 					"✗ failed to create config from kubeconfig path \"/non-existing/path/kubeconfig\": stat /non-existing/path/kubeconfig: no such file or directory",
 				))
 			})
@@ -193,7 +193,7 @@ var _ = Describe("pctl get", func() {
 		})
 
 		It("returns all the installations and catalog profiles", func() {
-			Expect(pctl("get")).To(ConsistOf(
+			Expect(kivo("get")).To(ConsistOf(
 				"INSTALLED PACKAGES",
 				"NAMESPACE                            NAME                        SOURCE                                AVAILABLE UPDATES",
 				fmt.Sprintf("%s long-name-to-ensure-padding nginx-catalog/weaveworks-nginx/v0.1.0 v0.1.1", namespace),
@@ -230,7 +230,7 @@ var _ = Describe("pctl get", func() {
 				},
 			})).Should(Succeed())
 
-			Expect(pctl("get", "bitnami-nginx")).To(ConsistOf(
+			Expect(kivo("get", "bitnami-nginx")).To(ConsistOf(
 				"INSTALLED PACKAGES",
 				"NAMESPACE                            NAME          SOURCE                             AVAILABLE UPDATES",
 				fmt.Sprintf("%s bitnami-nginx nginx-catalog/bitnami-nginx/v0.0.1 -", namespace),
@@ -282,7 +282,7 @@ var _ = Describe("pctl get", func() {
 
 		It("returns the installations", func() {
 			Eventually(func() []string {
-				return pctl("get", "--installed")
+				return kivo("get", "--installed")
 			}).Should(ConsistOf(
 				"INSTALLED PACKAGES",
 				"NAMESPACE                            NAME                        SOURCE                                AVAILABLE UPDATES",
@@ -316,7 +316,7 @@ var _ = Describe("pctl get", func() {
 				}
 				Expect(kClient.Create(ctx, &bitnamiSub)).Should(Succeed())
 				Eventually(func() []string {
-					return pctl("get", "--installed")
+					return kivo("get", "--installed")
 				}).Should(ContainElements(
 					"INSTALLED PACKAGES",
 					"NAMESPACE                            NAME                        SOURCE                                AVAILABLE UPDATES",
@@ -350,7 +350,7 @@ var _ = Describe("pctl get", func() {
 				}
 				Expect(kClient.Create(ctx, &bitnamiSub)).Should(Succeed())
 				Eventually(func() []string {
-					return pctl("get", "--installed", "bitnami-profile")
+					return kivo("get", "--installed", "bitnami-profile")
 				}).Should(ContainElements(
 					"INSTALLED PACKAGES",
 					"NAMESPACE                            NAME            SOURCE                             AVAILABLE UPDATES",
@@ -363,7 +363,7 @@ var _ = Describe("pctl get", func() {
 	Context("version", func() {
 		When("version is used in the get command", func() {
 			It("shows the right profile", func() {
-				Expect(pctl("get", "--profile-version", "v0.1.0", "nginx-catalog/weaveworks-nginx")).To(ConsistOf(
+				Expect(kivo("get", "--profile-version", "v0.1.0", "nginx-catalog/weaveworks-nginx")).To(ConsistOf(
 					"Catalog       nginx-catalog",
 					"Name          weaveworks-nginx",
 					"Version       v0.1.0",
@@ -377,7 +377,7 @@ var _ = Describe("pctl get", func() {
 
 		When("-o is set to json", func() {
 			It("returns the profile info in json", func() {
-				Expect(pctlWithRawOutput("get", "-o", "json", "--profile-version", "v0.1.0", "nginx-catalog/weaveworks-nginx")).To(ContainSubstring(`{
+				Expect(kivoWithRawOutput("get", "-o", "json", "--profile-version", "v0.1.0", "nginx-catalog/weaveworks-nginx")).To(ContainSubstring(`{
   "tag": "weaveworks-nginx/v0.1.0",
   "catalogSource": "nginx-catalog",
   "url": "https://github.com/weaveworks/profiles-examples",
@@ -393,8 +393,8 @@ var _ = Describe("pctl get", func() {
 
 		When("a name argument is not provided correctly", func() {
 			It("returns a useful error", func() {
-				Expect(pctlWithError("get", "--profile-version", "v0.1.0", "test-profile")).To(ContainElement(
-					"✗ both catalog name and profile name must be provided example: pctl get catalog/weaveworks-nginx --version v0.1.0",
+				Expect(kivoWithError("get", "--profile-version", "v0.1.0", "test-profile")).To(ContainElement(
+					"✗ both catalog name and profile name must be provided example: kivo get catalog/weaveworks-nginx --version v0.1.0",
 				))
 			})
 		})

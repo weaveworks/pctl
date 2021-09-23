@@ -13,7 +13,7 @@ import (
 
 var _ = Describe("PCTL", func() {
 	Context("docgen", func() {
-		It("writes pctl command help to markdown files", func() {
+		It("writes kivo command help to markdown files", func() {
 			cmd := exec.Command(binaryPath, "docgen", "--path", temp)
 			_, err := cmd.CombinedOutput()
 			Expect(err).ToNot(HaveOccurred())
@@ -23,7 +23,7 @@ var _ = Describe("PCTL", func() {
 			Expect(len(files)).To(Equal(5))
 			commands := []string{"add", "bootstrap", "install", "get", "upgrade"}
 			for _, cmd := range commands {
-				filename := filepath.Join(temp, fmt.Sprintf("pctl-%s-cmd.md", cmd))
+				filename := filepath.Join(temp, fmt.Sprintf("kivo-%s-cmd.md", cmd))
 				Expect(filename).To(BeAnExistingFile())
 				contents, err := ioutil.ReadFile(filename)
 				Expect(err).NotTo(HaveOccurred())

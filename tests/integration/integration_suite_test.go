@@ -27,18 +27,18 @@ import (
 	sourcev1 "github.com/fluxcd/source-controller/api/v1beta1"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 
-	"github.com/weaveworks/pctl/tests/integration"
+	"github.com/weaveworks/kivo-cli/tests/integration"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 var (
 	binaryPath                      string
 	skipTestsThatRequireCredentials bool
-	pctlTestRepositoryName          = "git@github.com:weaveworks/pctl-test-repo.git"
+	kivoTestRepositoryName          = "git@github.com:weaveworks/pctl-test-repo.git"
 	// used when creating a pr
-	pctlTestRepositoryOrgName = "weaveworks/pctl-test-repo"
+	kivoTestRepositoryOrgName = "weaveworks/pctl-test-repo"
 	// used for flux repository branch creation
-	pctlTestRepositoryHTTP = "https://github.com/weaveworks/pctl-test-repo"
+	kivoTestRepositoryHTTP = "https://github.com/weaveworks/pctl-test-repo"
 	kClient                client.Client
 	temp                   string
 	namespace              string
@@ -53,22 +53,22 @@ func TestIntegration(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	var err error
-	binaryPath, err = gexec.Build("github.com/weaveworks/pctl/cmd/pctl")
+	binaryPath, err = gexec.Build("github.com/weaveworks/kivo-cli/cmd/kivo")
 	Expect(err).NotTo(HaveOccurred())
 
 	// overwrite the default test repository location if set
 	if v := os.Getenv("PCTL_TEST_REPOSITORY_URL"); v != "" {
-		pctlTestRepositoryName = v
-		repoName := path.Base(pctlTestRepositoryName)
+		kivoTestRepositoryName = v
+		repoName := path.Base(kivoTestRepositoryName)
 		repoName = strings.TrimSuffix(repoName, ".git")
 		re := regexp.MustCompile("^(https|git)(://|@)([^/:]+)[/:]([^/:]+)/(.+)$")
-		m := re.FindAllStringSubmatch(pctlTestRepositoryName, -1)
+		m := re.FindAllStringSubmatch(kivoTestRepositoryName, -1)
 		if len(m) == 0 || len(m[0]) < 5 {
 			Fail("failed to extract repo user from the url, only github with https or git format is supported atm")
 		}
 		repoUser := m[0][4]
-		pctlTestRepositoryHTTP = fmt.Sprintf("https://github.com/%s/%s", repoUser, repoName)
-		pctlTestRepositoryOrgName = fmt.Sprintf("%s/%s", repoUser, repoName)
+		kivoTestRepositoryHTTP = fmt.Sprintf("https://github.com/%s/%s", repoUser, repoName)
+		kivoTestRepositoryOrgName = fmt.Sprintf("%s/%s", repoUser, repoName)
 	}
 
 	if v := os.Getenv("SKIP_CREDENTIAL_TESTS"); v == "true" {
@@ -95,7 +95,7 @@ var _ = AfterSuite(func() {
 
 var _ = BeforeEach(func() {
 	var err error
-	temp, err = ioutil.TempDir("", "pctl_tmp")
+	temp, err = ioutil.TempDir("", "kivo_tmp")
 	Expect(err).ToNot(HaveOccurred())
 })
 
@@ -103,28 +103,28 @@ var _ = AfterEach(func() {
 	_ = os.RemoveAll(temp)
 })
 
-func pctl(args ...string) []string {
+func kivo(args ...string) []string {
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Dir = temp
 	session, err := cmd.CombinedOutput()
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), fmt.Sprintf("error occurred running: pctl %s. Output: %s", strings.Join(args, " "), string(session)))
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), fmt.Sprintf("error occurred running: kivo %s. Output: %s", strings.Join(args, " "), string(session)))
 	return sanitiseString(string(session))
 }
 
-func pctlWithError(args ...string) []string {
+func kivoWithError(args ...string) []string {
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Dir = temp
 	session, err := cmd.CombinedOutput()
-	ExpectWithOffset(1, err).To(HaveOccurred(), fmt.Sprintf("error occurred running: pctl %s. Output: %s", strings.Join(args, " "), string(session)))
+	ExpectWithOffset(1, err).To(HaveOccurred(), fmt.Sprintf("error occurred running: kivo %s. Output: %s", strings.Join(args, " "), string(session)))
 
 	return sanitiseString(string(session))
 }
 
-func pctlWithRawOutput(args ...string) string {
+func kivoWithRawOutput(args ...string) string {
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Dir = temp
 	session, err := cmd.CombinedOutput()
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), fmt.Sprintf("error occurred running: pctl %s. Output: %s", strings.Join(args, " "), string(session)))
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), fmt.Sprintf("error occurred running: kivo %s. Output: %s", strings.Join(args, " "), string(session)))
 	return string(session)
 }
 
@@ -163,7 +163,7 @@ func catFile(filename string) string {
 
 func cloneAndCheckoutBranch(temp, branch string) {
 	// check out the branch
-	cmd := exec.Command("git", "clone", pctlTestRepositoryName, temp)
+	cmd := exec.Command("git", "clone", kivoTestRepositoryName, temp)
 	output, err := cmd.CombinedOutput()
 	ExpectWithOffset(1, err).ToNot(HaveOccurred(), fmt.Sprintf("clone failed: %s", string(output)))
 	cmd = exec.Command("git", "--git-dir", filepath.Join(temp, ".git"), "--work-tree", temp, "checkout", "-b", branch)

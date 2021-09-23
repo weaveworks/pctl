@@ -23,7 +23,7 @@ import (
 
 var _ = Describe("end to end flow", func() {
 	var (
-		gitRepoName             = "pctl-repo"
+		gitRepoName             = "kivo-repo"
 		profileInstallationName = "e2e"
 	)
 
@@ -31,7 +31,7 @@ var _ = Describe("end to end flow", func() {
 		var err error
 		branch = "flux_repo_test_" + uuid.NewString()[:6]
 		namespace = uuid.New().String()
-		temp, err = ioutil.TempDir("", "pctl_test_install_upgrade")
+		temp, err = ioutil.TempDir("", "kivo_test_install_upgrade")
 		Expect(err).ToNot(HaveOccurred())
 		nsp := v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -58,7 +58,7 @@ var _ = Describe("end to end flow", func() {
 		}
 		cloneAndCheckoutBranch(temp, branch)
 
-		cmd := exec.Command("flux", "create", "source", "git", gitRepoName, "--url", pctlTestRepositoryHTTP, "--branch", branch, "--namespace", namespace)
+		cmd := exec.Command("flux", "create", "source", "git", gitRepoName, "--url", kivoTestRepositoryHTTP, "--branch", branch, "--namespace", namespace)
 		output, err := cmd.CombinedOutput()
 		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create source git failed: %s", string(output)))
 	})
@@ -80,11 +80,11 @@ var _ = Describe("end to end flow", func() {
 
 	It("works end-to-end", func() {
 		By("searching for the desired weaveworks-nginx profile", func() {
-			Expect(pctl("get", "--catalog", "weaveworks-nginx")).To(ContainElement(
+			Expect(kivo("get", "--catalog", "weaveworks-nginx")).To(ContainElement(
 				"nginx-catalog/weaveworks-nginx v0.1.0  This installs nginx.",
 			))
 
-			Expect(pctl("get", "-p", "v0.1.0", "nginx-catalog/weaveworks-nginx")).To(ContainElements(
+			Expect(kivo("get", "-p", "v0.1.0", "nginx-catalog/weaveworks-nginx")).To(ContainElements(
 				"Catalog       nginx-catalog",
 				"Name          weaveworks-nginx",
 				"Version       v0.1.0",
@@ -96,17 +96,17 @@ var _ = Describe("end to end flow", func() {
 		})
 
 		By("bootstrapping the repo")
-		Expect(pctl("bootstrap", "--git-repository", fmt.Sprintf("%s/%s", namespace, gitRepoName), "--default-dir", "out", temp)).To(ContainElement("✔ bootstrap completed"))
+		Expect(kivo("bootstrap", "--git-repository", fmt.Sprintf("%s/%s", namespace, gitRepoName), "--default-dir", "out", temp)).To(ContainElement("✔ bootstrap completed"))
 
 		By("installing the desired profile", func() {
-			pctlAddOutput := pctl(
+			kivoAddOutput := kivo(
 				"add",
 				"--name", profileInstallationName,
 				"--namespace", namespace,
 				"--config-map", configMapName,
 				"nginx-catalog/weaveworks-nginx/v0.1.0",
 			)
-			Expect(pctlAddOutput).To(ConsistOf(
+			Expect(kivoAddOutput).To(ConsistOf(
 				"► generating profile installation from source: catalog entry nginx-catalog/weaveworks-nginx/v0.1.0",
 				"✔ installation completed successfully",
 			))
@@ -173,7 +173,7 @@ status: {}
 			By("the profile deploying successfully")
 			//replicas=3 in v0.1.0
 			ensureArtifactDeployedSuccessfully(profileInstallationName, 2)
-			By("the profile being returned in pctl get")
+			By("the profile being returned in kivo get")
 			getCmd := func() []string {
 				cmd := exec.Command(binaryPath, "get", "--installed", profileInstallationName)
 				session, err := cmd.CombinedOutput()
@@ -189,7 +189,7 @@ status: {}
 		})
 
 		By("updating the profile to the latest version", func() {
-			Expect(pctl("get", "-p", "v0.1.1", "nginx-catalog/weaveworks-nginx")).To(ContainElements(
+			Expect(kivo("get", "-p", "v0.1.1", "nginx-catalog/weaveworks-nginx")).To(ContainElements(
 				"Catalog       nginx-catalog",
 				"Name          weaveworks-nginx",
 				"Version       v0.1.1",
@@ -207,7 +207,7 @@ status: {}
 				"v0.1.1")
 			cmd.Dir = temp
 			output, err := cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("pctl add failed: %s", string(output)))
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("kivo add failed: %s", string(output)))
 			Expect(string(output)).To(ContainSubstring(fmt.Sprintf(`upgrading profile "%s" from version "v0.1.0" to "v0.1.1"`, profileInstallationName)))
 			Expect(string(output)).To(ContainSubstring("upgrade completed successfully"))
 
