@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	helmv2 "github.com/fluxcd/helm-controller/api/v2beta1"
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1beta1"
@@ -144,6 +145,7 @@ var _ = Describe("Helm", func() {
 			},
 			Spec: helmv2.HelmReleaseSpec{
 				ReleaseName: artifactName,
+				Interval:    metav1.Duration{Duration: time.Minute * 5},
 				Chart: helmv2.HelmChartTemplate{
 					Spec: helmv2.HelmChartTemplateSpec{
 						Chart: filepath.Join(rootDir, "artifacts/1/helm-chart/files/"),
@@ -259,6 +261,7 @@ var _ = Describe("Helm", func() {
 					Namespace: namespace,
 				},
 				Spec: helmv2.HelmReleaseSpec{
+					Interval:    metav1.Duration{Duration: time.Minute * 5},
 					ReleaseName: artifactName,
 					Chart: helmv2.HelmChartTemplate{
 						Spec: helmv2.HelmChartTemplateSpec{
