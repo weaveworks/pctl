@@ -15,8 +15,8 @@ import (
 func bootstrapCmd() *cli.Command {
 	return &cli.Command{
 		Name:      "bootstrap",
-		Usage:     "bootstrap default settings for pctl",
-		UsageText: "pctl bootstrap",
+		Usage:     "bootstrap default settings for kivo",
+		UsageText: "kivo bootstrap",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "git-repository",

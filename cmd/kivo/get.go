@@ -19,8 +19,8 @@ func getCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "get",
 		Usage: "get a profile",
-		UsageText: "pctl get [--output table|json <QUERY> --installed --catalog --version] \n\n" +
-			"   example: pctl get nginx",
+		UsageText: "kivo get [--output table|json <QUERY> --installed --catalog --version] \n\n" +
+			"   example: kivo get nginx",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "output",
@@ -43,8 +43,8 @@ func getCmd() *cli.Command {
 				Name:    "profile-version",
 				Aliases: []string{"p"},
 				Usage: "Get information about a profile \n\n" +
-					"   pctl [--kubeconfig=<kubeconfig-path>] get <CATALOG>/<PROFILE>\n\n" +
-					"   example: pctl get catalog/weaveworks-nginx --profile-version v0.1.0",
+					"   kivo [--kubeconfig=<kubeconfig-path>] get <CATALOG>/<PROFILE>\n\n" +
+					"   example: kivo get catalog/weaveworks-nginx --profile-version v0.1.0",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -133,7 +133,7 @@ func getCatalogProfilesWithVersion(c *cli.Context, catalogClient *client.Client,
 	parts := strings.Split(name, "/")
 	if len(parts) < 2 {
 		_ = cli.ShowCommandHelp(c, "get")
-		return fmt.Errorf("both catalog name and profile name must be provided example: pctl get catalog/weaveworks-nginx --version v0.1.0")
+		return fmt.Errorf("both catalog name and profile name must be provided example: kivo get catalog/weaveworks-nginx --version v0.1.0")
 	}
 	catalogName, profileName := parts[0], parts[1]
 	manager := &catalog.Manager{}

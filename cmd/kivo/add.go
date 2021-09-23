@@ -62,8 +62,8 @@ func addCmd() *cli.Command {
 		Name:    "add",
 		Aliases: []string{"apply"},
 		Usage:   "generate a profile installation",
-		UsageText: "To add from a profile catalog entry: pctl --catalog-url <URL> add --name pctl-profile --namespace default --profile-branch main --config-map configmap-name <CATALOG>/<PROFILE>[/<VERSION>]\n   " +
-			"To add directly from a profile repository: pctl add --name pctl-profile --namespace default --profile-branch development --profile-repo-url https://github.com/weaveworks/profiles-examples --profile-path bitnami-nginx",
+		UsageText: "To add from a profile catalog entry: kivo --catalog-url <URL> add --name kivo-profile --namespace default --profile-branch main --config-map configmap-name <CATALOG>/<PROFILE>[/<VERSION>]\n   " +
+			"To add directly from a profile repository: kivo add --name kivo-profile --namespace default --profile-branch development --profile-repo-url https://github.com/weaveworks/profiles-examples --profile-path bitnami-nginx",
 		Flags: append(createPRFlags,
 			&cli.StringFlag{
 				Name:     "name",
@@ -248,7 +248,7 @@ func getGitRepositoryNamespaceAndName(c *cli.Context, config *bootstrap.Config) 
 	if config != nil {
 		return config.GitRepository.Namespace, config.GitRepository.Name, nil
 	}
-	return "", "", fmt.Errorf("flux git repository not provided, please provide the --git-repository flag or use the pctl bootstrap functionality")
+	return "", "", fmt.Errorf("flux git repository not provided, please provide the --git-repository flag or use the kivo bootstrap functionality")
 }
 
 // getOutFolder returns the output folder with the following precedence:
