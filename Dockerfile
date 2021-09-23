@@ -16,13 +16,13 @@ COPY pkg/ pkg/
 ARG TARGETARCH
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} GO111MODULE=on go build -ldflags="-s -w" -a -o pctl ./cmd/pctl
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} GO111MODULE=on go build -ldflags="-s -w" -a -o kivo ./cmd/kivo
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
-COPY --from=builder /workspace/pctl .
+COPY --from=builder /workspace/kivo .
 USER 65532:65532
 
-ENTRYPOINT ["/pctl"]
+ENTRYPOINT ["/kivo"]
