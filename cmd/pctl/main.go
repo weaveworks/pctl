@@ -1,19 +1,21 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/urfave/cli/v2"
-	"github.com/weaveworks/pctl/pkg/client"
-	"github.com/weaveworks/pctl/pkg/log"
-	"github.com/weaveworks/pctl/pkg/version"
 	profilesv1 "github.com/weaveworks/profiles/api/v1alpha1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/weaveworks/pctl/pkg/client"
+	"github.com/weaveworks/pctl/pkg/log"
+	"github.com/weaveworks/pctl/pkg/version"
 )
 
 const (
@@ -83,7 +85,7 @@ func globalFlags() []cli.Flag {
 
 func parseArgs(c *cli.Context) (string, *client.Client, error) {
 	if c.Args().Len() < 1 {
-		return "", nil, fmt.Errorf("argument must be provided")
+		return "", nil, errors.New("<CATALOG>/<PROFILE>[/<VERSION>] must be provided")
 	}
 	client, err := buildCatalogClient(c)
 	if err != nil {
