@@ -459,6 +459,15 @@ status: {}
 		})
 	})
 
+	When("missing arguments when url is not provided", func() {
+		It("returns an error message", func() {
+			cmd := exec.Command(binaryPath, "add", "--name", "pctl-profile", "--git-repository", namespace+"/git-repo-name")
+			output, err := cmd.CombinedOutput()
+			Expect(err).To(HaveOccurred())
+			Expect(string(output)).To(ContainSubstring(`<CATALOG>/<PROFILE>[/<VERSION>] must be provided`))
+		})
+	})
+
 	// Note, the repo cleans the creates PRs via Github actions.
 	When("create-pr is enabled", func() {
 		It("creates a pull request to the remote branch", func() {
