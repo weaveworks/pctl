@@ -3,8 +3,8 @@ release:
 
 builds:
   - id: default
-    main: ./cmd/pctl
-    binary: pctl
+    main: ./cmd/kivo
+    binary: kivo
     flags:
       - -tags
       - netgo release
@@ -13,7 +13,7 @@ builds:
       - CGO_ENABLED=0
     ldflags:
       # gitTag set from a generated file (see ./tag_release.sh)
-      - -s -w -X github.com/weaveworks/pctl/pkg/version.BuildDate={{.Date}} -X github.com/weaveworks/pctl/pkg/version.GitCommit={{.ShortCommit}}
+      - -s -w -X github.com/weaveworks/kivo/pkg/version.BuildDate={{.Date}} -X github.com/weaveworks/kivo/pkg/version.GitCommit={{.ShortCommit}}
     goos:
       - linux
       - darwin
@@ -30,10 +30,10 @@ archives:
   - id: default
     builds:
       - default
-    name_template: "pctl_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    name_template: "kivo_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
     format: tar.gz
     files:
       - none*
 
 checksum:
-  name_template: "pctl_checksums.txt"
+  name_template: "kivo_checksums.txt"

@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("PCTL", func() {
+var _ = Describe("Kivo", func() {
 	Context("install", func() {
 		When("dry-run is provided", func() {
 			It("displays the to be applied content", func() {

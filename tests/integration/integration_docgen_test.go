@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("PCTL", func() {
+var _ = Describe("Kivo", func() {
 	Context("docgen", func() {
 		It("writes kivo command help to markdown files", func() {
 			cmd := exec.Command(binaryPath, "docgen", "--path", temp)
