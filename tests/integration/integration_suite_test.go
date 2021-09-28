@@ -57,7 +57,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	// overwrite the default test repository location if set
-	if v := os.Getenv("PCTL_TEST_REPOSITORY_URL"); v != "" {
+	if v := os.Getenv("KIVO_TEST_REPOSITORY_URL"); v != "" {
 		kivoTestRepositoryName = v
 		repoName := path.Base(kivoTestRepositoryName)
 		repoName = strings.TrimSuffix(repoName, ".git")
