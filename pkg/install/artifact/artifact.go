@@ -137,7 +137,11 @@ func (c *Writer) writeChartArtifact(installation profilesv1.ProfileInstallation,
 			return err
 		}
 
-		if err := c.writeOutKustomizeResource([]string{"HelmRelease.yaml"}, helmChartDir); err != nil {
+		resources := []string{"HelmRelease.yaml"}
+		if cfgMap != nil {
+			resources = append(resources, "ConfigMap.yaml")
+		}
+		if err := c.writeOutKustomizeResource(resources, helmChartDir); err != nil {
 			return err
 		}
 
@@ -313,7 +317,7 @@ func (c *Writer) makeDefaultValuesCfgMap(name, data string, installation profile
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      c.makeCfgMapName(name, installation),
+			Name:      c.makeCfgMapName(name, installation.Name),
 			Namespace: installation.ObjectMeta.Namespace,
 		},
 		Data: map[string]string{
@@ -373,11 +377,11 @@ func (c *Writer) makeKustomization(
 	}
 }
 
-func (c *Writer) makeCfgMapName(name string, installation profilesv1.ProfileInstallation) string {
+func (c *Writer) makeCfgMapName(name string, installationName string) string {
 	if strings.Contains(name, "/") {
 		name = filepath.Base(name)
 	}
-	return c.join(installation.Name, name, "defaultvalues")
+	return c.join(installationName, name, "defaultvalues")
 }
 
 // join creates a joined string of name using - as a join character.

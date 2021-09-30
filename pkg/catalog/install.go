@@ -24,15 +24,15 @@ type Profile struct {
 }
 
 type ProfileConfig struct {
-	ProfileName   string
-	CatalogName   string
-	ConfigMap     string
-	Namespace     string
-	SubName       string
-	Version       string
-	ProfileBranch string
-	URL           string
-	Path          string
+	ProfileName           string
+	CatalogName           string
+	ConfigMap             string
+	InstallationNamespace string
+	InstallationName      string
+	Version               string
+	ProfileBranch         string
+	URL                   string
+	Path                  string
 }
 
 // GitConfig contains the configuration of the git repository used to deploy the profile
@@ -60,8 +60,8 @@ func (m *Manager) Install(cfg InstallConfig) error {
 			APIVersion: "weave.works/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cfg.SubName,
-			Namespace: cfg.ProfileConfig.Namespace,
+			Name:      cfg.InstallationName,
+			Namespace: cfg.InstallationNamespace,
 		},
 		Spec: pSpec,
 	}

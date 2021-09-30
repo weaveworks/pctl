@@ -95,10 +95,12 @@ func Upgrade(cfg Config) error {
 			},
 			Profile: catalog.Profile{
 				ProfileConfig: catalog.ProfileConfig{
-					ProfileName: profileName,
-					CatalogName: catalogName,
-					Version:     currentVersion,
-					ConfigMap:   profileInstallation.Spec.ConfigMap,
+					ProfileName:           profileName,
+					CatalogName:           catalogName,
+					Version:               currentVersion,
+					ConfigMap:             profileInstallation.Spec.ConfigMap,
+					InstallationNamespace: profileInstallation.Namespace,
+					InstallationName:      profileInstallation.Name,
 				},
 				GitRepoConfig: catalog.GitRepoConfig{
 					Namespace: gitRepoNamespace,
@@ -141,10 +143,12 @@ func Upgrade(cfg Config) error {
 			},
 			Profile: catalog.Profile{
 				ProfileConfig: catalog.ProfileConfig{
-					ProfileName: profileName,
-					CatalogName: catalogName,
-					Version:     cfg.Version,
-					ConfigMap:   profileInstallation.Spec.ConfigMap,
+					ProfileName:           profileName,
+					CatalogName:           catalogName,
+					Version:               cfg.Version,
+					ConfigMap:             profileInstallation.Spec.ConfigMap,
+					InstallationNamespace: profileInstallation.Namespace,
+					InstallationName:      profileInstallation.Name,
 				},
 				GitRepoConfig: catalog.GitRepoConfig{
 					Namespace: gitRepoNamespace,

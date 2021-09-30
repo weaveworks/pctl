@@ -113,10 +113,12 @@ var _ = Describe("Upgrade", func() {
 		Expect(fakeCatalogManager.InstallCallCount()).To(Equal(1))
 		Expect(fakeCatalogManager.InstallArgsForCall(0).Profile).To(Equal(catalog.Profile{
 			ProfileConfig: catalog.ProfileConfig{
-				CatalogName: "my-catalog",
-				ProfileName: "my-profile",
-				Version:     "v0.1.0",
-				ConfigMap:   "my-config-map",
+				CatalogName:           "my-catalog",
+				ProfileName:           "my-profile",
+				Version:               "v0.1.0",
+				ConfigMap:             "my-config-map",
+				InstallationNamespace: "default",
+				InstallationName:      "pctl-installation",
 			},
 			GitRepoConfig: catalog.GitRepoConfig{
 				Name:      "foo",
@@ -140,10 +142,12 @@ var _ = Describe("Upgrade", func() {
 		Expect(fakeCatalogManager.InstallCallCount()).To(Equal(2))
 		Expect(fakeCatalogManager.InstallArgsForCall(1).Profile).To(Equal(catalog.Profile{
 			ProfileConfig: catalog.ProfileConfig{
-				CatalogName: "my-catalog",
-				ProfileName: "my-profile",
-				Version:     "v0.1.1",
-				ConfigMap:   "my-config-map",
+				CatalogName:           "my-catalog",
+				ProfileName:           "my-profile",
+				Version:               "v0.1.1",
+				ConfigMap:             "my-config-map",
+				InstallationNamespace: "default",
+				InstallationName:      "pctl-installation",
 			},
 			GitRepoConfig: catalog.GitRepoConfig{
 				Name:      "foo",

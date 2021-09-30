@@ -231,12 +231,17 @@ status: {}
 			return false
 		}, 5*time.Minute, 5*time.Second).Should(BeTrue())
 
-		Expect(helmRelease.Spec.ValuesFrom).To(HaveLen(1))
-		Expect(helmRelease.Spec.ValuesFrom[0]).To(Equal(helmv2.ValuesReference{
-			Kind:      "ConfigMap",
-			Name:      configMapName,
-			ValuesKey: "nginx-server",
-		}))
+		Expect(helmRelease.Spec.ValuesFrom).To(ConsistOf(
+			helmv2.ValuesReference{
+				Kind:      "ConfigMap",
+				Name:      "pprof-nginx-server-defaultvalues",
+				ValuesKey: "default-values.yaml",
+			},
+			helmv2.ValuesReference{
+				Kind:      "ConfigMap",
+				Name:      configMapName,
+				ValuesKey: "nginx-server",
+			}))
 
 		By("successfully deploying the redis resource with dependsOn")
 		kustomizeName = fmt.Sprintf("%s-%s", subName, "dependon-chart")
