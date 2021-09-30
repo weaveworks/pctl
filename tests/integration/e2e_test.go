@@ -171,8 +171,8 @@ status: {}
 			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("flux create kustomization failed : %s", string(output)))
 
 			By("the profile deploying successfully")
-			//replicas=3 in v0.1.0
-			ensureArtifactDeployedSuccessfully(profileInstallationName, 2)
+			ensureWeaveworksNginxV010DeployedSuccessfully(profileInstallationName)
+
 			By("the profile being returned in pctl get")
 			getCmd := func() []string {
 				cmd := exec.Command(binaryPath, "get", "--installed", profileInstallationName)
@@ -290,12 +290,41 @@ status: {}
 			))
 
 			//replicas=3 in v0.1.1
-			ensureArtifactDeployedSuccessfully(profileInstallationName, 3)
+			ensureWeaveworksNginxV011DeployedSuccessfully(profileInstallationName)
 		})
 	})
 })
 
-func ensureArtifactDeployedSuccessfully(profileInstallationName string, replicas int) {
+func ensureWeaveworksNginxV010DeployedSuccessfully(profileInstallationName string) {
+	//replicas=2 in v0.1.0
+	//no default configmap values
+	ensureArtifactDeployedSuccessfully(profileInstallationName, 2, []helmv2.ValuesReference{
+		{
+			Kind:      "ConfigMap",
+			Name:      configMapName,
+			ValuesKey: "nginx-server",
+		},
+	})
+}
+
+func ensureWeaveworksNginxV011DeployedSuccessfully(profileInstallationName string) {
+	//replicas=3 in v0.1.1
+	//new set of default values
+	ensureArtifactDeployedSuccessfully(profileInstallationName, 3, []helmv2.ValuesReference{
+		{
+			Kind:      "ConfigMap",
+			Name:      fmt.Sprintf("%s-nginx-server-defaultvalues", profileInstallationName),
+			ValuesKey: "default-values.yaml",
+		},
+		{
+			Kind:      "ConfigMap",
+			Name:      configMapName,
+			ValuesKey: "nginx-server",
+		},
+	})
+}
+
+func ensureArtifactDeployedSuccessfully(profileInstallationName string, replicas int, expectedValues []helmv2.ValuesReference) {
 	By("successfully deploying the kustomize resource")
 	kustomizeName := fmt.Sprintf("%s-%s", profileInstallationName, "nginx-deployment")
 	var kustomize *kustomizev1.Kustomization
@@ -385,10 +414,5 @@ func ensureArtifactDeployedSuccessfully(profileInstallationName string, replicas
 		return false
 	}, 5*time.Minute, 5*time.Second).Should(BeTrue())
 
-	Expect(helmRelease.Spec.ValuesFrom).To(HaveLen(1))
-	Expect(helmRelease.Spec.ValuesFrom[0]).To(Equal(helmv2.ValuesReference{
-		Kind:      "ConfigMap",
-		Name:      configMapName,
-		ValuesKey: "nginx-server",
-	}))
+	Expect(helmRelease.Spec.ValuesFrom).To(Equal(expectedValues))
 }

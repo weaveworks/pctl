@@ -115,7 +115,7 @@ var _ = Describe("Helm", func() {
 		kustomization = types.Kustomization{}
 		decodeFile(filepath.Join(rootDir, "artifacts/1/helm-chart/kustomization.yaml"), &kustomization)
 		Expect(kustomization).To(Equal(types.Kustomization{
-			Resources: []string{"HelmRelease.yaml"},
+			Resources: []string{"HelmRelease.yaml", "ConfigMap.yaml"},
 		}))
 
 		configMap := corev1.ConfigMap{}
@@ -184,9 +184,10 @@ var _ = Describe("Helm", func() {
 					Artifact: profilesv1.Artifact{
 						Name: artifactName,
 						Chart: &profilesv1.Chart{
-							URL:     chartURL,
-							Version: chartVersion,
-							Name:    chartName,
+							URL:           chartURL,
+							Version:       chartVersion,
+							Name:          chartName,
+							DefaultValues: "values",
 						},
 					},
 					PathToProfileClone: filepath.Join(gitDir, profilePath),
@@ -196,6 +197,7 @@ var _ = Describe("Helm", func() {
 		})
 
 		It("generates the helm resources and copies the chart into the directory", func() {
+			installation.Spec.ConfigMap = configMapName
 			err := artifactWriter.Write(installation, artifacts)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -212,6 +214,7 @@ var _ = Describe("Helm", func() {
 				"artifacts/1/kustomize-flux.yaml",
 				"artifacts/1/helm-chart/HelmRelease.yaml",
 				"artifacts/1/helm-chart/HelmRepository.yaml",
+				"artifacts/1/helm-chart/ConfigMap.yaml",
 				"profile-installation.yaml",
 			))
 
@@ -272,6 +275,18 @@ var _ = Describe("Helm", func() {
 								Name:      fmt.Sprintf("%s-%s", installationName, artifactName),
 								Namespace: namespace,
 							},
+						},
+					},
+					ValuesFrom: []helmv2.ValuesReference{
+						{
+							Name:      fmt.Sprintf("%s-%s-defaultvalues", installationName, artifactName),
+							Kind:      "ConfigMap",
+							ValuesKey: "default-values.yaml",
+						},
+						{
+							Kind:      "ConfigMap",
+							Name:      configMapName,
+							ValuesKey: artifactName,
 						},
 					},
 				},

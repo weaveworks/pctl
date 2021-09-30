@@ -53,13 +53,13 @@ var _ = Describe("Install", func() {
 		cfg = catalog.InstallConfig{
 			Profile: catalog.Profile{
 				ProfileConfig: catalog.ProfileConfig{
-					CatalogName:   "nginx",
-					Namespace:     "default",
-					ProfileBranch: "main",
-					ProfileName:   "nginx-1",
-					SubName:       "mysub",
-					Version:       "v0.0.1",
-					ConfigMap:     "config-map",
+					CatalogName:           "nginx",
+					InstallationNamespace: "default",
+					ProfileBranch:         "main",
+					ProfileName:           "nginx-1",
+					InstallationName:      "mysub",
+					Version:               "v0.0.1",
+					ConfigMap:             "config-map",
 				},
 				GitRepoConfig: catalog.GitRepoConfig{
 					Name:      "git-name",
@@ -120,13 +120,13 @@ var _ = Describe("Install", func() {
 				cfg = catalog.InstallConfig{
 					Profile: catalog.Profile{
 						ProfileConfig: catalog.ProfileConfig{
-							Namespace:     "default",
-							ProfileBranch: "main",
-							Path:          "nginx-1",
-							URL:           "https://github.com/weaveworks/nginx-profile",
-							SubName:       "mysub",
-							Version:       "v0.0.1",
-							ConfigMap:     "config-map",
+							InstallationNamespace: "default",
+							ProfileBranch:         "main",
+							Path:                  "nginx-1",
+							URL:                   "https://github.com/weaveworks/nginx-profile",
+							InstallationName:      "mysub",
+							Version:               "v0.0.1",
+							ConfigMap:             "config-map",
 						},
 						GitRepoConfig: catalog.GitRepoConfig{
 							Name:      "git-name",
@@ -187,13 +187,13 @@ var _ = Describe("Install", func() {
 					},
 					Profile: catalog.Profile{
 						ProfileConfig: catalog.ProfileConfig{
-							CatalogName:   "nginx",
-							Namespace:     "default",
-							Path:          "path",
-							ProfileBranch: "not_domain_compatible",
-							ProfileName:   "nginx-1",
-							SubName:       "mysub",
-							URL:           "https://github.com/weaveworks/profiles-examples",
+							CatalogName:           "nginx",
+							InstallationNamespace: "default",
+							Path:                  "path",
+							ProfileBranch:         "not_domain_compatible",
+							ProfileName:           "nginx-1",
+							InstallationName:      "mysub",
+							URL:                   "https://github.com/weaveworks/profiles-examples",
 						},
 					},
 				}
