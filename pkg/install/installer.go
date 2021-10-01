@@ -78,8 +78,7 @@ func (i *Installer) collectArtifacts(installation profilesv1.ProfileInstallation
 	for _, a := range profileDef.Spec.Artifacts {
 		//If its a nested profile lets make a recursive call to scans its artifacts
 		if a.Profile != nil {
-			err := validateProfileArtifact(a.Profile)
-			if err != nil {
+			if err := validateProfileArtifact(a.Profile); err != nil {
 				return nil, err
 			}
 			nestedInstallation := installation.DeepCopyObject().(*profilesv1.ProfileInstallation)
