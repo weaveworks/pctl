@@ -78,6 +78,9 @@ func (i *Installer) collectArtifacts(installation profilesv1.ProfileInstallation
 	for _, a := range profileDef.Spec.Artifacts {
 		//If its a nested profile lets make a recursive call to scans its artifacts
 		if a.Profile != nil {
+			if err := validateProfileArtifact(a.Profile); err != nil {
+				return nil, err
+			}
 			nestedInstallation := installation.DeepCopyObject().(*profilesv1.ProfileInstallation)
 			nestedInstallation.Spec.Source.URL = a.Profile.Source.URL
 			nestedInstallation.Spec.Source.Branch = a.Profile.Source.Branch
@@ -108,6 +111,17 @@ func (i *Installer) collectArtifacts(installation profilesv1.ProfileInstallation
 		}
 	}
 	return artifacts, nil
+}
+
+func validateProfileArtifact(p *profilesv1.Profile) error {
+	if p.Source.Tag != "" && p.Source.Branch != "" {
+		return fmt.Errorf("cannot configure both %q and %q in profile artifact", "profile.Source.Tag", "Profile.Source.Branch")
+	}
+
+	if p.Source.Tag == "" && p.Source.Branch == "" {
+		return fmt.Errorf("one of %q or %q must be configured", "profile.Source.Tag", "Profile.Source.Branch")
+	}
+	return nil
 }
 
 func (i *Installer) cloneRepoAndGetProfileDefinition(repoURL, branch, path string) (profilesv1.ProfileDefinition, error) {
