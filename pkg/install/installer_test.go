@@ -235,6 +235,25 @@ var _ = Describe("Installer", func() {
 			Expect(err).To(MatchError(ContainSubstring("failed to parse profile.yaml")))
 		})
 	})
+
+	When("the nested profile is invalid", func() {
+		When("branch and tag are both configured", func() {
+			It("returns an error", func() {
+				profileDefinition1.Spec.Artifacts[1].Profile.Source.Tag = "foo"
+				err := installer.Install(installation)
+				Expect(err).To(MatchError(ContainSubstring("cannot configure both \"profile.Source.Tag\" and \"Profile.Source.Branch\" in profile artifact")))
+			})
+		})
+
+		When("neither branch and tag are both configured", func() {
+			It("returns an error", func() {
+				profileDefinition1.Spec.Artifacts[1].Profile.Source.Branch = ""
+				profileDefinition1.Spec.Artifacts[1].Profile.Source.Tag = ""
+				err := installer.Install(installation)
+				Expect(err).To(MatchError(ContainSubstring("one of \"profile.Source.Tag\" or \"Profile.Source.Branch\" must be configured")))
+			})
+		})
+	})
 })
 
 func writeKubernetesResource(obj runtime.Object, dir, filename string) error {
