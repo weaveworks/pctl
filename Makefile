@@ -19,8 +19,6 @@ test-env: submodule ## Create an environment for tests
 ##@ Build
 
 lint: ## Run the linter
-	go mod download
-	go mod tidy
 	golangci-lint run --exclude-use-default=false --timeout=5m0s
 
 build: ## Build the pctl binary to ./pctl
