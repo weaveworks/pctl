@@ -75,6 +75,10 @@ var _ = Describe("Installer", func() {
 		profileURL1        = "github.com/weaveworks/profiles-examples"
 		profileBranch1     = "main"
 		profilePath1       = "weaveworks-nginx"
+		profileDefinition1 profilesv1.ProfileDefinition
+	)
+
+	BeforeEach(func() {
 		profileDefinition1 = profilesv1.ProfileDefinition{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "profile-1",
@@ -97,9 +101,7 @@ var _ = Describe("Installer", func() {
 				},
 			},
 		}
-	)
 
-	BeforeEach(func() {
 		fakeGitClient = &fakegit.FakeGit{}
 		fakeWriter = &fakes.FakeArtifactWriter{}
 		installer = install.NewInstaller(install.Config{
@@ -199,6 +201,24 @@ var _ = Describe("Installer", func() {
 			}
 			err := installer.Install(installation)
 			Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("failed to read profile.yaml in repo %q branch %q path %q:", profileURL1, profileBranch1, profilePath1))))
+		})
+	})
+
+	When("the profile contains no artifacts", func() {
+		It("returns an error", func() {
+			profileDefinition1.Spec.Artifacts = nil
+
+			err := installer.Install(installation)
+			Expect(err).To(MatchError("profile contains no artifacts"))
+		})
+	})
+
+	When("the profile contains duplicate artifacts", func() {
+		It("returns an error", func() {
+			profileDefinition1.Spec.Artifacts[0] = profileDefinition1.Spec.Artifacts[1]
+
+			err := installer.Install(installation)
+			Expect(err).To(MatchError("profile contains duplicate artifacts with the same name"))
 		})
 	})
 
