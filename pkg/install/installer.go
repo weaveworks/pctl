@@ -72,6 +72,11 @@ func (i *Installer) collectArtifacts(installation profilesv1.ProfileInstallation
 	if err != nil {
 		return nil, err
 	}
+
+	if err := validateDefinition(profileDef); err != nil {
+		return nil, err
+	}
+
 	profileRepoKey := cloneCacheKey(installation.Spec.Source.URL, branchOrTag)
 
 	var artifacts []artifact.ArtifactWrapper
@@ -164,6 +169,21 @@ func (i *Installer) cloneRepoAndGetProfileDefinition(repoURL, branch, path strin
 	}
 
 	return profile, nil
+}
+
+func validateDefinition(def profilesv1.ProfileDefinition) error {
+	if len(def.Spec.Artifacts) == 0 {
+		return fmt.Errorf("profile contains no artifacts")
+	}
+	m := make(map[string]interface{})
+	for _, a := range def.Spec.Artifacts {
+		m[a.Name] = nil
+	}
+
+	if len(m) != len(def.Spec.Artifacts) {
+		return fmt.Errorf("profile contains duplicate artifacts with the same name")
+	}
+	return nil
 }
 
 func cloneCacheKey(url, branch string) string {
