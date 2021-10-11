@@ -10,7 +10,7 @@ require (
 	github.com/fluxcd/pkg/apis/meta v0.10.1
 	github.com/fluxcd/pkg/runtime v0.12.1
 	github.com/fluxcd/pkg/version v0.1.0
-	github.com/fluxcd/source-controller/api v0.15.4
+	github.com/fluxcd/source-controller/api v0.16.0
 	github.com/google/uuid v1.3.0
 	github.com/jenkins-x/go-scm v1.10.10
 	github.com/mattn/go-runewidth v0.0.13 // indirect
