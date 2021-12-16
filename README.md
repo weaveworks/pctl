@@ -1,3 +1,5 @@
+# Archived. Profiles work has moved to https://github.com/weaveworks/weave-gitops
+
 # pctl
 pctl is a cli tool for interacting with [Profiles](https://github.com/weaveworks/profiles)
 
