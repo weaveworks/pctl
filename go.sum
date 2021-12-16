@@ -283,11 +283,12 @@ github.com/fluxcd/helm-controller/api v0.11.2/go.mod h1:gLPpLa8NMQJ+b4pwP/sExAPk
 github.com/fluxcd/helm-controller/api v0.12.1 h1:rDyhMPvbhCxslqiNNG4nlfDCeYgrk6D+1ZKLsBS/Irs=
 github.com/fluxcd/helm-controller/api v0.12.1/go.mod h1:zWmzV0s2SU4rEIGLPTt+dsaMs40OsNQgSgOATgJmxB0=
 github.com/fluxcd/kustomize-controller/api v0.13.3/go.mod h1:3RNiEd/XnYjSTGzMqDzDbQkOYpdPFrKuS+XdgWt9pds=
-github.com/fluxcd/kustomize-controller/api v0.15.2 h1:6MEt9ke7eQeRZsFPv+OzPeXuURS9axCIFgV3KopDOmo=
-github.com/fluxcd/kustomize-controller/api v0.15.2/go.mod h1:OhnZuXBeDl4NqbDZgpYKRg8nmsmeUIddH3vX8wxym9A=
+github.com/fluxcd/kustomize-controller/api v0.18.2 h1:rGu9R6PMFw3x0S6tVj/ZS54sJWW6/cdWe0Gga09e1AY=
+github.com/fluxcd/kustomize-controller/api v0.18.2/go.mod h1:psXYbb3lbSCbakC715fzdpUnuILra00N++t/S1UUDRM=
 github.com/fluxcd/pkg/apis/kustomize v0.1.0/go.mod h1:gEl+W5cVykCC3RfrCaqe+Pz+j4lKl2aeR4dxsom/zII=
-github.com/fluxcd/pkg/apis/kustomize v0.2.0 h1:jhu2QHvs+j3Zo9rR6w8hkO3LSC6h3M37zY5ejufOmxY=
 github.com/fluxcd/pkg/apis/kustomize v0.2.0/go.mod h1:gEl+W5cVykCC3RfrCaqe+Pz+j4lKl2aeR4dxsom/zII=
+github.com/fluxcd/pkg/apis/kustomize v0.3.0 h1:o7o8hHIWh+1kyx/E21b2tZpCD4tX8NRijbGioAZXSBU=
+github.com/fluxcd/pkg/apis/kustomize v0.3.0/go.mod h1:bkeOkDpm2PQamZT+RLs20ZOt3TgOdLKWmi9kVxmcdmM=
 github.com/fluxcd/pkg/apis/meta v0.10.0/go.mod h1:CW9X9ijMTpNe7BwnokiUOrLl/h13miwVr/3abEQLbKE=
 github.com/fluxcd/pkg/apis/meta v0.10.1 h1:zISenRlqNG7WK8TP3HxZTvv+1Z7JZOUIQvZrOr6pQ2w=
 github.com/fluxcd/pkg/apis/meta v0.10.1/go.mod h1:yUblM2vg+X8TE3A2VvJfdhkGmg+uqBlSPkLk7dxi0UM=
@@ -1664,7 +1665,6 @@ sigs.k8s.io/controller-runtime v0.9.0-beta.5.0.20210524185538-7181f1162e79/go.mo
 sigs.k8s.io/controller-runtime v0.9.0/go.mod h1:TgkfvrhhEw3PlI0BRL/5xM+89y3/yc0ZDfdbTl84si8=
 sigs.k8s.io/controller-runtime v0.9.5/go.mod h1:q6PpkM5vqQubEKUKOM6qr06oXGzOBcCby1DA9FbyZeA=
 sigs.k8s.io/controller-runtime v0.9.6/go.mod h1:q6PpkM5vqQubEKUKOM6qr06oXGzOBcCby1DA9FbyZeA=
-sigs.k8s.io/controller-runtime v0.10.1/go.mod h1:CQp8eyUQZ/Q7PJvnIrB6/hgfTC1kBkGylwsLgOQi1WY=
 sigs.k8s.io/controller-runtime v0.10.2 h1:jW8qiY+yMnnPx6O9hu63tgcwaKzd1yLYui+mpvClOOc=
 sigs.k8s.io/controller-runtime v0.10.2/go.mod h1:CQp8eyUQZ/Q7PJvnIrB6/hgfTC1kBkGylwsLgOQi1WY=
 sigs.k8s.io/kustomize/api v0.8.10 h1:CqbdK/qT7JE+uVETkrVMk7pQf0fPFXk9+QQ//Q7sAtc=
