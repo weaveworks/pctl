@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/dave/jennifer v1.4.1
 	github.com/fluxcd/helm-controller/api v0.12.1
-	github.com/fluxcd/kustomize-controller/api v0.15.2
+	github.com/fluxcd/kustomize-controller/api v0.18.2
 	github.com/fluxcd/pkg/apis/meta v0.10.1
 	github.com/fluxcd/pkg/runtime v0.12.2
 	github.com/fluxcd/pkg/version v0.1.0
@@ -48,7 +48,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/evanphx/json-patch v4.11.0+incompatible // indirect
-	github.com/fluxcd/pkg/apis/kustomize v0.2.0 // indirect
+	github.com/fluxcd/pkg/apis/kustomize v0.3.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-errors/errors v1.4.0 // indirect
